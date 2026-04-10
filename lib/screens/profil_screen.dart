@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_theme.dart';
+import '../services/auth_service.dart';
+import 'login_screen.dart';
 
 class ProfilScreen extends StatelessWidget {
   const ProfilScreen({super.key});
@@ -281,7 +283,16 @@ class ProfilScreen extends StatelessWidget {
                   // Keluar
                   Center(
                     child: TextButton.icon(
-                      onPressed: () {},
+                      onPressed: () async {
+                        await AuthService.logout();
+                        if (!context.mounted) return;
+                        Navigator.pushAndRemoveUntil(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => const LoginScreen()),
+                          (route) => false,
+                        );
+                      },
                       icon: const Icon(Icons.logout,
                           color: AppColors.red, size: 18),
                       label: Text(
