@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_theme.dart';
+import '../services/auth_service.dart';
 import 'login_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -21,6 +22,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   bool _obscurePass = true;
   bool _obscureConfirmPass = true;
+  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -34,8 +36,68 @@ class _RegisterScreenState extends State<RegisterScreen> {
     super.dispose();
   }
 
-  void _register() {
-    // Add logic for registration
+  Future<void> _register() async {
+    final name = _nameController.text.trim();
+    final rm = _rmController.text.trim();
+    final email = _emailController.text.trim();
+    final weight = _weightController.text.trim();
+    final height = _heightController.text.trim();
+    final password = _passController.text;
+    final confirmPass = _confirmPassController.text;
+
+    // Validasi form
+    if (name.isEmpty || rm.isEmpty || email.isEmpty ||
+        weight.isEmpty || height.isEmpty || password.isEmpty) {
+      _showSnackBar('Semua field harus diisi.', isError: true);
+      return;
+    }
+
+    if (password != confirmPass) {
+      _showSnackBar('Kata sandi tidak cocok.', isError: true);
+      return;
+    }
+
+    if (password.length < 6) {
+      _showSnackBar('Kata sandi minimal 6 karakter.', isError: true);
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    final result = await AuthService.register(
+      name: name,
+      rm: rm,
+      email: email,
+      weight: weight,
+      height: height,
+      password: password,
+    );
+
+    if (!mounted) return;
+    setState(() => _isLoading = false);
+
+    if (result['success'] == true) {
+      _showSnackBar('Registrasi berhasil! Silakan masuk.', isError: false);
+      await Future.delayed(const Duration(seconds: 1));
+      if (!mounted) return;
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const LoginScreen()),
+      );
+    } else {
+      _showSnackBar(result['message'] ?? 'Registrasi gagal.', isError: true);
+    }
+  }
+
+  void _showSnackBar(String message, {required bool isError}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message, style: GoogleFonts.nunito()),
+        backgroundColor: isError ? Colors.redAccent : AppColors.primary,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+    );
   }
 
   @override
@@ -170,7 +232,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: _register,
+                onPressed: _isLoading ? null : _register,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
                   foregroundColor: Colors.white,
@@ -180,13 +242,22 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                   elevation: 0,
                 ),
-                child: Text(
-                  'DAFTAR',
-                  style: GoogleFonts.nunito(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
+                child: _isLoading
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : Text(
+                        'DAFTAR',
+                        style: GoogleFonts.nunito(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
               ),
             ),
             const SizedBox(height: 16),
