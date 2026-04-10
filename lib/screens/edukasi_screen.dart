@@ -69,7 +69,7 @@ class _EdukasiScreenState extends State<EdukasiScreen> {
             elevation: 0,
             title: Text(
               'Edukasi',
-              style: GoogleFonts.nunito(
+              style: GoogleFonts.poppins(
                 fontSize: 22,
                 fontWeight: FontWeight.w900,
                 color: AppColors.textPrimary,
@@ -104,7 +104,7 @@ class _EdukasiScreenState extends State<EdukasiScreen> {
                     child: TextField(
                       decoration: InputDecoration(
                         hintText: 'Cari tips atau artikel...',
-                        hintStyle: GoogleFonts.nunito(
+                        hintStyle: GoogleFonts.poppins(
                             color: AppColors.textMuted, fontSize: 14),
                         prefixIcon: const Icon(Icons.search,
                             color: AppColors.textMuted),
@@ -137,7 +137,7 @@ class _EdukasiScreenState extends State<EdukasiScreen> {
                           alignment: Alignment.center,
                           child: Text(
                             filters[i],
-                            style: GoogleFonts.nunito(
+                            style: GoogleFonts.poppins(
                               fontWeight: FontWeight.w700,
                               fontSize: 13,
                               color: _selectedFilter == i
@@ -157,7 +157,7 @@ class _EdukasiScreenState extends State<EdukasiScreen> {
 
                   Text(
                     'Artikel Terbaru',
-                    style: GoogleFonts.nunito(
+                    style: GoogleFonts.poppins(
                       fontSize: 17,
                       fontWeight: FontWeight.w800,
                       color: AppColors.textPrimary,
@@ -210,7 +210,7 @@ class _EdukasiScreenState extends State<EdukasiScreen> {
                   const SizedBox(height: 8),
                   Text(
                     'Hidrasi & Kesehatan',
-                    style: GoogleFonts.nunito(
+                    style: GoogleFonts.poppins(
                         color: AppColors.primaryDark,
                         fontWeight: FontWeight.w700),
                   ),
@@ -225,7 +225,7 @@ class _EdukasiScreenState extends State<EdukasiScreen> {
               children: [
                 Text(
                   'Pentingnya Air Putih untuk Diet',
-                  style: GoogleFonts.nunito(
+                  style: GoogleFonts.poppins(
                     fontSize: 16,
                     fontWeight: FontWeight.w800,
                     color: AppColors.textPrimary,
@@ -234,13 +234,13 @@ class _EdukasiScreenState extends State<EdukasiScreen> {
                 const SizedBox(height: 4),
                 Text(
                   'Minum air yang cukup membantu metabolisme...',
-                  style: GoogleFonts.nunito(
+                  style: GoogleFonts.poppins(
                       fontSize: 13, color: AppColors.textSecondary),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   'Baca Selengkapnya',
-                  style: GoogleFonts.nunito(
+                  style: GoogleFonts.poppins(
                     fontSize: 13,
                     fontWeight: FontWeight.w700,
                     color: AppColors.primary,
@@ -280,7 +280,7 @@ class _EdukasiScreenState extends State<EdukasiScreen> {
               children: [
                 Text(
                   article['title'] as String,
-                  style: GoogleFonts.nunito(
+                  style: GoogleFonts.poppins(
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
                     color: AppColors.textPrimary,
@@ -289,7 +289,7 @@ class _EdukasiScreenState extends State<EdukasiScreen> {
                 const SizedBox(height: 2),
                 Text(
                   article['duration'] as String,
-                  style: GoogleFonts.nunito(
+                  style: GoogleFonts.poppins(
                       fontSize: 12, color: AppColors.textMuted),
                 ),
               ],

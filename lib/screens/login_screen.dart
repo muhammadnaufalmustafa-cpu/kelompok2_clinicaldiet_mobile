@@ -53,7 +53,7 @@ class _LoginScreenState extends State<LoginScreen> {
   void _showError(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message, style: GoogleFonts.nunito()),
+        content: Text(message, style: GoogleFonts.poppins()),
         backgroundColor: Colors.redAccent,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -101,7 +101,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     const SizedBox(width: 8),
                     Text(
                       'ClinicalDiet',
-                      style: GoogleFonts.nunito(
+                      style: GoogleFonts.poppins(
                         fontSize: 16,
                         fontWeight: FontWeight.w800,
                         color: AppColors.primary,
@@ -130,7 +130,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         child: Text(
                           'Simpan\nlogo.png',
                           textAlign: TextAlign.center,
-                          style: GoogleFonts.nunito(
+                          style: GoogleFonts.poppins(
                             fontSize: 12,
                             fontWeight: FontWeight.bold,
                             color: AppColors.primary,
@@ -144,7 +144,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 Center(
                   child: Text(
                     'ClinicalDietMobile',
-                    style: GoogleFonts.nunito(
+                    style: GoogleFonts.poppins(
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
                       color: AppColors.textSecondary,
@@ -157,7 +157,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 Center(
                   child: Text(
                     'Masuk ke Aplikasi',
-                    style: GoogleFonts.nunito(
+                    style: GoogleFonts.poppins(
                       fontSize: 22,
                       fontWeight: FontWeight.w900,
                       color: AppColors.textPrimary,
@@ -169,7 +169,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 // RM field
                 Text(
                   'NOMOR REKAM MEDIS (RM)',
-                  style: GoogleFonts.nunito(
+                  style: GoogleFonts.poppins(
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
                     letterSpacing: 1,
@@ -187,7 +187,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 const SizedBox(height: 4),
                 Text(
                   'Isi dengan nomor RM bapak/ibu',
-                  style: GoogleFonts.nunito(
+                  style: GoogleFonts.poppins(
                       fontSize: 12, color: AppColors.textMuted),
                 ),
                 const SizedBox(height: 18),
@@ -195,7 +195,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 // Password field
                 Text(
                   'KATA SANDI',
-                  style: GoogleFonts.nunito(
+                  style: GoogleFonts.poppins(
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
                     letterSpacing: 1,
@@ -221,7 +221,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 const SizedBox(height: 4),
                 Text(
                   'Isi kata sandi yang diberikan petugas',
-                  style: GoogleFonts.nunito(
+                  style: GoogleFonts.poppins(
                       fontSize: 12, color: AppColors.textMuted),
                 ),
                 const SizedBox(height: 32),
@@ -251,7 +251,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           )
                         : Text(
                             'MASUK',
-                            style: GoogleFonts.nunito(
+                            style: GoogleFonts.poppins(
                               fontSize: 16,
                               fontWeight: FontWeight.w800,
                               letterSpacing: 1.5,
@@ -285,11 +285,11 @@ class _LoginScreenState extends State<LoginScreen> {
         controller: controller,
         obscureText: obscure,
         keyboardType: keyboardType,
-        style: GoogleFonts.nunito(fontSize: 15, color: AppColors.textPrimary),
+        style: GoogleFonts.poppins(fontSize: 15, color: AppColors.textPrimary),
         decoration: InputDecoration(
           hintText: hint,
           hintStyle:
-              GoogleFonts.nunito(color: AppColors.textMuted, fontSize: 14),
+              GoogleFonts.poppins(color: AppColors.textMuted, fontSize: 14),
           suffixIcon: suffix != null
               ? Padding(
                   padding: const EdgeInsets.only(right: 12),
@@ -374,7 +374,7 @@ class _LoginScreenState extends State<LoginScreen> {
             const SizedBox(height: 4),
             Text(
               label,
-              style: GoogleFonts.nunito(
+              style: GoogleFonts.poppins(
                 fontSize: 11,
                 fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
                 color: isSelected ? AppColors.primary : AppColors.textMuted,

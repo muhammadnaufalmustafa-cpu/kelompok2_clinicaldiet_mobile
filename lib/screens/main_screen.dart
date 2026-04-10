@@ -85,7 +85,7 @@ class _MainScreenState extends State<MainScreen> {
           const SizedBox(height: 2),
           Text(
             label,
-            style: GoogleFonts.nunito(
+            style: GoogleFonts.poppins(
               fontSize: 11,
               fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
               color: isActive ? AppColors.primary : AppColors.textMuted,
