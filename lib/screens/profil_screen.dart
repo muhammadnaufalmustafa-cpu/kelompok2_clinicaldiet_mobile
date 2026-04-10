@@ -22,19 +22,14 @@ class ProfilScreen extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    Container(
+                    Image.asset(
+                      'assets/images/icon.png',
                       width: 30,
                       height: 30,
-                      decoration: BoxDecoration(
-                        color: AppColors.primaryLight,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Icon(Icons.monitor_heart_outlined,
-                          color: AppColors.primary, size: 16),
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      'ClinicalDiet',
+                      'Clinical Diet',
                       style: GoogleFonts.poppins(
                         fontSize: 16,
                         fontWeight: FontWeight.w800,

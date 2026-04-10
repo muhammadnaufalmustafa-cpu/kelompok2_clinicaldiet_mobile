@@ -66,19 +66,14 @@ class _CatatanScreenState extends State<CatatanScreen> {
             children: [
               Row(
                 children: [
-                  Container(
+                  Image.asset(
+                    'assets/images/icon.png',
                     width: 32,
                     height: 32,
-                    decoration: BoxDecoration(
-                      color: AppColors.primaryLight,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Icon(Icons.monitor_heart_outlined,
-                        color: AppColors.primary, size: 18),
                   ),
                   const SizedBox(width: 8),
                   Text(
-                    'ClinicalDiet',
+                    'Clinical Diet',
                     style: GoogleFonts.poppins(
                       fontSize: 16,
                       fontWeight: FontWeight.w800,

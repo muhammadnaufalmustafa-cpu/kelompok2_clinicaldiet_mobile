@@ -58,19 +58,14 @@ class HomeScreen extends StatelessWidget {
         children: [
           Row(
             children: [
-              Container(
+              Image.asset(
+                'assets/images/icon.png',
                 width: 36,
                 height: 36,
-                decoration: BoxDecoration(
-                  color: AppColors.primaryLight,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(Icons.monitor_heart_outlined,
-                    color: AppColors.primary, size: 20),
               ),
               const SizedBox(width: 8),
               Text(
-                'ClinicalDiet',
+                'Clinical Diet',
                 style: GoogleFonts.poppins(
                   fontSize: 18,
                   fontWeight: FontWeight.w800,
