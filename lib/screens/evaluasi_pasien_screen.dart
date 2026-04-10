@@ -55,7 +55,7 @@ class _EvaluasiPasienScreenState extends State<EvaluasiPasienScreen> {
           'Evaluasi Pasien',
           style: GoogleFonts.poppins(
             fontSize: 18,
-            fontWeight: FontWeight.w800,
+            fontWeight: FontWeight.w600,
             color: AppColors.textPrimary,
           ),
         ),
@@ -94,7 +94,7 @@ class _EvaluasiPasienScreenState extends State<EvaluasiPasienScreen> {
                           'Siti Amelia',
                           style: GoogleFonts.poppins(
                             fontSize: 16,
-                            fontWeight: FontWeight.w800,
+                            fontWeight: FontWeight.w600,
                             color: AppColors.textPrimary,
                           ),
                         ),
@@ -115,7 +115,7 @@ class _EvaluasiPasienScreenState extends State<EvaluasiPasienScreen> {
                             'DIET JANTUNG',
                             style: GoogleFonts.poppins(
                               fontSize: 10,
-                              fontWeight: FontWeight.w700,
+                              fontWeight: FontWeight.w600,
                               color: AppColors.primaryDark,
                             ),
                           ),
@@ -148,7 +148,7 @@ class _EvaluasiPasienScreenState extends State<EvaluasiPasienScreen> {
                   'Chat WhatsApp Pasien',
                   style: GoogleFonts.poppins(
                     fontSize: 15,
-                    fontWeight: FontWeight.w800,
+                    fontWeight: FontWeight.w600,
                     color: Colors.white,
                   ),
                 ),
@@ -170,7 +170,7 @@ class _EvaluasiPasienScreenState extends State<EvaluasiPasienScreen> {
                   'Log Laporan (Minggu, 15 Mar)',
                   style: GoogleFonts.poppins(
                     fontSize: 16,
-                    fontWeight: FontWeight.w800,
+                    fontWeight: FontWeight.w600,
                     color: AppColors.textPrimary,
                   ),
                 ),
@@ -186,7 +186,7 @@ class _EvaluasiPasienScreenState extends State<EvaluasiPasienScreen> {
                     'TERVERIFIKASI',
                     style: GoogleFonts.poppins(
                       fontSize: 10,
-                      fontWeight: FontWeight.w700,
+                      fontWeight: FontWeight.w600,
                       color: AppColors.primaryDark,
                     ),
                   ),
@@ -227,7 +227,7 @@ class _EvaluasiPasienScreenState extends State<EvaluasiPasienScreen> {
                                       item['label'] as String,
                                       style: GoogleFonts.poppins(
                                         fontSize: 11,
-                                        fontWeight: FontWeight.w800,
+                                        fontWeight: FontWeight.w600,
                                         letterSpacing: 0.8,
                                         color: AppColors.primary,
                                       ),
@@ -256,7 +256,7 @@ class _EvaluasiPasienScreenState extends State<EvaluasiPasienScreen> {
               'Catatan Evaluasi (CPPT)',
               style: GoogleFonts.poppins(
                 fontSize: 16,
-                fontWeight: FontWeight.w800,
+                fontWeight: FontWeight.w600,
                 color: AppColors.textPrimary,
               ),
             ),
@@ -316,7 +316,7 @@ class _EvaluasiPasienScreenState extends State<EvaluasiPasienScreen> {
               'SIMPAN EVALUASI',
               style: GoogleFonts.poppins(
                 fontSize: 15,
-                fontWeight: FontWeight.w800,
+                fontWeight: FontWeight.w600,
                 letterSpacing: 1.2,
                 color: Colors.white,
               ),

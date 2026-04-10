@@ -32,7 +32,7 @@ class ProfilScreen extends StatelessWidget {
                       'Clinical Diet',
                       style: GoogleFonts.poppins(
                         fontSize: 16,
-                        fontWeight: FontWeight.w800,
+                        fontWeight: FontWeight.w600,
                         color: AppColors.primary,
                       ),
                     ),
@@ -92,7 +92,7 @@ class ProfilScreen extends StatelessWidget {
                     'Siska Amelia',
                     style: GoogleFonts.poppins(
                       fontSize: 20,
-                      fontWeight: FontWeight.w900,
+                      fontWeight: FontWeight.w600,
                       color: AppColors.textPrimary,
                     ),
                   ),
@@ -135,7 +135,7 @@ class ProfilScreen extends StatelessWidget {
                           'BMI SAAT INI',
                           style: GoogleFonts.poppins(
                             fontSize: 10,
-                            fontWeight: FontWeight.w700,
+                            fontWeight: FontWeight.w600,
                             letterSpacing: 1.1,
                             color: AppColors.textMuted,
                           ),
@@ -147,7 +147,7 @@ class ProfilScreen extends StatelessWidget {
                               '22.8',
                               style: GoogleFonts.poppins(
                                 fontSize: 26,
-                                fontWeight: FontWeight.w900,
+                                fontWeight: FontWeight.w600,
                                 color: AppColors.textPrimary,
                               ),
                             ),
@@ -163,7 +163,7 @@ class ProfilScreen extends StatelessWidget {
                                 'NORMAL',
                                 style: GoogleFonts.poppins(
                                   fontSize: 11,
-                                  fontWeight: FontWeight.w700,
+                                  fontWeight: FontWeight.w600,
                                   color: AppColors.primaryDark,
                                 ),
                               ),
@@ -200,7 +200,7 @@ class ProfilScreen extends StatelessWidget {
                                 'Chat  WhatsApp dengan Ahli Gizi',
                                 style: GoogleFonts.poppins(
                                   fontSize: 14,
-                                  fontWeight: FontWeight.w800,
+                                  fontWeight: FontWeight.w600,
                                   color: Colors.white,
                                 ),
                               ),
@@ -241,7 +241,7 @@ class ProfilScreen extends StatelessWidget {
                       'AKUN & PENGATURAN',
                       style: GoogleFonts.poppins(
                         fontSize: 11,
-                        fontWeight: FontWeight.w700,
+                        fontWeight: FontWeight.w600,
                         letterSpacing: 1.2,
                         color: AppColors.textMuted,
                       ),
@@ -288,7 +288,7 @@ class ProfilScreen extends StatelessWidget {
                         'KELUAR AKUN',
                         style: GoogleFonts.poppins(
                           fontSize: 14,
-                          fontWeight: FontWeight.w800,
+                          fontWeight: FontWeight.w600,
                           color: AppColors.red,
                           letterSpacing: 1,
                         ),
@@ -320,7 +320,7 @@ class ProfilScreen extends StatelessWidget {
             label,
             style: GoogleFonts.poppins(
               fontSize: 10,
-              fontWeight: FontWeight.w700,
+              fontWeight: FontWeight.w600,
               letterSpacing: 1,
               color: AppColors.textMuted,
             ),
@@ -333,7 +333,7 @@ class ProfilScreen extends StatelessWidget {
                   text: value,
                   style: GoogleFonts.poppins(
                     fontSize: 22,
-                    fontWeight: FontWeight.w900,
+                    fontWeight: FontWeight.w600,
                     color: AppColors.textPrimary,
                   ),
                 ),

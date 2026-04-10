@@ -87,7 +87,7 @@ class _MainScreenState extends State<MainScreen> {
             label,
             style: GoogleFonts.poppins(
               fontSize: 11,
-              fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
+              fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
               color: isActive ? AppColors.primary : AppColors.textMuted,
             ),
           ),

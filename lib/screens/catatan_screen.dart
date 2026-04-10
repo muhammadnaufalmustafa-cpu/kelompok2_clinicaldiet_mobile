@@ -76,7 +76,7 @@ class _CatatanScreenState extends State<CatatanScreen> {
                     'Clinical Diet',
                     style: GoogleFonts.poppins(
                       fontSize: 16,
-                      fontWeight: FontWeight.w800,
+                      fontWeight: FontWeight.w600,
                       color: AppColors.primary,
                     ),
                   ),
@@ -91,7 +91,7 @@ class _CatatanScreenState extends State<CatatanScreen> {
             'Catatan Makan Hari Ini',
             style: GoogleFonts.poppins(
               fontSize: 20,
-              fontWeight: FontWeight.w900,
+              fontWeight: FontWeight.w600,
               color: AppColors.textPrimary,
             ),
           ),
@@ -100,7 +100,7 @@ class _CatatanScreenState extends State<CatatanScreen> {
             'HARI INI',
             style: GoogleFonts.poppins(
               fontSize: 10,
-              fontWeight: FontWeight.w700,
+              fontWeight: FontWeight.w600,
               letterSpacing: 1.2,
               color: AppColors.textMuted,
             ),
@@ -110,7 +110,7 @@ class _CatatanScreenState extends State<CatatanScreen> {
             'Minggu, 25 Maret 2026',
             style: GoogleFonts.poppins(
               fontSize: 18,
-              fontWeight: FontWeight.w900,
+              fontWeight: FontWeight.w600,
               color: AppColors.textPrimary,
             ),
           ),
@@ -134,7 +134,7 @@ class _CatatanScreenState extends State<CatatanScreen> {
                 'BAGIAN ${_page + 1}/2',
                 style: GoogleFonts.poppins(
                   fontSize: 11,
-                  fontWeight: FontWeight.w700,
+                  fontWeight: FontWeight.w600,
                   color: AppColors.primary,
                 ),
               ),
@@ -228,7 +228,7 @@ class _CatatanScreenState extends State<CatatanScreen> {
               label,
               style: GoogleFonts.poppins(
                 fontSize: 13,
-                fontWeight: FontWeight.w800,
+                fontWeight: FontWeight.w600,
                 letterSpacing: 0.8,
                 color: AppColors.textPrimary,
               ),
@@ -307,7 +307,7 @@ class _CatatanScreenState extends State<CatatanScreen> {
             _page == 0 ? 'LANJUT KE MAKAN SIANG' : 'KIRIM LAPORAN',
             style: GoogleFonts.poppins(
               fontSize: 15,
-              fontWeight: FontWeight.w800,
+              fontWeight: FontWeight.w600,
               letterSpacing: 1.2,
               color: Colors.white,
             ),

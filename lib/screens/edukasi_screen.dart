@@ -71,7 +71,7 @@ class _EdukasiScreenState extends State<EdukasiScreen> {
               'Edukasi',
               style: GoogleFonts.poppins(
                 fontSize: 22,
-                fontWeight: FontWeight.w900,
+                fontWeight: FontWeight.w600,
                 color: AppColors.textPrimary,
               ),
             ),
@@ -138,7 +138,7 @@ class _EdukasiScreenState extends State<EdukasiScreen> {
                           child: Text(
                             filters[i],
                             style: GoogleFonts.poppins(
-                              fontWeight: FontWeight.w700,
+                              fontWeight: FontWeight.w600,
                               fontSize: 13,
                               color: _selectedFilter == i
                                   ? Colors.white
@@ -159,7 +159,7 @@ class _EdukasiScreenState extends State<EdukasiScreen> {
                     'Artikel Terbaru',
                     style: GoogleFonts.poppins(
                       fontSize: 17,
-                      fontWeight: FontWeight.w800,
+                      fontWeight: FontWeight.w600,
                       color: AppColors.textPrimary,
                     ),
                   ),
@@ -212,7 +212,7 @@ class _EdukasiScreenState extends State<EdukasiScreen> {
                     'Hidrasi & Kesehatan',
                     style: GoogleFonts.poppins(
                         color: AppColors.primaryDark,
-                        fontWeight: FontWeight.w700),
+                        fontWeight: FontWeight.w600),
                   ),
                 ],
               ),
@@ -227,7 +227,7 @@ class _EdukasiScreenState extends State<EdukasiScreen> {
                   'Pentingnya Air Putih untuk Diet',
                   style: GoogleFonts.poppins(
                     fontSize: 16,
-                    fontWeight: FontWeight.w800,
+                    fontWeight: FontWeight.w600,
                     color: AppColors.textPrimary,
                   ),
                 ),
@@ -242,7 +242,7 @@ class _EdukasiScreenState extends State<EdukasiScreen> {
                   'Baca Selengkapnya',
                   style: GoogleFonts.poppins(
                     fontSize: 13,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w600,
                     color: AppColors.primary,
                   ),
                 ),
@@ -282,7 +282,7 @@ class _EdukasiScreenState extends State<EdukasiScreen> {
                   article['title'] as String,
                   style: GoogleFonts.poppins(
                     fontSize: 14,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w600,
                     color: AppColors.textPrimary,
                   ),
                 ),

@@ -68,7 +68,7 @@ class HomeScreen extends StatelessWidget {
                 'Clinical Diet',
                 style: GoogleFonts.poppins(
                   fontSize: 18,
-                  fontWeight: FontWeight.w800,
+                  fontWeight: FontWeight.w600,
                   color: AppColors.primary,
                 ),
               ),
@@ -91,7 +91,7 @@ class HomeScreen extends StatelessWidget {
                   style: GoogleFonts.poppins(
                     color: AppColors.primary,
                     fontSize: 12,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ),
@@ -133,7 +133,7 @@ class HomeScreen extends StatelessWidget {
                 '1.840',
                 style: GoogleFonts.poppins(
                   fontSize: 34,
-                  fontWeight: FontWeight.w900,
+                  fontWeight: FontWeight.w600,
                   color: AppColors.textPrimary,
                   height: 1.1,
                 ),
@@ -163,7 +163,7 @@ class HomeScreen extends StatelessWidget {
             'Ringkasan Vitalitas Harian',
             style: GoogleFonts.poppins(
               fontSize: 17,
-              fontWeight: FontWeight.w800,
+              fontWeight: FontWeight.w600,
               color: AppColors.textPrimary,
             ),
           ),
@@ -190,7 +190,7 @@ class HomeScreen extends StatelessWidget {
               label,
               style: GoogleFonts.poppins(
                 fontSize: 11,
-                fontWeight: FontWeight.w700,
+                fontWeight: FontWeight.w600,
                 letterSpacing: 1,
                 color: AppColors.textSecondary,
               ),
@@ -199,7 +199,7 @@ class HomeScreen extends StatelessWidget {
               caption,
               style: GoogleFonts.poppins(
                 fontSize: 12,
-                fontWeight: FontWeight.w700,
+                fontWeight: FontWeight.w600,
                 color: color,
               ),
             ),
@@ -263,7 +263,7 @@ class HomeScreen extends StatelessWidget {
                 'Catat',
                 style: GoogleFonts.poppins(
                     color: AppColors.primaryDark,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w600,
                     fontSize: 12),
               ),
             ),
@@ -293,7 +293,7 @@ class HomeScreen extends StatelessWidget {
                   'Laporan Harian',
                   style: GoogleFonts.poppins(
                     fontSize: 16,
-                    fontWeight: FontWeight.w800,
+                    fontWeight: FontWeight.w600,
                     color: AppColors.textPrimary,
                   ),
                 ),
@@ -304,7 +304,7 @@ class HomeScreen extends StatelessWidget {
               'ANALISIS KLINIS',
               style: GoogleFonts.poppins(
                 fontSize: 10,
-                fontWeight: FontWeight.w700,
+                fontWeight: FontWeight.w600,
                 letterSpacing: 1.2,
                 color: AppColors.textMuted,
               ),
@@ -353,7 +353,7 @@ class HomeScreen extends StatelessWidget {
           Text(value,
               style: GoogleFonts.poppins(
                   fontSize: 14,
-                  fontWeight: FontWeight.w800,
+                  fontWeight: FontWeight.w600,
                   color: AppColors.primary)),
         ],
       ),
@@ -389,7 +389,7 @@ class HomeScreen extends StatelessWidget {
             value,
             style: GoogleFonts.poppins(
               fontSize: 22,
-              fontWeight: FontWeight.w900,
+              fontWeight: FontWeight.w600,
               color: AppColors.textPrimary,
             ),
           ),
@@ -397,7 +397,7 @@ class HomeScreen extends StatelessWidget {
             label,
             style: GoogleFonts.poppins(
               fontSize: 10,
-              fontWeight: FontWeight.w700,
+              fontWeight: FontWeight.w600,
               color: AppColors.textSecondary,
               letterSpacing: 0.8,
             ),

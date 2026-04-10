@@ -98,7 +98,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       'Clinical Diet',
                       style: GoogleFonts.poppins(
                         fontSize: 16,
-                        fontWeight: FontWeight.w800,
+                        fontWeight: FontWeight.w600,
                         color: AppColors.primary,
                       ),
                     ),
@@ -141,7 +141,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     'ClinicalDietMobile',
                     style: GoogleFonts.poppins(
                       fontSize: 13,
-                      fontWeight: FontWeight.w700,
+                      fontWeight: FontWeight.w600,
                       color: AppColors.textSecondary,
                     ),
                   ),
@@ -154,7 +154,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     'Masuk ke Aplikasi',
                     style: GoogleFonts.poppins(
                       fontSize: 22,
-                      fontWeight: FontWeight.w900,
+                      fontWeight: FontWeight.w600,
                       color: AppColors.textPrimary,
                     ),
                   ),
@@ -166,7 +166,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   'NOMOR REKAM MEDIS (RM)',
                   style: GoogleFonts.poppins(
                     fontSize: 11,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w600,
                     letterSpacing: 1,
                     color: AppColors.textSecondary,
                   ),
@@ -192,7 +192,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   'KATA SANDI',
                   style: GoogleFonts.poppins(
                     fontSize: 11,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w600,
                     letterSpacing: 1,
                     color: AppColors.textSecondary,
                   ),
@@ -248,7 +248,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             'MASUK',
                             style: GoogleFonts.poppins(
                               fontSize: 16,
-                              fontWeight: FontWeight.w800,
+                              fontWeight: FontWeight.w600,
                               letterSpacing: 1.5,
                             ),
                           ),
@@ -371,7 +371,7 @@ class _LoginScreenState extends State<LoginScreen> {
               label,
               style: GoogleFonts.poppins(
                 fontSize: 11,
-                fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w600,
                 color: isSelected ? AppColors.primary : AppColors.textMuted,
               ),
             ),

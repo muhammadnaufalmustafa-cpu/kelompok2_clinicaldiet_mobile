@@ -117,7 +117,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               'Clinical Diet',
               style: GoogleFonts.poppins(
                 fontSize: 18,
-                fontWeight: FontWeight.w800,
+                fontWeight: FontWeight.w600,
                 color: AppColors.primaryDark,
               ),
             ),
@@ -133,7 +133,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               'Daftar Akun Baru',
               style: GoogleFonts.poppins(
                 fontSize: 24,
-                fontWeight: FontWeight.w800,
+                fontWeight: FontWeight.w600,
                 color: AppColors.textPrimary,
               ),
             ),
@@ -255,7 +255,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         'DAFTAR',
                         style: GoogleFonts.poppins(
                           fontSize: 16,
-                          fontWeight: FontWeight.w700,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
               ),
@@ -282,7 +282,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         text: 'Masuk di sini',
                         style: GoogleFonts.poppins(
                           color: AppColors.primary,
-                          fontWeight: FontWeight.w700,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                     ],
@@ -385,7 +385,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       suffixText,
                       style: GoogleFonts.poppins(
                         color: AppColors.textPrimary,
-                        fontWeight: FontWeight.w700,
+                        fontWeight: FontWeight.w600,
                         fontSize: 14,
                       ),
                     ),
@@ -471,7 +471,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               label,
               style: GoogleFonts.poppins(
                 fontSize: 11,
-                fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w600,
                 color: isSelected ? AppColors.primary : AppColors.textMuted,
               ),
             ),
