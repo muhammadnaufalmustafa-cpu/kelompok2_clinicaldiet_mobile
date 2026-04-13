@@ -141,7 +141,15 @@ class _EvaluasiPasienScreenState extends State<EvaluasiPasienScreen> {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
-                onPressed: () {},
+                onPressed: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Membuka WhatsApp Pasien...', style: GoogleFonts.manrope()),
+                      backgroundColor: AppColors.primary,
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                },
                 icon: const Icon(Icons.chat_outlined,
                     color: Colors.white, size: 20),
                 label: Text(

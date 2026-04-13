@@ -21,7 +21,7 @@ class HomeScreen extends StatelessWidget {
                 _buildTopBar(context),
                 _buildCalorieRing(),
                 _buildNutritionSummary(),
-                _buildReminderCard(),
+                _buildReminderCard(context),
                 _buildDailyReport(),
                 _buildBottomStats(),
                 const SizedBox(height: 16),
@@ -33,7 +33,15 @@ class HomeScreen extends StatelessWidget {
             bottom: 24,
             right: 24,
             child: FloatingActionButton(
-              onPressed: () {},
+              onPressed: () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Fitur tambah data akan segera hadir.', style: GoogleFonts.manrope()),
+                    backgroundColor: AppColors.primary,
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              },
               backgroundColor: AppColors.primary,
               shape: const CircleBorder(),
               child: const Icon(Icons.add, color: Colors.white, size: 28),
@@ -77,7 +85,15 @@ class HomeScreen extends StatelessWidget {
           Row(
             children: [
               OutlinedButton(
-                onPressed: () {},
+                onPressed: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Beralih mode pengguna...', style: GoogleFonts.manrope()),
+                      backgroundColor: AppColors.primary,
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                },
                 style: OutlinedButton.styleFrom(
                   side: const BorderSide(color: AppColors.primary),
                   padding:
@@ -218,7 +234,7 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildReminderCard() {
+  Widget _buildReminderCard(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
       child: Container(
@@ -252,7 +268,15 @@ class HomeScreen extends StatelessWidget {
             ),
             const SizedBox(width: 8),
             TextButton(
-              onPressed: () {},
+              onPressed: () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Membuka form pencatatan...', style: GoogleFonts.manrope()),
+                    backgroundColor: AppColors.primary,
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              },
               style: TextButton.styleFrom(
                 backgroundColor: AppColors.primaryLight,
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),

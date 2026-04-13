@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'theme/app_theme.dart';
 import 'screens/login_screen.dart';
+import 'screens/main_screen.dart';
+import 'services/auth_service.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
   SystemChrome.setSystemUIOverlayStyle(
@@ -12,11 +14,15 @@ void main() {
       statusBarIconBrightness: Brightness.dark,
     ),
   );
-  runApp(const ClinicalDietApp());
+  
+  final isLoggedIn = await AuthService.isLoggedIn();
+  
+  runApp(ClinicalDietApp(isLoggedIn: isLoggedIn));
 }
 
 class ClinicalDietApp extends StatelessWidget {
-  const ClinicalDietApp({super.key});
+  final bool isLoggedIn;
+  const ClinicalDietApp({super.key, this.isLoggedIn = false});
 
   @override
   Widget build(BuildContext context) {
@@ -24,7 +30,7 @@ class ClinicalDietApp extends StatelessWidget {
       title: 'ClinicalDiet',
       debugShowCheckedModeBanner: false,
       theme: buildAppTheme(),
-      home: const LoginScreen(),
+      home: isLoggedIn ? const MainScreen() : const LoginScreen(),
     );
   }
 }

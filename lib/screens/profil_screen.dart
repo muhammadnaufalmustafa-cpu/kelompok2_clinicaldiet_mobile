@@ -4,8 +4,30 @@ import '../theme/app_theme.dart';
 import '../services/auth_service.dart';
 import 'login_screen.dart';
 
-class ProfilScreen extends StatelessWidget {
+class ProfilScreen extends StatefulWidget {
   const ProfilScreen({super.key});
+
+  @override
+  State<ProfilScreen> createState() => _ProfilScreenState();
+}
+
+class _ProfilScreenState extends State<ProfilScreen> {
+  Map<String, dynamic>? _user;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUser();
+  }
+
+  Future<void> _loadUser() async {
+    final user = await AuthService.getLoggedInUser();
+    if (mounted) {
+      setState(() {
+        _user = user;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -91,7 +113,7 @@ class ProfilScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    'Siska Amelia',
+                    _user?['name'] ?? 'Memuat...',
                     style: GoogleFonts.manrope(
                       fontSize: 20,
                       fontWeight: FontWeight.w600,
@@ -100,7 +122,7 @@ class ProfilScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    'ID Pasien: #CD-88219',
+                    'ID Pasien: #CD-${_user?['rm'] ?? '...'}',
                     style: GoogleFonts.manrope(
                       fontSize: 13,
                       color: AppColors.textSecondary,
@@ -111,9 +133,9 @@ class ProfilScreen extends StatelessWidget {
                   // Berat & Tinggi
                   Row(
                     children: [
-                      Expanded(child: _buildBodyStat('BERAT BADAN', '64.5', 'kg')),
+                      Expanded(child: _buildBodyStat('BERAT BADAN', _user?['weight']?.toString() ?? '-', 'kg')),
                       const SizedBox(width: 12),
-                      Expanded(child: _buildBodyStat('TINGGI BADAN', '168', 'cm')),
+                      Expanded(child: _buildBodyStat('TINGGI BADAN', _user?['height']?.toString() ?? '-', 'cm')),
                     ],
                   ),
                   const SizedBox(height: 12),
@@ -181,7 +203,15 @@ class ProfilScreen extends StatelessWidget {
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
-                      onPressed: () {},
+                      onPressed: () {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Membuka WhatsApp Ahli Gizi...', style: GoogleFonts.manrope()),
+                            backgroundColor: AppColors.primary,
+                            behavior: SnackBarBehavior.floating,
+                          ),
+                        );
+                      },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primary,
                         padding: const EdgeInsets.symmetric(vertical: 14),
@@ -257,21 +287,25 @@ class ProfilScreen extends StatelessWidget {
                     child: Column(
                       children: [
                         _buildMenuItem(
+                          context,
                           icon: Icons.favorite_border,
                           title: 'Informasi Kesehatan',
                         ),
                         _divider(),
                         _buildMenuItem(
+                          context,
                           icon: Icons.track_changes_outlined,
                           title: 'Target Diet',
                         ),
                         _divider(),
                         _buildMenuItem(
+                          context,
                           icon: Icons.shield_outlined,
                           title: 'Privasi & Keamanan',
                         ),
                         _divider(),
                         _buildMenuItem(
+                          context,
                           icon: Icons.settings_outlined,
                           title: 'Pengaturan Akun',
                         ),
@@ -366,7 +400,7 @@ class ProfilScreen extends StatelessWidget {
   Widget _divider() =>
       Divider(height: 1, thickness: 1, color: AppColors.divider, indent: 56);
 
-  Widget _buildMenuItem({required IconData icon, required String title}) {
+  Widget _buildMenuItem(BuildContext context, {required IconData icon, required String title}) {
     return ListTile(
       leading: Container(
         width: 36,
@@ -387,7 +421,15 @@ class ProfilScreen extends StatelessWidget {
       ),
       trailing:
           const Icon(Icons.chevron_right, color: AppColors.textMuted, size: 20),
-      onTap: () {},
+      onTap: () {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Fitur $title akan segera hadir.', style: GoogleFonts.manrope()),
+            backgroundColor: AppColors.primary,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      },
     );
   }
 }
