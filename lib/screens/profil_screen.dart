@@ -29,6 +29,172 @@ class _ProfilScreenState extends State<ProfilScreen> {
     }
   }
 
+  void _showUpdateBBTBDialog() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.fromLTRB(
+            24, 24, 24, MediaQuery.of(ctx).viewInsets.bottom + 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Catat BB & TB',
+                style: GoogleFonts.manrope(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimary)),
+            const SizedBox(height: 8),
+            Text('Perbarui data fisik Anda untuk memantau IMT harian.',
+                style: GoogleFonts.manrope(
+                    fontSize: 13, color: AppColors.textSecondary)),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    keyboardType: TextInputType.number,
+                    decoration: InputDecoration(
+                      labelText: 'Berat Badan',
+                      hintText: _user?['weight']?.toString() ?? '0',
+                      suffixText: 'kg',
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: TextField(
+                    keyboardType: TextInputType.number,
+                    decoration: InputDecoration(
+                      labelText: 'Tinggi Badan',
+                      hintText: _user?['height']?.toString() ?? '0',
+                      suffixText: 'cm',
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                    content: Text('Data berhasil diperbarui!',
+                        style: GoogleFonts.manrope()),
+                    backgroundColor: AppColors.primary,
+                    behavior: SnackBarBehavior.floating,
+                  ));
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ),
+                child: Text('SIMPAN',
+                    style: GoogleFonts.manrope(
+                        fontWeight: FontWeight.w600, color: Colors.white)),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  int _selectedRating = 5;
+
+  void _showRatingDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setStateDialog) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Text('Beri Rating Ahli Gizi',
+              style: GoogleFonts.manrope(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 18,
+                  color: AppColors.textPrimary)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('Seberapa puas Anda dengan pelayanan ahli gizi Anda?',
+                  style: GoogleFonts.manrope(
+                      fontSize: 14, color: AppColors.textSecondary),
+                  textAlign: TextAlign.center),
+              const SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(5, (index) {
+                  return IconButton(
+                    onPressed: () {
+                      setStateDialog(() {
+                        _selectedRating = index + 1;
+                      });
+                    },
+                    icon: Icon(
+                      index < _selectedRating ? Icons.star : Icons.star_border,
+                      color: const Color(0xFFF59E0B),
+                      size: 32,
+                    ),
+                  );
+                }),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('Batal',
+                  style: GoogleFonts.manrope(
+                      color: AppColors.textSecondary,
+                      fontWeight: FontWeight.w600)),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                Navigator.pop(context);
+                
+                // Ambil daftar ahli gizi untuk simulasikan update
+                final ahliGiziList = await AuthService.getAllAhliGizi();
+                if (ahliGiziList.isNotEmpty) {
+                  final ag = ahliGiziList.first; // Ambil ahli gizi pertama sementara karena UI blm simpan ID
+                  await AuthService.submitRatingAhliGizi(ag['nip'], _selectedRating.toDouble());
+                }
+
+                if (!context.mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                  content: Text('Terima kasih atas penilaian Anda!',
+                      style: GoogleFonts.manrope()),
+                  backgroundColor: AppColors.primary,
+                  behavior: SnackBarBehavior.floating,
+                ));
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
+              ),
+              child: Text('Kirim',
+                  style: GoogleFonts.manrope(
+                      color: Colors.white, fontWeight: FontWeight.w600)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -156,7 +322,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'BMI SAAT INI',
+                          'IMT SAAT INI',
                           style: GoogleFonts.manrope(
                             fontSize: 10,
                             fontWeight: FontWeight.w600,
@@ -195,6 +361,21 @@ class _ProfilScreenState extends State<ProfilScreen> {
                           ],
                         ),
                       ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: _showUpdateBBTBDialog,
+                      icon: const Icon(Icons.monitor_weight_outlined, size: 18, color: AppColors.primary),
+                      label: Text('Catat BB & TB Hari Ini', style: GoogleFonts.manrope(fontWeight: FontWeight.w600, color: AppColors.primary)),
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: AppColors.primary),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -250,6 +431,23 @@ class _ProfilScreenState extends State<ProfilScreen> {
                           const Icon(Icons.arrow_forward,
                               color: Colors.white, size: 18),
                         ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Rating button
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: _showRatingDialog,
+                      icon: const Icon(Icons.star_outline, size: 20, color: Color(0xFFD97706)),
+                      label: Text('Beri Rating Ahli Gizi', style: GoogleFonts.manrope(fontWeight: FontWeight.w600, color: const Color(0xFFD97706))),
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: Color(0xFFFDE68A)),
+                        backgroundColor: const Color(0xFFFEF3C7),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                       ),
                     ),
                   ),

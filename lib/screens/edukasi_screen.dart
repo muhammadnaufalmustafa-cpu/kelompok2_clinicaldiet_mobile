@@ -9,7 +9,38 @@ class EdukasiScreen extends StatefulWidget {
   State<EdukasiScreen> createState() => _EdukasiScreenState();
 }
 
-class _EdukasiScreenState extends State<EdukasiScreen> {
+class _EdukasiScreenState extends State<EdukasiScreen>
+    with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+
+  final List<Map<String, String>> _leaflets = [
+    {
+      'title': 'Diet Jantung Sehat',
+      'desc': 'Panduan diet rendah lemak jenuh untuk pasien kardiovaskular',
+      'category': 'Kardiovaskular',
+    },
+    {
+      'title': 'Diet Diabetes Mellitus',
+      'desc': 'Pengaturan karbohidrat dan indeks glikemik untuk pasien DM',
+      'category': 'Metabolik',
+    },
+    {
+      'title': 'Diet Tinggi Kalori Tinggi Protein (TKTP)',
+      'desc': 'Panduan diet untuk pasien gizi buruk / pasca operasi',
+      'category': 'Gizi Kurang',
+    },
+    {
+      'title': 'Diet Rendah Garam',
+      'desc': 'Pembatasan natrium untuk pasien hipertensi dan gagal ginjal',
+      'category': 'Hipertensi',
+    },
+    {
+      'title': 'Diet Gizi Kurang',
+      'desc': 'Peningkatan asupan energi dan protein untuk pasien malnutrisi',
+      'category': 'Gizi Kurang',
+    },
+  ];
+
   int _selectedFilter = 0;
   final filters = ['Semua', 'Nutrisi', 'Olahraga', 'Psikologi'];
 
@@ -52,134 +83,243 @@ class _EdukasiScreenState extends State<EdukasiScreen> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this, initialIndex: 1);
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        title: Text(
+          'Edukasi',
+          style: GoogleFonts.manrope(
+            fontSize: 22,
+            fontWeight: FontWeight.w600,
+            color: AppColors.textPrimary,
+          ),
+        ),
+        actions: [
+          Container(
+            margin: const EdgeInsets.only(right: 16),
+            width: 36,
+            height: 36,
+            decoration: const BoxDecoration(
+              color: AppColors.surface,
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.person_outline,
+                color: AppColors.textSecondary, size: 20),
+          ),
+        ],
+        bottom: TabBar(
+          controller: _tabController,
+          indicatorColor: AppColors.primary,
+          labelColor: AppColors.primary,
+          unselectedLabelColor: AppColors.textSecondary,
+          labelStyle:
+              GoogleFonts.manrope(fontWeight: FontWeight.w600, fontSize: 13),
+          tabs: const [
+            Tab(text: 'Leaflet Diet'),
+            Tab(text: 'Artikel'),
+          ],
+        ),
+      ),
+      body: TabBarView(
+        controller: _tabController,
+        children: [
+          _buildLeafletTab(),
+          _buildArtikelTab(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLeafletTab() {
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: _leaflets.length,
+      itemBuilder: (ctx, i) {
+        final l = _leaflets[i];
+        return Container(
+          margin: const EdgeInsets.only(bottom: 10),
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: AppColors.primaryLight,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(Icons.picture_as_pdf,
+                    color: AppColors.primary, size: 26),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(l['title']!,
+                        style: GoogleFonts.manrope(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textPrimary)),
+                    const SizedBox(height: 2),
+                    Text(l['desc']!,
+                        style: GoogleFonts.manrope(
+                            fontSize: 12, color: AppColors.textSecondary,
+                            height: 1.4)),
+                    const SizedBox(height: 4),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: AppColors.primaryLight,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(l['category']!,
+                          style: GoogleFonts.manrope(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.primaryDark)),
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.download_outlined,
+                    color: AppColors.textMuted, size: 20),
+                onPressed: () {
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                    content: Text('Mengunduh leaflet "${l['title']}"...',
+                        style: GoogleFonts.manrope()),
+                    backgroundColor: AppColors.primary,
+                    behavior: SnackBarBehavior.floating,
+                  ));
+                },
+              ),
+            ],
+          ),
+        );
+      }
+    );
+  }
+
+  Widget _buildArtikelTab() {
     final filtered = _selectedFilter == 0
         ? articles
         : articles
             .where((a) => a['category'] == filters[_selectedFilter])
             .toList();
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: CustomScrollView(
-        slivers: [
-          SliverAppBar(
-            floating: true,
-            backgroundColor: AppColors.background,
-            elevation: 0,
-            title: Text(
-              'Edukasi',
-              style: GoogleFonts.manrope(
-                fontSize: 22,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textPrimary,
-              ),
-            ),
-            actions: [
-              Container(
-                margin: const EdgeInsets.only(right: 16),
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.person_outline,
-                    color: AppColors.textSecondary, size: 20),
-              ),
-            ],
-          ),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Search bar
-                  Container(
-                    decoration: BoxDecoration(
-                      color: AppColors.surface,
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: TextField(
-                      decoration: InputDecoration(
-                        hintText: 'Cari tips atau artikel...',
-                        hintStyle: GoogleFonts.manrope(
-                            color: AppColors.textMuted, fontSize: 14),
-                        prefixIcon: const Icon(Icons.search,
-                            color: AppColors.textMuted),
-                        border: InputBorder.none,
-                        contentPadding: const EdgeInsets.symmetric(
-                            vertical: 14, horizontal: 16),
-                      ),
+    return CustomScrollView(
+      slivers: [
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Search bar
+                Container(
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: TextField(
+                    decoration: InputDecoration(
+                      hintText: 'Cari tips atau artikel...',
+                      hintStyle: GoogleFonts.manrope(
+                          color: AppColors.textMuted, fontSize: 14),
+                      prefixIcon: const Icon(Icons.search,
+                          color: AppColors.textMuted),
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(
+                          vertical: 14, horizontal: 16),
                     ),
                   ),
-                  const SizedBox(height: 14),
+                ),
+                const SizedBox(height: 14),
 
-                  // Filter chips
-                  SizedBox(
-                    height: 36,
-                    child: ListView.separated(
-                      scrollDirection: Axis.horizontal,
-                      itemCount: filters.length,
-                      separatorBuilder: (context, index) => const SizedBox(width: 8),
-                      itemBuilder: (context, i) => GestureDetector(
-                        onTap: () => setState(() => _selectedFilter = i),
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 200),
-                          padding: const EdgeInsets.symmetric(horizontal: 18),
-                          decoration: BoxDecoration(
+                // Filter chips
+                SizedBox(
+                  height: 36,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: filters.length,
+                    separatorBuilder: (context, index) => const SizedBox(width: 8),
+                    itemBuilder: (context, i) => GestureDetector(
+                      onTap: () => setState(() => _selectedFilter = i),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        padding: const EdgeInsets.symmetric(horizontal: 18),
+                        decoration: BoxDecoration(
+                          color: _selectedFilter == i
+                              ? AppColors.primary
+                              : AppColors.surface,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(
+                          filters[i],
+                          style: GoogleFonts.manrope(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
                             color: _selectedFilter == i
-                                ? AppColors.primary
-                                : AppColors.surface,
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          alignment: Alignment.center,
-                          child: Text(
-                            filters[i],
-                            style: GoogleFonts.manrope(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 13,
-                              color: _selectedFilter == i
-                                  ? Colors.white
-                                  : AppColors.textSecondary,
-                            ),
+                                ? Colors.white
+                                : AppColors.textSecondary,
                           ),
                         ),
                       ),
                     ),
                   ),
-                  const SizedBox(height: 18),
+                ),
+                const SizedBox(height: 18),
 
-                  // Featured article
-                  _buildFeaturedCard(),
-                  const SizedBox(height: 20),
+                // Featured article
+                _buildFeaturedCard(),
+                const SizedBox(height: 20),
 
-                  Text(
-                    'Artikel Terbaru',
-                    style: GoogleFonts.manrope(
-                      fontSize: 17,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textPrimary,
-                    ),
+                Text(
+                  'Artikel Terbaru',
+                  style: GoogleFonts.manrope(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimary,
                   ),
-                  const SizedBox(height: 12),
-                ],
-              ),
+                ),
+                const SizedBox(height: 12),
+              ],
             ),
           ),
-          SliverList(
-            delegate: SliverChildBuilderDelegate(
-              (context, i) => Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
-                child: _buildArticleTile(filtered[i]),
-              ),
-              childCount: filtered.length,
+        ),
+        SliverList(
+          delegate: SliverChildBuilderDelegate(
+            (context, i) => Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+              child: _buildArticleTile(filtered[i]),
             ),
+            childCount: filtered.length,
           ),
-          const SliverToBoxAdapter(child: SizedBox(height: 20)),
-        ],
-      ),
+        ),
+        const SliverToBoxAdapter(child: SizedBox(height: 20)),
+      ],
     );
   }
 

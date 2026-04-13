@@ -30,6 +30,24 @@ class _CatatanScreenState extends State<CatatanScreen> {
     super.dispose();
   }
 
+  final List<String> _hariNames = [
+    '', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'
+  ];
+  final List<String> _bulanNames = [
+    '', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+    'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+  ];
+
+  String _formatTanggal(DateTime dt) {
+    return '${_hariNames[dt.weekday]}, ${dt.day} ${_bulanNames[dt.month]} ${dt.year}';
+  }
+
+  String _formatJam(DateTime dt) {
+    final h = dt.hour.toString().padLeft(2, '0');
+    final m = dt.minute.toString().padLeft(2, '0');
+    return '$h.$m WIB';
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -107,11 +125,19 @@ class _CatatanScreenState extends State<CatatanScreen> {
           ),
           const SizedBox(height: 2),
           Text(
-            'Minggu, 25 Maret 2026',
+            _formatTanggal(DateTime.now()),
             style: GoogleFonts.manrope(
               fontSize: 18,
               fontWeight: FontWeight.w600,
               color: AppColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Waktu pengisian: ${_formatJam(DateTime.now())}',
+            style: GoogleFonts.manrope(
+              fontSize: 12,
+              color: AppColors.textSecondary,
             ),
           ),
           const SizedBox(height: 12),
