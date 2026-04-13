@@ -74,7 +74,7 @@ class _CatatanScreenState extends State<CatatanScreen> {
                   const SizedBox(width: 8),
                   Text(
                     'Clinical Diet',
-                    style: GoogleFonts.poppins(
+                    style: GoogleFonts.manrope(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
                       color: AppColors.primary,
@@ -89,7 +89,7 @@ class _CatatanScreenState extends State<CatatanScreen> {
           const SizedBox(height: 16),
           Text(
             'Catatan Makan Hari Ini',
-            style: GoogleFonts.poppins(
+            style: GoogleFonts.manrope(
               fontSize: 20,
               fontWeight: FontWeight.w600,
               color: AppColors.textPrimary,
@@ -98,7 +98,7 @@ class _CatatanScreenState extends State<CatatanScreen> {
           const SizedBox(height: 12),
           Text(
             'HARI INI',
-            style: GoogleFonts.poppins(
+            style: GoogleFonts.manrope(
               fontSize: 10,
               fontWeight: FontWeight.w600,
               letterSpacing: 1.2,
@@ -108,7 +108,7 @@ class _CatatanScreenState extends State<CatatanScreen> {
           const SizedBox(height: 2),
           Text(
             'Minggu, 25 Maret 2026',
-            style: GoogleFonts.poppins(
+            style: GoogleFonts.manrope(
               fontSize: 18,
               fontWeight: FontWeight.w600,
               color: AppColors.textPrimary,
@@ -132,7 +132,7 @@ class _CatatanScreenState extends State<CatatanScreen> {
               const SizedBox(width: 10),
               Text(
                 'BAGIAN ${_page + 1}/2',
-                style: GoogleFonts.poppins(
+                style: GoogleFonts.manrope(
                   fontSize: 11,
                   fontWeight: FontWeight.w600,
                   color: AppColors.primary,
@@ -226,7 +226,7 @@ class _CatatanScreenState extends State<CatatanScreen> {
             const SizedBox(width: 10),
             Text(
               label,
-              style: GoogleFonts.poppins(
+              style: GoogleFonts.manrope(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
                 letterSpacing: 0.8,
@@ -245,10 +245,10 @@ class _CatatanScreenState extends State<CatatanScreen> {
           child: TextField(
             controller: controller,
             maxLines: 3,
-            style: GoogleFonts.poppins(fontSize: 14, color: AppColors.textPrimary),
+            style: GoogleFonts.manrope(fontSize: 14, color: AppColors.textPrimary),
             decoration: InputDecoration(
               hintText: hint,
-              hintStyle: GoogleFonts.poppins(
+              hintStyle: GoogleFonts.manrope(
                   color: AppColors.textMuted, fontSize: 13, height: 1.5),
               border: InputBorder.none,
               contentPadding: const EdgeInsets.all(14),
@@ -259,7 +259,7 @@ class _CatatanScreenState extends State<CatatanScreen> {
           const SizedBox(height: 8),
           Text(
             tip,
-            style: GoogleFonts.poppins(
+            style: GoogleFonts.manrope(
                 fontSize: 12, color: AppColors.textSecondary, height: 1.5),
           ),
         ],
@@ -288,7 +288,7 @@ class _CatatanScreenState extends State<CatatanScreen> {
                 SnackBar(
                   content: Text(
                     'Laporan berhasil dikirim!',
-                    style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+                    style: GoogleFonts.manrope(fontWeight: FontWeight.w600),
                   ),
                   backgroundColor: AppColors.primary,
                   behavior: SnackBarBehavior.floating,
@@ -305,7 +305,7 @@ class _CatatanScreenState extends State<CatatanScreen> {
           ),
           label: Text(
             _page == 0 ? 'LANJUT KE MAKAN SIANG' : 'KIRIM LAPORAN',
-            style: GoogleFonts.poppins(
+            style: GoogleFonts.manrope(
               fontSize: 15,
               fontWeight: FontWeight.w600,
               letterSpacing: 1.2,

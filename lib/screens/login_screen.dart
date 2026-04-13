@@ -53,7 +53,7 @@ class _LoginScreenState extends State<LoginScreen> {
   void _showError(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message, style: GoogleFonts.poppins()),
+        content: Text(message, style: GoogleFonts.manrope()),
         backgroundColor: Colors.redAccent,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -96,7 +96,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     const SizedBox(width: 8),
                     Text(
                       'Clinical Diet',
-                      style: GoogleFonts.poppins(
+                      style: GoogleFonts.manrope(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
                         color: AppColors.primary,
@@ -125,7 +125,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         child: Text(
                           'Simpan\nlogo.png',
                           textAlign: TextAlign.center,
-                          style: GoogleFonts.poppins(
+                          style: GoogleFonts.manrope(
                             fontSize: 12,
                             fontWeight: FontWeight.bold,
                             color: AppColors.primary,
@@ -139,7 +139,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 Center(
                   child: Text(
                     'ClinicalDietMobile',
-                    style: GoogleFonts.poppins(
+                    style: GoogleFonts.manrope(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
                       color: AppColors.textSecondary,
@@ -152,7 +152,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 Center(
                   child: Text(
                     'Masuk ke Aplikasi',
-                    style: GoogleFonts.poppins(
+                    style: GoogleFonts.manrope(
                       fontSize: 22,
                       fontWeight: FontWeight.w600,
                       color: AppColors.textPrimary,
@@ -164,7 +164,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 // RM field
                 Text(
                   'NOMOR REKAM MEDIS (RM)',
-                  style: GoogleFonts.poppins(
+                  style: GoogleFonts.manrope(
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
                     letterSpacing: 1,
@@ -182,7 +182,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 const SizedBox(height: 4),
                 Text(
                   'Isi dengan nomor RM bapak/ibu',
-                  style: GoogleFonts.poppins(
+                  style: GoogleFonts.manrope(
                       fontSize: 12, color: AppColors.textMuted),
                 ),
                 const SizedBox(height: 18),
@@ -190,7 +190,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 // Password field
                 Text(
                   'KATA SANDI',
-                  style: GoogleFonts.poppins(
+                  style: GoogleFonts.manrope(
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
                     letterSpacing: 1,
@@ -216,7 +216,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 const SizedBox(height: 4),
                 Text(
                   'Isi kata sandi yang diberikan petugas',
-                  style: GoogleFonts.poppins(
+                  style: GoogleFonts.manrope(
                       fontSize: 12, color: AppColors.textMuted),
                 ),
                 const SizedBox(height: 32),
@@ -246,7 +246,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           )
                         : Text(
                             'MASUK',
-                            style: GoogleFonts.poppins(
+                            style: GoogleFonts.manrope(
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
                               letterSpacing: 1.5,
@@ -280,11 +280,11 @@ class _LoginScreenState extends State<LoginScreen> {
         controller: controller,
         obscureText: obscure,
         keyboardType: keyboardType,
-        style: GoogleFonts.poppins(fontSize: 15, color: AppColors.textPrimary),
+        style: GoogleFonts.manrope(fontSize: 15, color: AppColors.textPrimary),
         decoration: InputDecoration(
           hintText: hint,
           hintStyle:
-              GoogleFonts.poppins(color: AppColors.textMuted, fontSize: 14),
+              GoogleFonts.manrope(color: AppColors.textMuted, fontSize: 14),
           suffixIcon: suffix != null
               ? Padding(
                   padding: const EdgeInsets.only(right: 12),
@@ -369,7 +369,7 @@ class _LoginScreenState extends State<LoginScreen> {
             const SizedBox(height: 4),
             Text(
               label,
-              style: GoogleFonts.poppins(
+              style: GoogleFonts.manrope(
                 fontSize: 11,
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.w600,
                 color: isSelected ? AppColors.primary : AppColors.textMuted,

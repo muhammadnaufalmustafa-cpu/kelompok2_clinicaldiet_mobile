@@ -53,7 +53,7 @@ class _EvaluasiPasienScreenState extends State<EvaluasiPasienScreen> {
         ),
         title: Text(
           'Evaluasi Pasien',
-          style: GoogleFonts.poppins(
+          style: GoogleFonts.manrope(
             fontSize: 18,
             fontWeight: FontWeight.w600,
             color: AppColors.textPrimary,
@@ -92,7 +92,7 @@ class _EvaluasiPasienScreenState extends State<EvaluasiPasienScreen> {
                       children: [
                         Text(
                           'Siti Amelia',
-                          style: GoogleFonts.poppins(
+                          style: GoogleFonts.manrope(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
                             color: AppColors.textPrimary,
@@ -100,7 +100,7 @@ class _EvaluasiPasienScreenState extends State<EvaluasiPasienScreen> {
                         ),
                         Text(
                           'RM: 887234',
-                          style: GoogleFonts.poppins(
+                          style: GoogleFonts.manrope(
                               fontSize: 13, color: AppColors.textSecondary),
                         ),
                         const SizedBox(height: 4),
@@ -113,7 +113,7 @@ class _EvaluasiPasienScreenState extends State<EvaluasiPasienScreen> {
                           ),
                           child: Text(
                             'DIET JANTUNG',
-                            style: GoogleFonts.poppins(
+                            style: GoogleFonts.manrope(
                               fontSize: 10,
                               fontWeight: FontWeight.w600,
                               color: AppColors.primaryDark,
@@ -146,7 +146,7 @@ class _EvaluasiPasienScreenState extends State<EvaluasiPasienScreen> {
                     color: Colors.white, size: 20),
                 label: Text(
                   'Chat WhatsApp Pasien',
-                  style: GoogleFonts.poppins(
+                  style: GoogleFonts.manrope(
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
                     color: Colors.white,
@@ -168,7 +168,7 @@ class _EvaluasiPasienScreenState extends State<EvaluasiPasienScreen> {
               children: [
                 Text(
                   'Log Laporan (Minggu, 15 Mar)',
-                  style: GoogleFonts.poppins(
+                  style: GoogleFonts.manrope(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
                     color: AppColors.textPrimary,
@@ -184,7 +184,7 @@ class _EvaluasiPasienScreenState extends State<EvaluasiPasienScreen> {
                   ),
                   child: Text(
                     'TERVERIFIKASI',
-                    style: GoogleFonts.poppins(
+                    style: GoogleFonts.manrope(
                       fontSize: 10,
                       fontWeight: FontWeight.w600,
                       color: AppColors.primaryDark,
@@ -225,7 +225,7 @@ class _EvaluasiPasienScreenState extends State<EvaluasiPasienScreen> {
                                   children: [
                                     Text(
                                       item['label'] as String,
-                                      style: GoogleFonts.poppins(
+                                      style: GoogleFonts.manrope(
                                         fontSize: 11,
                                         fontWeight: FontWeight.w600,
                                         letterSpacing: 0.8,
@@ -234,7 +234,7 @@ class _EvaluasiPasienScreenState extends State<EvaluasiPasienScreen> {
                                     ),
                                     Text(
                                       item['value'] as String,
-                                      style: GoogleFonts.poppins(
+                                      style: GoogleFonts.manrope(
                                         fontSize: 13,
                                         color: AppColors.textPrimary,
                                         height: 1.4,
@@ -254,7 +254,7 @@ class _EvaluasiPasienScreenState extends State<EvaluasiPasienScreen> {
             // CPPT
             Text(
               'Catatan Evaluasi (CPPT)',
-              style: GoogleFonts.poppins(
+              style: GoogleFonts.manrope(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
                 color: AppColors.textPrimary,
@@ -270,12 +270,12 @@ class _EvaluasiPasienScreenState extends State<EvaluasiPasienScreen> {
               child: TextField(
                 controller: _evaluasiCtrl,
                 maxLines: 5,
-                style: GoogleFonts.poppins(
+                style: GoogleFonts.manrope(
                     fontSize: 14, color: AppColors.textPrimary),
                 decoration: InputDecoration(
                   hintText:
                       'Ketik evaluasi perkembangan diet pasien di sini...',
-                  hintStyle: GoogleFonts.poppins(
+                  hintStyle: GoogleFonts.manrope(
                       color: AppColors.textMuted, fontSize: 13, height: 1.5),
                   border: InputBorder.none,
                   contentPadding: const EdgeInsets.all(14),
@@ -301,7 +301,7 @@ class _EvaluasiPasienScreenState extends State<EvaluasiPasienScreen> {
                 SnackBar(
                   content: Text(
                     'Evaluasi berhasil disimpan!',
-                    style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+                    style: GoogleFonts.manrope(fontWeight: FontWeight.w600),
                   ),
                   backgroundColor: AppColors.primary,
                   behavior: SnackBarBehavior.floating,
@@ -314,7 +314,7 @@ class _EvaluasiPasienScreenState extends State<EvaluasiPasienScreen> {
                 const Icon(Icons.save_outlined, color: Colors.white, size: 20),
             label: Text(
               'SIMPAN EVALUASI',
-              style: GoogleFonts.poppins(
+              style: GoogleFonts.manrope(
                 fontSize: 15,
                 fontWeight: FontWeight.w600,
                 letterSpacing: 1.2,

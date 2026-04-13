@@ -92,7 +92,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   void _showSnackBar(String message, {required bool isError}) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message, style: GoogleFonts.poppins()),
+        content: Text(message, style: GoogleFonts.manrope()),
         backgroundColor: isError ? Colors.redAccent : AppColors.primary,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -115,7 +115,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             const SizedBox(width: 8),
             Text(
               'Clinical Diet',
-              style: GoogleFonts.poppins(
+              style: GoogleFonts.manrope(
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
                 color: AppColors.primaryDark,
@@ -131,7 +131,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           children: [
             Text(
               'Daftar Akun Baru',
-              style: GoogleFonts.poppins(
+              style: GoogleFonts.manrope(
                 fontSize: 24,
                 fontWeight: FontWeight.w600,
                 color: AppColors.textPrimary,
@@ -140,7 +140,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             const SizedBox(height: 8),
             Text(
               'Isi data medis untuk memulai panduan klinis Anda.',
-              style: GoogleFonts.poppins(
+              style: GoogleFonts.manrope(
                 fontSize: 14,
                 color: AppColors.textSecondary,
               ),
@@ -253,7 +253,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       )
                     : Text(
                         'DAFTAR',
-                        style: GoogleFonts.poppins(
+                        style: GoogleFonts.manrope(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
                         ),
@@ -273,14 +273,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 child: RichText(
                   text: TextSpan(
                     text: 'Sudah punya akun? ',
-                    style: GoogleFonts.poppins(
+                    style: GoogleFonts.manrope(
                       color: AppColors.textSecondary,
                       fontSize: 14,
                     ),
                     children: [
                       TextSpan(
                         text: 'Masuk di sini',
-                        style: GoogleFonts.poppins(
+                        style: GoogleFonts.manrope(
                           color: AppColors.primary,
                           fontWeight: FontWeight.w600,
                         ),
@@ -312,7 +312,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       children: [
         Text(
           label,
-          style: GoogleFonts.poppins(
+          style: GoogleFonts.manrope(
             fontSize: 13,
             color: AppColors.textPrimary,
           ),
@@ -328,10 +328,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
             controller: controller,
             obscureText: obscure,
             keyboardType: keyboardType,
-            style: GoogleFonts.poppins(fontSize: 15, color: AppColors.textPrimary),
+            style: GoogleFonts.manrope(fontSize: 15, color: AppColors.textPrimary),
             decoration: InputDecoration(
               hintText: hint,
-              hintStyle: GoogleFonts.poppins(color: AppColors.textMuted, fontSize: 14),
+              hintStyle: GoogleFonts.manrope(color: AppColors.textMuted, fontSize: 14),
               prefixIcon: prefixIcon != null
                   ? Icon(prefixIcon, color: AppColors.textSecondary, size: 20)
                   : null,
@@ -356,7 +356,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       children: [
         Text(
           label,
-          style: GoogleFonts.poppins(
+          style: GoogleFonts.manrope(
             fontSize: 13,
             color: AppColors.textPrimary,
           ),
@@ -372,10 +372,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
             controller: controller,
             keyboardType: TextInputType.number,
             textAlign: TextAlign.center,
-            style: GoogleFonts.poppins(fontSize: 15, color: AppColors.textPrimary),
+            style: GoogleFonts.manrope(fontSize: 15, color: AppColors.textPrimary),
             decoration: InputDecoration(
               hintText: hint,
-              hintStyle: GoogleFonts.poppins(color: AppColors.textMuted, fontSize: 14),
+              hintStyle: GoogleFonts.manrope(color: AppColors.textMuted, fontSize: 14),
               suffixIcon: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -383,7 +383,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     padding: const EdgeInsets.only(right: 16),
                     child: Text(
                       suffixText,
-                      style: GoogleFonts.poppins(
+                      style: GoogleFonts.manrope(
                         color: AppColors.textPrimary,
                         fontWeight: FontWeight.w600,
                         fontSize: 14,
@@ -469,7 +469,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             const SizedBox(height: 4),
             Text(
               label,
-              style: GoogleFonts.poppins(
+              style: GoogleFonts.manrope(
                 fontSize: 11,
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.w600,
                 color: isSelected ? AppColors.primary : AppColors.textMuted,

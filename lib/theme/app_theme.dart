@@ -25,13 +25,13 @@ ThemeData buildAppTheme() {
       surface: AppColors.surface,
     ),
     scaffoldBackgroundColor: AppColors.background,
-    textTheme: GoogleFonts.poppinsTextTheme(),
+    textTheme: GoogleFonts.manropeTextTheme(),
     appBarTheme: AppBarTheme(
       backgroundColor: AppColors.surface,
       elevation: 0,
       centerTitle: true,
       iconTheme: const IconThemeData(color: AppColors.textPrimary),
-      titleTextStyle: GoogleFonts.poppins(
+      titleTextStyle: GoogleFonts.manrope(
         fontSize: 18,
         fontWeight: FontWeight.w600,
         color: AppColors.textPrimary,

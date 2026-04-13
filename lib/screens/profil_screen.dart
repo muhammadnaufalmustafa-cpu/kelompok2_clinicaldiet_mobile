@@ -32,7 +32,7 @@ class ProfilScreen extends StatelessWidget {
                     const SizedBox(width: 8),
                     Text(
                       'Clinical Diet',
-                      style: GoogleFonts.poppins(
+                      style: GoogleFonts.manrope(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
                         color: AppColors.primary,
@@ -92,7 +92,7 @@ class ProfilScreen extends StatelessWidget {
                   const SizedBox(height: 12),
                   Text(
                     'Siska Amelia',
-                    style: GoogleFonts.poppins(
+                    style: GoogleFonts.manrope(
                       fontSize: 20,
                       fontWeight: FontWeight.w600,
                       color: AppColors.textPrimary,
@@ -101,7 +101,7 @@ class ProfilScreen extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     'ID Pasien: #CD-88219',
-                    style: GoogleFonts.poppins(
+                    style: GoogleFonts.manrope(
                       fontSize: 13,
                       color: AppColors.textSecondary,
                     ),
@@ -135,7 +135,7 @@ class ProfilScreen extends StatelessWidget {
                       children: [
                         Text(
                           'BMI SAAT INI',
-                          style: GoogleFonts.poppins(
+                          style: GoogleFonts.manrope(
                             fontSize: 10,
                             fontWeight: FontWeight.w600,
                             letterSpacing: 1.1,
@@ -147,7 +147,7 @@ class ProfilScreen extends StatelessWidget {
                           children: [
                             Text(
                               '22.8',
-                              style: GoogleFonts.poppins(
+                              style: GoogleFonts.manrope(
                                 fontSize: 26,
                                 fontWeight: FontWeight.w600,
                                 color: AppColors.textPrimary,
@@ -163,7 +163,7 @@ class ProfilScreen extends StatelessWidget {
                               ),
                               child: Text(
                                 'NORMAL',
-                                style: GoogleFonts.poppins(
+                                style: GoogleFonts.manrope(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w600,
                                   color: AppColors.primaryDark,
@@ -200,7 +200,7 @@ class ProfilScreen extends StatelessWidget {
                             children: [
                               Text(
                                 'Chat  WhatsApp dengan Ahli Gizi',
-                                style: GoogleFonts.poppins(
+                                style: GoogleFonts.manrope(
                                   fontSize: 14,
                                   fontWeight: FontWeight.w600,
                                   color: Colors.white,
@@ -208,7 +208,7 @@ class ProfilScreen extends StatelessWidget {
                               ),
                               Text(
                                 'PAKAR TERSEDIA',
-                                style: GoogleFonts.poppins(
+                                style: GoogleFonts.manrope(
                                   fontSize: 10,
                                   color: Colors.white70,
                                   letterSpacing: 0.8,
@@ -241,7 +241,7 @@ class ProfilScreen extends StatelessWidget {
                     padding: const EdgeInsets.only(bottom: 10),
                     child: Text(
                       'AKUN & PENGATURAN',
-                      style: GoogleFonts.poppins(
+                      style: GoogleFonts.manrope(
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
                         letterSpacing: 1.2,
@@ -297,7 +297,7 @@ class ProfilScreen extends StatelessWidget {
                           color: AppColors.red, size: 18),
                       label: Text(
                         'KELUAR AKUN',
-                        style: GoogleFonts.poppins(
+                        style: GoogleFonts.manrope(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
                           color: AppColors.red,
@@ -329,7 +329,7 @@ class ProfilScreen extends StatelessWidget {
         children: [
           Text(
             label,
-            style: GoogleFonts.poppins(
+            style: GoogleFonts.manrope(
               fontSize: 10,
               fontWeight: FontWeight.w600,
               letterSpacing: 1,
@@ -342,7 +342,7 @@ class ProfilScreen extends StatelessWidget {
               children: [
                 TextSpan(
                   text: value,
-                  style: GoogleFonts.poppins(
+                  style: GoogleFonts.manrope(
                     fontSize: 22,
                     fontWeight: FontWeight.w600,
                     color: AppColors.textPrimary,
@@ -350,7 +350,7 @@ class ProfilScreen extends StatelessWidget {
                 ),
                 TextSpan(
                   text: ' $unit',
-                  style: GoogleFonts.poppins(
+                  style: GoogleFonts.manrope(
                     fontSize: 13,
                     color: AppColors.textSecondary,
                   ),
@@ -379,7 +379,7 @@ class ProfilScreen extends StatelessWidget {
       ),
       title: Text(
         title,
-        style: GoogleFonts.poppins(
+        style: GoogleFonts.manrope(
           fontSize: 15,
           fontWeight: FontWeight.w600,
           color: AppColors.textPrimary,

@@ -66,7 +66,7 @@ class HomeScreen extends StatelessWidget {
               const SizedBox(width: 8),
               Text(
                 'Clinical Diet',
-                style: GoogleFonts.poppins(
+                style: GoogleFonts.manrope(
                   fontSize: 18,
                   fontWeight: FontWeight.w600,
                   color: AppColors.primary,
@@ -88,7 +88,7 @@ class HomeScreen extends StatelessWidget {
                 ),
                 child: Text(
                   'PASIEN',
-                  style: GoogleFonts.poppins(
+                  style: GoogleFonts.manrope(
                     color: AppColors.primary,
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
@@ -122,7 +122,7 @@ class HomeScreen extends StatelessWidget {
             children: [
               Text(
                 'HARI INI',
-                style: GoogleFonts.poppins(
+                style: GoogleFonts.manrope(
                   fontSize: 11,
                   color: AppColors.textMuted,
                   fontWeight: FontWeight.w600,
@@ -131,7 +131,7 @@ class HomeScreen extends StatelessWidget {
               ),
               Text(
                 '1.840',
-                style: GoogleFonts.poppins(
+                style: GoogleFonts.manrope(
                   fontSize: 34,
                   fontWeight: FontWeight.w600,
                   color: AppColors.textPrimary,
@@ -140,7 +140,7 @@ class HomeScreen extends StatelessWidget {
               ),
               Text(
                 'Kkal dikonsumsi',
-                style: GoogleFonts.poppins(
+                style: GoogleFonts.manrope(
                   fontSize: 11,
                   color: AppColors.textSecondary,
                 ),
@@ -161,7 +161,7 @@ class HomeScreen extends StatelessWidget {
         children: [
           Text(
             'Ringkasan Vitalitas Harian',
-            style: GoogleFonts.poppins(
+            style: GoogleFonts.manrope(
               fontSize: 17,
               fontWeight: FontWeight.w600,
               color: AppColors.textPrimary,
@@ -188,7 +188,7 @@ class HomeScreen extends StatelessWidget {
           children: [
             Text(
               label,
-              style: GoogleFonts.poppins(
+              style: GoogleFonts.manrope(
                 fontSize: 11,
                 fontWeight: FontWeight.w600,
                 letterSpacing: 1,
@@ -197,7 +197,7 @@ class HomeScreen extends StatelessWidget {
             ),
             Text(
               caption,
-              style: GoogleFonts.poppins(
+              style: GoogleFonts.manrope(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
                 color: color,
@@ -243,7 +243,7 @@ class HomeScreen extends StatelessWidget {
             Expanded(
               child: Text(
                 'Anda belum mencatat camilan sore hari ini!',
-                style: GoogleFonts.poppins(
+                style: GoogleFonts.manrope(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
                   color: AppColors.textPrimary,
@@ -261,7 +261,7 @@ class HomeScreen extends StatelessWidget {
               ),
               child: Text(
                 'Catat',
-                style: GoogleFonts.poppins(
+                style: GoogleFonts.manrope(
                     color: AppColors.primaryDark,
                     fontWeight: FontWeight.w600,
                     fontSize: 12),
@@ -291,7 +291,7 @@ class HomeScreen extends StatelessWidget {
                 const SizedBox(width: 8),
                 Text(
                   'Laporan Harian',
-                  style: GoogleFonts.poppins(
+                  style: GoogleFonts.manrope(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
                     color: AppColors.textPrimary,
@@ -302,7 +302,7 @@ class HomeScreen extends StatelessWidget {
             const SizedBox(height: 6),
             Text(
               'ANALISIS KLINIS',
-              style: GoogleFonts.poppins(
+              style: GoogleFonts.manrope(
                 fontSize: 10,
                 fontWeight: FontWeight.w600,
                 letterSpacing: 1.2,
@@ -312,7 +312,7 @@ class HomeScreen extends StatelessWidget {
             const SizedBox(height: 6),
             Text(
               'Asupan protein Anda sedikit di atas target, sangat baik untuk pemulihan otot. Namun, pertimbangkan menambah lemak sehat seperti alpukat pada makan malam untuk mencapai keseimbangan lipid.',
-              style: GoogleFonts.poppins(
+              style: GoogleFonts.manrope(
                 fontSize: 13,
                 color: AppColors.textSecondary,
                 height: 1.5,
@@ -347,11 +347,11 @@ class HomeScreen extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(label,
-              style: GoogleFonts.poppins(
+              style: GoogleFonts.manrope(
                   fontSize: 11, color: AppColors.textSecondary)),
           const SizedBox(height: 2),
           Text(value,
-              style: GoogleFonts.poppins(
+              style: GoogleFonts.manrope(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
                   color: AppColors.primary)),
@@ -387,7 +387,7 @@ class HomeScreen extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             value,
-            style: GoogleFonts.poppins(
+            style: GoogleFonts.manrope(
               fontSize: 22,
               fontWeight: FontWeight.w600,
               color: AppColors.textPrimary,
@@ -395,7 +395,7 @@ class HomeScreen extends StatelessWidget {
           ),
           Text(
             label,
-            style: GoogleFonts.poppins(
+            style: GoogleFonts.manrope(
               fontSize: 10,
               fontWeight: FontWeight.w600,
               color: AppColors.textSecondary,
