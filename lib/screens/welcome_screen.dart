@@ -11,171 +11,410 @@ class WelcomeScreen extends StatefulWidget {
   State<WelcomeScreen> createState() => _WelcomeScreenState();
 }
 
-class _WelcomeScreenState extends State<WelcomeScreen> {
-  // Mock data for BMR / kebutuhan kalori
-  late int _kalori;
-  late int _protein;
-  late int _lemak;
-  late int _karbohidrat;
+class _WelcomeScreenState extends State<WelcomeScreen>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _animCtrl;
+  late Animation<double> _fadeAnim;
+  late Animation<Offset> _slideAnim;
 
   @override
   void initState() {
     super.initState();
-    // Di aplikasi nyata, hitung BMR pakai rumus Harris-Benedict
-    // Di sini kita mock berdasarkan jenis diet
-    final diet = widget.user['diet_type'] as String? ?? 'Normal';
-    if (diet.contains('Tinggi Kalori')) {
-      _kalori = 2500;
-      _protein = 100;
-      _lemak = 70;
-      _karbohidrat = 350;
-    } else if (diet.contains('Gizi Kurang')) {
-      _kalori = 2800;
-      _protein = 120;
-      _lemak = 80;
-      _karbohidrat = 400;
-    } else {
-      _kalori = 1840;
-      _protein = 60;
-      _lemak = 55;
-      _karbohidrat = 250;
-    }
+    _animCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    );
+    _fadeAnim = CurvedAnimation(parent: _animCtrl, curve: Curves.easeOut);
+    _slideAnim = Tween<Offset>(
+      begin: const Offset(0, 0.18),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _animCtrl, curve: Curves.easeOutCubic));
+    _animCtrl.forward();
   }
+
+  @override
+  void dispose() {
+    _animCtrl.dispose();
+    super.dispose();
+  }
+
+  String get _firstName =>
+      (widget.user['name'] as String? ?? 'Pasien').split(' ').first;
+
+  String get _dietType =>
+      widget.user['diet_type'] as String? ?? 'Program Diet Umum';
+
+  String get _rm => widget.user['rm'] as String? ?? '-';
+
+  String get _avatarInitial => _firstName.isNotEmpty
+      ? _firstName.substring(0, 1).toUpperCase()
+      : 'P';
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 20),
-              Text('Selamat Datang!',
-                  style: GoogleFonts.manrope(
-                      fontSize: 32,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.textPrimary)),
-              const SizedBox(height: 6),
-              Text(
-                widget.user['name'] ?? '-',
-                style: GoogleFonts.manrope(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.primary),
-              ),
-              const SizedBox(height: 32),
-              
-              Text('Kebutuhan Gizi Harian Anda',
-                  style: GoogleFonts.manrope(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textPrimary)),
-              const SizedBox(height: 16),
+      body: Column(
+        children: [
+          // ── Hero gradient header ──────────────────────────────────────────
+          _buildHero(context),
 
-              // Kalori utama
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: AppColors.primary,
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(
-                        color: AppColors.primary.withValues(alpha: 0.3),
-                        blurRadius: 16,
-                        offset: const Offset(0, 8)),
-                  ],
-                ),
-                child: Column(
-                  children: [
-                    const Icon(Icons.local_fire_department,
-                        color: Colors.white, size: 40),
-                    const SizedBox(height: 8),
-                    Text('$_kalori',
+          // ── Content ──────────────────────────────────────────────────────
+          Expanded(
+            child: FadeTransition(
+              opacity: _fadeAnim,
+              child: SlideTransition(
+                position: _slideAnim,
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Profil chip
+                      _buildProfileCard(),
+                      const SizedBox(height: 28),
+
+                      // Fitur utama
+                      Text(
+                        'Yang Bisa Kamu Lakukan',
                         style: GoogleFonts.manrope(
-                            fontSize: 48,
-                            fontWeight: FontWeight.w800,
-                            color: Colors.white,
-                            height: 1.1)),
-                    Text('Kkal / Hari',
-                        style: GoogleFonts.manrope(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w500,
-                            color: Colors.white.withValues(alpha: 0.9))),
-                  ],
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      _buildFeatureRow(
+                        Icons.monitor_heart_outlined,
+                        'Pantau Nutrisi Harian',
+                        'Lihat target & asupan kalori dari ahli gizi',
+                        const Color(0xFFD1FAE5),
+                        AppColors.primary,
+                      ),
+                      const SizedBox(height: 10),
+                      _buildFeatureRow(
+                        Icons.edit_note_outlined,
+                        'Catat Makan',
+                        'Log makanan harian dengan mudah & cepat',
+                        const Color(0xFFDBEAFE),
+                        const Color(0xFF2563EB),
+                      ),
+                      const SizedBox(height: 10),
+                      _buildFeatureRow(
+                        Icons.picture_as_pdf_outlined,
+                        'Baca Leaflet Diet',
+                        'Akses 18 panduan diet langsung dari ahli gizi',
+                        const Color(0xFFFEF3C7),
+                        const Color(0xFFD97706),
+                      ),
+                      const SizedBox(height: 10),
+                      _buildFeatureRow(
+                        Icons.chat_outlined,
+                        'Chat Ahli Gizi via WhatsApp',
+                        'Konsultasi langsung dengan ahli gizi pilihan',
+                        const Color(0xFFF0FDF4),
+                        const Color(0xFF16A34A),
+                      ),
+
+                      const SizedBox(height: 32),
+
+                      // CTA Button
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: () => Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) => const PilihAhliGiziScreen()),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            padding: const EdgeInsets.symmetric(vertical: 18),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16)),
+                            elevation: 0,
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                'MULAI PERJALANAN DIET',
+                                style: GoogleFonts.manrope(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.white,
+                                  letterSpacing: 0.8,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              const Icon(Icons.arrow_forward_rounded,
+                                  color: Colors.white, size: 20),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Center(
+                        child: Text(
+                          'Pilih ahli gizi yang akan mendampingi Anda',
+                          style: GoogleFonts.manrope(
+                            fontSize: 12,
+                            color: AppColors.textMuted,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-              const SizedBox(height: 20),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
-              // Makronutrien
-              Row(
+  // ─────────────────────────────────────────────────────────────────────────
+
+  Widget _buildHero(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Color(0xFF059669), Color(0xFF34D399)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.only(
+          bottomLeft: Radius.circular(36),
+          bottomRight: Radius.circular(36),
+        ),
+      ),
+      padding: EdgeInsets.only(
+        top: MediaQuery.of(context).padding.top + 32,
+        left: 28,
+        right: 28,
+        bottom: 36,
+      ),
+      child: FadeTransition(
+        opacity: _fadeAnim,
+        child: Row(
+          children: [
+            // Avatar
+            Container(
+              width: 64,
+              height: 64,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.25),
+                shape: BoxShape.circle,
+                border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.5), width: 2),
+              ),
+              child: Center(
+                child: Text(
+                  _avatarInitial,
+                  style: GoogleFonts.manrope(
+                    fontSize: 28,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 18),
+
+            // Teks sambutan
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                      child: _buildMacro('Protein', _protein, 'g',
-                          const Color(0xFFFEF3C7))),
-                  const SizedBox(width: 12),
-                  Expanded(
-                      child: _buildMacro('Lemak', _lemak, 'g',
-                          const Color(0xFFFEE2E2))),
-                  const SizedBox(width: 12),
-                  Expanded(
-                      child: _buildMacro('Karbo', _karbohidrat, 'g',
-                          const Color(0xFFE0F2FE))),
+                  Text(
+                    'Selamat Datang,',
+                    style: GoogleFonts.manrope(
+                      fontSize: 14,
+                      color: Colors.white.withValues(alpha: 0.85),
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  Text(
+                    widget.user['name'] as String? ?? 'Pasien',
+                    style: GoogleFonts.manrope(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                      height: 1.2,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      'RM: $_rm',
+                      style: GoogleFonts.manrope(
+                        fontSize: 11,
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
                 ],
               ),
-              
-              const Spacer(),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () {
-                    Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) => const PilihAhliGiziScreen()));
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
-                  ),
-                  child: Text('LANJUTKAN',
-                      style: GoogleFonts.manrope(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white)),
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildMacro(String label, int value, String unit, Color bg) {
+  Widget _buildProfileCard() {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 16),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: bg,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          )
+        ],
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('$value',
+          Row(
+            children: [
+              const Icon(Icons.assignment_ind_outlined,
+                  color: AppColors.primary, size: 18),
+              const SizedBox(width: 8),
+              Text(
+                'Informasi Pasien',
+                style: GoogleFonts.manrope(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          const Divider(height: 1),
+          const SizedBox(height: 12),
+          _infoRow(Icons.restaurant_menu_outlined, 'Program Diet', _dietType,
+              AppColors.primary),
+          const SizedBox(height: 8),
+          _infoRow(
+            Icons.person_outline,
+            'Jenis Kelamin',
+            widget.user['gender'] as String? ?? '-',
+            const Color(0xFF2563EB),
+          ),
+          const SizedBox(height: 8),
+          _infoRow(
+            Icons.cake_outlined,
+            'Tanggal Lahir',
+            widget.user['birthdate'] as String? ?? '-',
+            const Color(0xFFD97706),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _infoRow(
+      IconData icon, String label, String value, Color iconColor) {
+    return Row(
+      children: [
+        Container(
+          width: 32,
+          height: 32,
+          decoration: BoxDecoration(
+            color: iconColor.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(icon, color: iconColor, size: 16),
+        ),
+        const SizedBox(width: 10),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              label,
               style: GoogleFonts.manrope(
-                  fontSize: 24,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.textPrimary)),
-          Text('$unit $label',
+                fontSize: 10,
+                color: AppColors.textMuted,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.5,
+              ),
+            ),
+            Text(
+              value,
               style: GoogleFonts.manrope(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                  color: AppColors.textSecondary)),
+                fontSize: 13,
+                color: AppColors.textPrimary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFeatureRow(IconData icon, String title, String subtitle,
+      Color bg, Color iconColor) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.divider),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: bg,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, color: iconColor, size: 22),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: GoogleFonts.manrope(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                Text(
+                  subtitle,
+                  style: GoogleFonts.manrope(
+                    fontSize: 11,
+                    color: AppColors.textSecondary,
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Icon(Icons.check_circle_outline,
+              color: iconColor.withValues(alpha: 0.6), size: 18),
         ],
       ),
     );
