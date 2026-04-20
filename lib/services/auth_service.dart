@@ -258,6 +258,210 @@ class AuthService {
     }
   }
 
+  // ─────────────────────────── GET SPECIFIC PASIEN ─────────────────────────
+
+  static Future<Map<String, dynamic>?> getPasienByRm(String rm) async {
+    final prefs = await SharedPreferences.getInstance();
+    final usersJson = prefs.getString(_usersKey);
+    if (usersJson == null) return null;
+
+    final decoded = jsonDecode(usersJson) as List;
+    final users = decoded.cast<Map<String, dynamic>>();
+
+    try {
+      return users.firstWhere(
+        (u) => u['rm'].toString().toLowerCase() == rm.toLowerCase(),
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  // ─────────────────────────── UPDATE PASIEN BB/TB ──────────────────────────
+
+  static Future<bool> updatePasienBBTB(
+    String rm,
+    double weight,
+    double height,
+  ) async {
+    final prefs = await SharedPreferences.getInstance();
+    final usersJson = prefs.getString(_usersKey);
+    if (usersJson == null) return false;
+
+    final decoded = jsonDecode(usersJson) as List;
+    final users = decoded.cast<Map<String, dynamic>>();
+
+    final idx = users.indexWhere(
+      (u) => u['rm'].toString().toLowerCase() == rm.toLowerCase(),
+    );
+    if (idx == -1) return false;
+
+    users[idx]['weight'] = weight;
+    users[idx]['height'] = height;
+
+    await prefs.setString(_usersKey, jsonEncode(users));
+
+    // Update logged-in user session jika pasien yang diupdate sedang login
+    final loggedIn = await getLoggedInUser();
+    if (loggedIn != null &&
+        loggedIn['rm'].toString().toLowerCase() == rm.toLowerCase()) {
+      await prefs.setString(_loggedInUserKey, jsonEncode(users[idx]));
+    }
+
+    return true;
+  }
+
+  // ───────────────────────── PILIH AHLI GIZI ──────────────────────────────
+
+  static Future<bool> selectAhliGizi(String rmPasien, String nipAhliGizi) async {
+    final prefs = await SharedPreferences.getInstance();
+    final usersJson = prefs.getString(_usersKey);
+    if (usersJson == null) return false;
+
+    final decoded = jsonDecode(usersJson) as List;
+    final users = decoded.cast<Map<String, dynamic>>();
+
+    final idx = users.indexWhere(
+      (u) => u['rm'].toString().toLowerCase() == rmPasien.toLowerCase(),
+    );
+    if (idx == -1) return false;
+
+    users[idx]['selected_ahli_gizi_nip'] = nipAhliGizi;
+
+    await prefs.setString(_usersKey, jsonEncode(users));
+
+    // Update logged-in user session jika pasien yang diupdate sedang login
+    final loggedIn = await getLoggedInUser();
+    if (loggedIn != null &&
+        loggedIn['rm'].toString().toLowerCase() == rmPasien.toLowerCase()) {
+      await prefs.setString(_loggedInUserKey, jsonEncode(users[idx]));
+    }
+
+    return true;
+  }
+
+  static Future<Map<String, dynamic>?> getSelectedAhliGizi(String rmPasien) async {
+    final pasien = await getPasienByRm(rmPasien);
+    if (pasien == null) return null;
+
+    final nipAhliGizi = pasien['selected_ahli_gizi_nip'];
+    if (nipAhliGizi == null) return null;
+
+    final allAhliGizi = await getAllAhliGizi();
+    try {
+      return allAhliGizi.firstWhere((ag) => ag['nip'] == nipAhliGizi);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  // ─────────────────────────── MEAL LOGS ───────────────────────────────────
+
+  static const String _mealLogsKey = 'meal_logs';
+
+  static Future<bool> saveMealLog({
+    required String rmPasien,
+    required String mealPagi,
+    required String selinganPagi,
+    required String mealSiang,
+    required String selinganSore,
+    required String mealMalam,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+
+    // Ambil existing logs
+    final logsJson = prefs.getString(_mealLogsKey);
+    List<Map<String, dynamic>> logs = [];
+    if (logsJson != null) {
+      final decoded = jsonDecode(logsJson) as List;
+      logs = decoded.cast<Map<String, dynamic>>();
+    }
+
+    final today = DateTime.now();
+    final todayString = '${today.year}-${today.month}-${today.day}';
+
+    // Cek apakah sudah ada log untuk hari ini
+    final existingLogIndex = logs.indexWhere(
+      (log) =>
+          log['rm_pasien'] == rmPasien &&
+          log['date'].toString().startsWith(todayString),
+    );
+
+    final newLog = {
+      'id': '${rmPasien}_${today.millisecondsSinceEpoch}',
+      'rm_pasien': rmPasien,
+      'date': today.toIso8601String(),
+      'meal_pagi': mealPagi,
+      'selingan_pagi': selinganPagi,
+      'meal_siang': mealSiang,
+      'selingan_sore': selinganSore,
+      'meal_malam': mealMalam,
+      'created_at': DateTime.now().toIso8601String(),
+      'updated_at': DateTime.now().toIso8601String(),
+    };
+
+    if (existingLogIndex != -1) {
+      // Update existing log
+      logs[existingLogIndex] = newLog;
+    } else {
+      // Add new log
+      logs.add(newLog);
+    }
+
+    await prefs.setString(_mealLogsKey, jsonEncode(logs));
+    return true;
+  }
+
+  static Future<Map<String, dynamic>?> getMealLogForDate(
+    String rmPasien,
+    DateTime date,
+  ) async {
+    final prefs = await SharedPreferences.getInstance();
+    final logsJson = prefs.getString(_mealLogsKey);
+    if (logsJson == null) return null;
+
+    final decoded = jsonDecode(logsJson) as List;
+    final logs = decoded.cast<Map<String, dynamic>>();
+
+    final dateString = '${date.year}-${date.month}-${date.day}';
+
+    try {
+      return logs.firstWhere(
+        (log) =>
+            log['rm_pasien'] == rmPasien &&
+            log['date'].toString().startsWith(dateString),
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static Future<List<Map<String, dynamic>>> getMealLogsForPasien(
+    String rmPasien, {
+    int days = 30,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final logsJson = prefs.getString(_mealLogsKey);
+    if (logsJson == null) return [];
+
+    final decoded = jsonDecode(logsJson) as List;
+    final logs = decoded.cast<Map<String, dynamic>>();
+
+    final cutoffDate = DateTime.now().subtract(Duration(days: days));
+    final result = logs
+        .where((log) =>
+            log['rm_pasien'] == rmPasien &&
+            DateTime.parse(log['date']).isAfter(cutoffDate))
+        .toList();
+
+    // Sort by date descending (newest first)
+    result.sort((a, b) => DateTime.parse(b['date']).compareTo(
+      DateTime.parse(a['date']),
+    ));
+
+    return result;
+  }
+
   // ─────────────────────────── SESSION ─────────────────────────────────────
 
   static Future<Map<String, dynamic>?> getLoggedInUser() async {

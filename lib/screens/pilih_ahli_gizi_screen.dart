@@ -88,10 +88,32 @@ class _PilihAhliGiziScreenState extends State<PilihAhliGiziScreen> {
         final ratingCount = (ag['rating_count'] as num?)?.toInt() ?? 0;
 
         return GestureDetector(
-          onTap: () {
-            // Dalam aplikasi sesungguhnya, simpan pilihan ahli gizi ke database
-            Navigator.pushReplacement(
-                context, MaterialPageRoute(builder: (_) => const MainScreen()));
+          onTap: () async {
+            // Save selected nutritionist to database
+            final user = await AuthService.getLoggedInUser();
+            if (user != null) {
+              final rm = user['rm'] as String;
+              final nip = ag['nip'] as String;
+              
+              await AuthService.selectAhliGizi(rm, nip);
+              
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      'Anda memilih ${ag['name']} sebagai ahli gizi Anda',
+                      style: GoogleFonts.manrope(fontWeight: FontWeight.w600),
+                    ),
+                    backgroundColor: AppColors.primary,
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (_) => const MainScreen()),
+                );
+              }
+            }
           },
           child: Container(
             margin: const EdgeInsets.only(bottom: 12),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_theme.dart';
+import '../services/auth_service.dart';
 
 class CatatanScreen extends StatefulWidget {
   const CatatanScreen({super.key});
@@ -10,6 +11,8 @@ class CatatanScreen extends StatefulWidget {
 }
 
 class _CatatanScreenState extends State<CatatanScreen> {
+  bool _isLoading = false;
+
   // Controllers for all meals
   final _pagiCtrl = TextEditingController();
   final _selinganPagiCtrl = TextEditingController();
@@ -29,11 +32,29 @@ class _CatatanScreenState extends State<CatatanScreen> {
   }
 
   final List<String> _hariNames = [
-    '', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'
+    '',
+    'Senin',
+    'Selasa',
+    'Rabu',
+    'Kamis',
+    'Jumat',
+    'Sabtu',
+    'Minggu',
   ];
   final List<String> _bulanNames = [
-    '', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
-    'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+    '',
+    'Januari',
+    'Februari',
+    'Maret',
+    'April',
+    'Mei',
+    'Juni',
+    'Juli',
+    'Agustus',
+    'September',
+    'Oktober',
+    'November',
+    'Desember',
   ];
 
   String _formatTanggal(DateTime dt) {
@@ -74,7 +95,8 @@ class _CatatanScreenState extends State<CatatanScreen> {
                     iconBg: const Color(0xFFD1FAE5),
                     label: 'SELINGAN PAGI',
                     controller: _selinganPagiCtrl,
-                    hint: 'Ketik di sini (contoh: Pisang rebus 1 buah, teh tawar)',
+                    hint:
+                        'Ketik di sini (contoh: Pisang rebus 1 buah, teh tawar)',
                   ),
                   const SizedBox(height: 20),
                   _buildMealSection(
@@ -127,11 +149,7 @@ class _CatatanScreenState extends State<CatatanScreen> {
             children: [
               Row(
                 children: [
-                  Image.asset(
-                    'assets/images/icon.png',
-                    width: 32,
-                    height: 32,
-                  ),
+                  Image.asset('assets/images/icon.png', width: 32, height: 32),
                   const SizedBox(width: 8),
                   Text(
                     'Clinical Diet',
@@ -143,8 +161,10 @@ class _CatatanScreenState extends State<CatatanScreen> {
                   ),
                 ],
               ),
-              const Icon(Icons.notifications_outlined,
-                  color: AppColors.textSecondary),
+              const Icon(
+                Icons.notifications_outlined,
+                color: AppColors.textSecondary,
+              ),
             ],
           ),
           const SizedBox(height: 16),
@@ -190,7 +210,6 @@ class _CatatanScreenState extends State<CatatanScreen> {
     );
   }
 
-
   Widget _buildMealSection({
     required IconData icon,
     required Color iconBg,
@@ -235,11 +254,17 @@ class _CatatanScreenState extends State<CatatanScreen> {
           child: TextField(
             controller: controller,
             maxLines: 3,
-            style: GoogleFonts.manrope(fontSize: 14, color: AppColors.textPrimary),
+            style: GoogleFonts.manrope(
+              fontSize: 14,
+              color: AppColors.textPrimary,
+            ),
             decoration: InputDecoration(
               hintText: hint,
               hintStyle: GoogleFonts.manrope(
-                  color: AppColors.textMuted, fontSize: 13, height: 1.5),
+                color: AppColors.textMuted,
+                fontSize: 13,
+                height: 1.5,
+              ),
               border: InputBorder.none,
               contentPadding: const EdgeInsets.all(14),
             ),
@@ -250,11 +275,97 @@ class _CatatanScreenState extends State<CatatanScreen> {
           Text(
             tip,
             style: GoogleFonts.manrope(
-                fontSize: 12, color: AppColors.textSecondary, height: 1.5),
+              fontSize: 12,
+              color: AppColors.textSecondary,
+              height: 1.5,
+            ),
           ),
         ],
       ],
     );
+  }
+
+  Future<void> _saveMealLog() async {
+    setState(() => _isLoading = true);
+
+    try {
+      final user = await AuthService.getLoggedInUser();
+      if (user == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Silakan login terlebih dahulu',
+              style: GoogleFonts.manrope(fontWeight: FontWeight.w600),
+            ),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        return;
+      }
+
+      final rm = user['rm'] as String;
+
+      final success = await AuthService.saveMealLog(
+        rmPasien: rm,
+        mealPagi: _pagiCtrl.text,
+        selinganPagi: _selinganPagiCtrl.text,
+        mealSiang: _siangCtrl.text,
+        selinganSore: _selinganSoreCtrl.text,
+        mealMalam: _malamCtrl.text,
+      );
+
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Catatan makan berhasil disimpan!',
+              style: GoogleFonts.manrope(fontWeight: FontWeight.w600),
+            ),
+            backgroundColor: AppColors.primary,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        );
+
+        // Clear fields after successful save
+        _pagiCtrl.clear();
+        _selinganPagiCtrl.clear();
+        _siangCtrl.clear();
+        _selinganSoreCtrl.clear();
+        _malamCtrl.clear();
+
+        if (Navigator.canPop(context)) {
+          Navigator.pop(context);
+        }
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Gagal menyimpan catatan makan. Coba lagi.',
+              style: GoogleFonts.manrope(fontWeight: FontWeight.w600),
+            ),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Error: ${e.toString()}',
+            style: GoogleFonts.manrope(fontWeight: FontWeight.w600),
+          ),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } finally {
+      setState(() => _isLoading = false);
+    }
   }
 
   Widget _buildBottomButton(BuildContext context) {
@@ -269,34 +380,21 @@ class _CatatanScreenState extends State<CatatanScreen> {
       child: SizedBox(
         width: double.infinity,
         child: ElevatedButton.icon(
-          onPressed: () {
-            // Submit
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  'Laporan berhasil dikirim!',
-                  style: GoogleFonts.manrope(fontWeight: FontWeight.w600),
-                ),
-                backgroundColor: AppColors.primary,
-                behavior: SnackBarBehavior.floating,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
-              ),
-            );
-            // Optionally clear fields or pop
-            _pagiCtrl.clear();
-            _selinganPagiCtrl.clear();
-            _siangCtrl.clear();
-            _selinganSoreCtrl.clear();
-            _malamCtrl.clear();
-            if (Navigator.canPop(context)) {
-              Navigator.pop(context);
-            }
-          },
-          icon: const Icon(
-            Icons.send_outlined,
-            color: Colors.white,
-          ),
+          onPressed: _isLoading
+              ? null
+              : () async {
+                  await _saveMealLog();
+                },
+          icon: _isLoading
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  ),
+                )
+              : const Icon(Icons.send_outlined, color: Colors.white),
           label: Text(
             'KIRIM LAPORAN',
             style: GoogleFonts.manrope(
