@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_theme.dart';
+import '../services/auth_service.dart';
 
 class CatatanScreen extends StatefulWidget {
   const CatatanScreen({super.key});
@@ -11,6 +12,7 @@ class CatatanScreen extends StatefulWidget {
 
 class _CatatanScreenState extends State<CatatanScreen> {
   int _page = 0; // 0 = Bagian 1/2, 1 = Bagian 2/2
+  bool _isLoading = false;
 
   // Controllers for page 1
   final _pagiCtrl = TextEditingController();
@@ -293,6 +295,87 @@ class _CatatanScreenState extends State<CatatanScreen> {
     );
   }
 
+  Future<void> _saveMealLog() async {
+    setState(() => _isLoading = true);
+
+    try {
+      final user = await AuthService.getLoggedInUser();
+      if (user == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Silakan login terlebih dahulu',
+              style: GoogleFonts.manrope(fontWeight: FontWeight.w600),
+            ),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        return;
+      }
+
+      final rm = user['rm'] as String;
+      
+      final success = await AuthService.saveMealLog(
+        rmPasien: rm,
+        mealPagi: _pagiCtrl.text,
+        selinganPagi: _selinganPagiCtrl.text,
+        mealSiang: _siangCtrl.text,
+        selinganSore: _selinganSoreCtrl.text,
+        mealMalam: _malamCtrl.text,
+      );
+
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Catatan makan berhasil disimpan!',
+              style: GoogleFonts.manrope(fontWeight: FontWeight.w600),
+            ),
+            backgroundColor: AppColors.primary,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        );
+        
+        // Clear fields after successful save
+        _pagiCtrl.clear();
+        _selinganPagiCtrl.clear();
+        _siangCtrl.clear();
+        _selinganSoreCtrl.clear();
+        _malamCtrl.clear();
+        
+        setState(() => _page = 0);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Gagal menyimpan catatan makan. Coba lagi.',
+              style: GoogleFonts.manrope(fontWeight: FontWeight.w600),
+            ),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Error: ${e.toString()}',
+            style: GoogleFonts.manrope(fontWeight: FontWeight.w600),
+          ),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
   Widget _buildBottomButton(BuildContext context) {
     return Container(
       color: AppColors.surface,
@@ -305,32 +388,33 @@ class _CatatanScreenState extends State<CatatanScreen> {
       child: SizedBox(
         width: double.infinity,
         child: ElevatedButton.icon(
-          onPressed: () {
-            if (_page == 0) {
-              setState(() => _page = 1);
-            } else {
-              // Submit
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    'Laporan berhasil dikirim!',
-                    style: GoogleFonts.manrope(fontWeight: FontWeight.w600),
+          onPressed: _isLoading
+              ? null
+              : () async {
+                  if (_page == 0) {
+                    setState(() => _page = 1);
+                  } else {
+                    // Save meal log
+                    await _saveMealLog();
+                  }
+                },
+          icon: _isLoading
+              ? SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      _isLoading ? Colors.grey : Colors.white,
+                    ),
                   ),
-                  backgroundColor: AppColors.primary,
-                  behavior: SnackBarBehavior.floating,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
+                )
+              : Icon(
+                  _page == 0 ? Icons.arrow_forward : Icons.send_outlined,
+                  color: Colors.white,
                 ),
-              );
-              setState(() => _page = 0);
-            }
-          },
-          icon: Icon(
-            _page == 0 ? Icons.arrow_forward : Icons.send_outlined,
-            color: Colors.white,
-          ),
           label: Text(
-            _page == 0 ? 'LANJUT KE MAKAN SIANG' : 'KIRIM LAPORAN',
+            _page == 0 ? 'LANJUT KE MAKAN SIANG' : 'SIMPAN CATATAN',
             style: GoogleFonts.manrope(
               fontSize: 15,
               fontWeight: FontWeight.w600,

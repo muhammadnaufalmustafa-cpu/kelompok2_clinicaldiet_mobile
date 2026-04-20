@@ -30,6 +30,10 @@ class _ProfilScreenState extends State<ProfilScreen> {
   }
 
   void _showUpdateBBTBDialog() {
+    final weightCtrl = TextEditingController(text: _user?['weight']?.toString() ?? '');
+    final heightCtrl = TextEditingController(text: _user?['height']?.toString() ?? '');
+    bool isLoading = false;
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -37,77 +41,167 @@ class _ProfilScreenState extends State<ProfilScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.fromLTRB(
-            24, 24, 24, MediaQuery.of(ctx).viewInsets.bottom + 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Catat BB & TB',
-                style: GoogleFonts.manrope(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textPrimary)),
-            const SizedBox(height: 8),
-            Text('Perbarui data fisik Anda untuk memantau IMT harian.',
-                style: GoogleFonts.manrope(
-                    fontSize: 13, color: AppColors.textSecondary)),
-            const SizedBox(height: 20),
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    keyboardType: TextInputType.number,
-                    decoration: InputDecoration(
-                      labelText: 'Berat Badan',
-                      hintText: _user?['weight']?.toString() ?? '0',
-                      suffixText: 'kg',
-                      border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12)),
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setStateDialog) => Padding(
+          padding: EdgeInsets.fromLTRB(
+              24, 24, 24, MediaQuery.of(ctx).viewInsets.bottom + 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Catat BB & TB',
+                  style: GoogleFonts.manrope(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textPrimary)),
+              const SizedBox(height: 8),
+              Text('Perbarui data fisik Anda untuk memantau IMT harian.',
+                  style: GoogleFonts.manrope(
+                      fontSize: 13, color: AppColors.textSecondary)),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: weightCtrl,
+                      keyboardType: TextInputType.number,
+                      enabled: !isLoading,
+                      decoration: InputDecoration(
+                        labelText: 'Berat Badan',
+                        hintText: 'Masukkan berat badan',
+                        suffixText: 'kg',
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: TextField(
-                    keyboardType: TextInputType.number,
-                    decoration: InputDecoration(
-                      labelText: 'Tinggi Badan',
-                      hintText: _user?['height']?.toString() ?? '0',
-                      suffixText: 'cm',
-                      border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12)),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: TextField(
+                      controller: heightCtrl,
+                      keyboardType: TextInputType.number,
+                      enabled: !isLoading,
+                      decoration: InputDecoration(
+                        labelText: 'Tinggi Badan',
+                        hintText: 'Masukkan tinggi badan',
+                        suffixText: 'cm',
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                      ),
                     ),
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                    content: Text('Data berhasil diperbarui!',
-                        style: GoogleFonts.manrope()),
-                    backgroundColor: AppColors.primary,
-                    behavior: SnackBarBehavior.floating,
-                  ));
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
-                ),
-                child: Text('SIMPAN',
-                    style: GoogleFonts.manrope(
-                        fontWeight: FontWeight.w600, color: Colors.white)),
+                ],
               ),
-            ),
-          ],
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: isLoading
+                      ? null
+                      : () async {
+                          final weight = double.tryParse(weightCtrl.text);
+                          final height = double.tryParse(heightCtrl.text);
+
+                          if (weight == null || height == null) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  'Masukkan nilai yang valid',
+                                  style: GoogleFonts.manrope(),
+                                ),
+                                backgroundColor: Colors.red,
+                                behavior: SnackBarBehavior.floating,
+                              ),
+                            );
+                            return;
+                          }
+
+                          setStateDialog(() => isLoading = true);
+
+                          try {
+                            final rm = _user?['rm'];
+                            if (rm == null) {
+                              throw Exception('User RM tidak ditemukan');
+                            }
+
+                            final success = await AuthService.updatePasienBBTB(
+                              rm,
+                              weight,
+                              height,
+                            );
+
+                            if (success) {
+                              weightCtrl.dispose();
+                              heightCtrl.dispose();
+                              
+                              if (!context.mounted) return;
+                              Navigator.pop(context);
+
+                              // Reload user data
+                              await _loadUser();
+
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    'Data BB & TB berhasil diperbarui!',
+                                    style: GoogleFonts.manrope(),
+                                  ),
+                                  backgroundColor: AppColors.primary,
+                                  behavior: SnackBarBehavior.floating,
+                                ),
+                              );
+                            } else {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    'Gagal memperbarui data. Coba lagi.',
+                                    style: GoogleFonts.manrope(),
+                                  ),
+                                  backgroundColor: Colors.red,
+                                  behavior: SnackBarBehavior.floating,
+                                ),
+                              );
+                            }
+                          } catch (e) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  'Error: ${e.toString()}',
+                                  style: GoogleFonts.manrope(),
+                                ),
+                                backgroundColor: Colors.red,
+                                behavior: SnackBarBehavior.floating,
+                              ),
+                            );
+                          } finally {
+                            setStateDialog(() => isLoading = false);
+                          }
+                        },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: isLoading
+                      ? SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.white.withValues(alpha: 0.7),
+                            ),
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : Text('SIMPAN',
+                          style: GoogleFonts.manrope(
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white)),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
