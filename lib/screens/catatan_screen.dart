@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_theme.dart';
+import '../services/auth_service.dart';
 
 class CatatanScreen extends StatefulWidget {
   const CatatanScreen({super.key});
@@ -10,9 +11,9 @@ class CatatanScreen extends StatefulWidget {
 }
 
 class _CatatanScreenState extends State<CatatanScreen> {
-  int _page = 0; // 0 = Bagian 1/2, 1 = Bagian 2/2
+  bool _isLoading = false;
 
-  // Controllers for page 1
+  // Controllers for all meals
   final _pagiCtrl = TextEditingController();
   final _selinganPagiCtrl = TextEditingController();
   // Controllers for page 2
@@ -30,6 +31,42 @@ class _CatatanScreenState extends State<CatatanScreen> {
     super.dispose();
   }
 
+  final List<String> _hariNames = [
+    '',
+    'Senin',
+    'Selasa',
+    'Rabu',
+    'Kamis',
+    'Jumat',
+    'Sabtu',
+    'Minggu',
+  ];
+  final List<String> _bulanNames = [
+    '',
+    'Januari',
+    'Februari',
+    'Maret',
+    'April',
+    'Mei',
+    'Juni',
+    'Juli',
+    'Agustus',
+    'September',
+    'Oktober',
+    'November',
+    'Desember',
+  ];
+
+  String _formatTanggal(DateTime dt) {
+    return '${_hariNames[dt.weekday]}, ${dt.day} ${_bulanNames[dt.month]} ${dt.year}';
+  }
+
+  String _formatJam(DateTime dt) {
+    final h = dt.hour.toString().padLeft(2, '0');
+    final m = dt.minute.toString().padLeft(2, '0');
+    return '$h.$m WIB';
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -40,7 +77,53 @@ class _CatatanScreenState extends State<CatatanScreen> {
           Expanded(
             child: SingleChildScrollView(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
-              child: _page == 0 ? _buildPage1() : _buildPage2(),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildMealSection(
+                    icon: Icons.wb_sunny_outlined,
+                    iconBg: const Color(0xFFD1FAE5),
+                    label: 'MAKAN PAGI',
+                    controller: _pagiCtrl,
+                    hint:
+                        'Ketik di sini (contoh: Nasi 1 centong, sayur bayam, telur dadar)',
+                    tip: 'Saran: Catat porsi dengan ukuran rumah tangga.',
+                  ),
+                  const SizedBox(height: 20),
+                  _buildMealSection(
+                    icon: Icons.storefront_outlined,
+                    iconBg: const Color(0xFFD1FAE5),
+                    label: 'SELINGAN PAGI',
+                    controller: _selinganPagiCtrl,
+                    hint:
+                        'Ketik di sini (contoh: Pisang rebus 1 buah, teh tawar)',
+                  ),
+                  const SizedBox(height: 20),
+                  _buildMealSection(
+                    icon: Icons.restaurant_outlined,
+                    iconBg: const Color(0xFFFEF3C7),
+                    label: 'MAKAN SIANG',
+                    controller: _siangCtrl,
+                    hint: 'Ketik di sini...',
+                  ),
+                  const SizedBox(height: 20),
+                  _buildMealSection(
+                    icon: Icons.storefront_outlined,
+                    iconBg: const Color(0xFFD1FAE5),
+                    label: 'SELINGAN SORE',
+                    controller: _selinganSoreCtrl,
+                    hint: 'Ketik di sini...',
+                  ),
+                  const SizedBox(height: 20),
+                  _buildMealSection(
+                    icon: Icons.nightlight_outlined,
+                    iconBg: const Color(0xFFEDE9FE),
+                    label: 'MAKAN MALAM',
+                    controller: _malamCtrl,
+                    hint: 'Ketik di sini...',
+                  ),
+                ],
+              ),
             ),
           ),
           _buildBottomButton(context),
@@ -66,143 +149,64 @@ class _CatatanScreenState extends State<CatatanScreen> {
             children: [
               Row(
                 children: [
-                  Container(
-                    width: 32,
-                    height: 32,
-                    decoration: BoxDecoration(
-                      color: AppColors.primaryLight,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Icon(Icons.monitor_heart_outlined,
-                        color: AppColors.primary, size: 18),
-                  ),
+                  Image.asset('assets/images/icon.png', width: 32, height: 32),
                   const SizedBox(width: 8),
                   Text(
-                    'ClinicalDiet',
-                    style: GoogleFonts.nunito(
+                    'Clinical Diet',
+                    style: GoogleFonts.manrope(
                       fontSize: 16,
-                      fontWeight: FontWeight.w800,
+                      fontWeight: FontWeight.w600,
                       color: AppColors.primary,
                     ),
                   ),
                 ],
               ),
-              const Icon(Icons.notifications_outlined,
-                  color: AppColors.textSecondary),
+              const Icon(
+                Icons.notifications_outlined,
+                color: AppColors.textSecondary,
+              ),
             ],
           ),
           const SizedBox(height: 16),
           Text(
             'Catatan Makan Hari Ini',
-            style: GoogleFonts.nunito(
+            style: GoogleFonts.manrope(
               fontSize: 20,
-              fontWeight: FontWeight.w900,
+              fontWeight: FontWeight.w600,
               color: AppColors.textPrimary,
             ),
           ),
           const SizedBox(height: 12),
           Text(
             'HARI INI',
-            style: GoogleFonts.nunito(
+            style: GoogleFonts.manrope(
               fontSize: 10,
-              fontWeight: FontWeight.w700,
+              fontWeight: FontWeight.w600,
               letterSpacing: 1.2,
               color: AppColors.textMuted,
             ),
           ),
           const SizedBox(height: 2),
           Text(
-            'Minggu, 25 Maret 2026',
-            style: GoogleFonts.nunito(
+            _formatTanggal(DateTime.now()),
+            style: GoogleFonts.manrope(
               fontSize: 18,
-              fontWeight: FontWeight.w900,
+              fontWeight: FontWeight.w600,
               color: AppColors.textPrimary,
             ),
           ),
-          const SizedBox(height: 12),
-          // Progress bar
-          Row(
-            children: [
-              Expanded(
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(4),
-                  child: LinearProgressIndicator(
-                    value: _page == 0 ? 0.5 : 1.0,
-                    backgroundColor: AppColors.primaryLight,
-                    color: AppColors.primary,
-                    minHeight: 6,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Text(
-                'BAGIAN ${_page + 1}/2',
-                style: GoogleFonts.nunito(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.primary,
-                ),
-              ),
-            ],
+          const SizedBox(height: 4),
+          Text(
+            'Waktu pengisian: ${_formatJam(DateTime.now())}',
+            style: GoogleFonts.manrope(
+              fontSize: 12,
+              color: AppColors.textSecondary,
+            ),
           ),
+          const SizedBox(height: 12),
+          // Progress bar dihilangkan karena UI menjadi satu halaman penuh
         ],
       ),
-    );
-  }
-
-  Widget _buildPage1() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildMealSection(
-          icon: Icons.wb_sunny_outlined,
-          iconBg: const Color(0xFFD1FAE5),
-          label: 'MAKAN PAGI',
-          controller: _pagiCtrl,
-          hint:
-              'Ketik di sini (contoh: Nasi 1 centong, sayur bayam, telur dadar)',
-          tip: 'Saran: Catat porsi dengan ukuran rumah tangga.',
-        ),
-        const SizedBox(height: 20),
-        _buildMealSection(
-          icon: Icons.storefront_outlined,
-          iconBg: const Color(0xFFD1FAE5),
-          label: 'SELINGAN PAGI',
-          controller: _selinganPagiCtrl,
-          hint: 'Ketik di sini (contoh: Pisang rebus 1 buah, teh tawar)',
-        ),
-      ],
-    );
-  }
-
-  Widget _buildPage2() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildMealSection(
-          icon: Icons.nightlight_outlined,
-          iconBg: const Color(0xFFEDE9FE),
-          label: 'MAKAN MALAM',
-          controller: _malamCtrl,
-          hint: 'Ketik di sini...',
-        ),
-        const SizedBox(height: 20),
-        _buildMealSection(
-          icon: Icons.storefront_outlined,
-          iconBg: const Color(0xFFD1FAE5),
-          label: 'SELINGAN SORE',
-          controller: _selinganSoreCtrl,
-          hint: 'Ketik di sini...',
-        ),
-        const SizedBox(height: 20),
-        _buildMealSection(
-          icon: Icons.restaurant_outlined,
-          iconBg: const Color(0xFFFEF3C7),
-          label: 'MAKAN SIANG',
-          controller: _siangCtrl,
-          hint: 'Ketik di sini...',
-        ),
-      ],
     );
   }
 
@@ -231,9 +235,9 @@ class _CatatanScreenState extends State<CatatanScreen> {
             const SizedBox(width: 10),
             Text(
               label,
-              style: GoogleFonts.nunito(
+              style: GoogleFonts.manrope(
                 fontSize: 13,
-                fontWeight: FontWeight.w800,
+                fontWeight: FontWeight.w600,
                 letterSpacing: 0.8,
                 color: AppColors.textPrimary,
               ),
@@ -250,11 +254,17 @@ class _CatatanScreenState extends State<CatatanScreen> {
           child: TextField(
             controller: controller,
             maxLines: 3,
-            style: GoogleFonts.nunito(fontSize: 14, color: AppColors.textPrimary),
+            style: GoogleFonts.manrope(
+              fontSize: 14,
+              color: AppColors.textPrimary,
+            ),
             decoration: InputDecoration(
               hintText: hint,
-              hintStyle: GoogleFonts.nunito(
-                  color: AppColors.textMuted, fontSize: 13, height: 1.5),
+              hintStyle: GoogleFonts.manrope(
+                color: AppColors.textMuted,
+                fontSize: 13,
+                height: 1.5,
+              ),
               border: InputBorder.none,
               contentPadding: const EdgeInsets.all(14),
             ),
@@ -264,12 +274,98 @@ class _CatatanScreenState extends State<CatatanScreen> {
           const SizedBox(height: 8),
           Text(
             tip,
-            style: GoogleFonts.nunito(
-                fontSize: 12, color: AppColors.textSecondary, height: 1.5),
+            style: GoogleFonts.manrope(
+              fontSize: 12,
+              color: AppColors.textSecondary,
+              height: 1.5,
+            ),
           ),
         ],
       ],
     );
+  }
+
+  Future<void> _saveMealLog() async {
+    setState(() => _isLoading = true);
+
+    try {
+      final user = await AuthService.getLoggedInUser();
+      if (user == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Silakan login terlebih dahulu',
+              style: GoogleFonts.manrope(fontWeight: FontWeight.w600),
+            ),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        return;
+      }
+
+      final rm = user['rm'] as String;
+
+      final success = await AuthService.saveMealLog(
+        rmPasien: rm,
+        mealPagi: _pagiCtrl.text,
+        selinganPagi: _selinganPagiCtrl.text,
+        mealSiang: _siangCtrl.text,
+        selinganSore: _selinganSoreCtrl.text,
+        mealMalam: _malamCtrl.text,
+      );
+
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Catatan makan berhasil disimpan!',
+              style: GoogleFonts.manrope(fontWeight: FontWeight.w600),
+            ),
+            backgroundColor: AppColors.primary,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        );
+
+        // Clear fields after successful save
+        _pagiCtrl.clear();
+        _selinganPagiCtrl.clear();
+        _siangCtrl.clear();
+        _selinganSoreCtrl.clear();
+        _malamCtrl.clear();
+
+        if (Navigator.canPop(context)) {
+          Navigator.pop(context);
+        }
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Gagal menyimpan catatan makan. Coba lagi.',
+              style: GoogleFonts.manrope(fontWeight: FontWeight.w600),
+            ),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Error: ${e.toString()}',
+            style: GoogleFonts.manrope(fontWeight: FontWeight.w600),
+          ),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } finally {
+      setState(() => _isLoading = false);
+    }
   }
 
   Widget _buildBottomButton(BuildContext context) {
@@ -284,35 +380,26 @@ class _CatatanScreenState extends State<CatatanScreen> {
       child: SizedBox(
         width: double.infinity,
         child: ElevatedButton.icon(
-          onPressed: () {
-            if (_page == 0) {
-              setState(() => _page = 1);
-            } else {
-              // Submit
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    'Laporan berhasil dikirim!',
-                    style: GoogleFonts.nunito(fontWeight: FontWeight.w600),
+          onPressed: _isLoading
+              ? null
+              : () async {
+                  await _saveMealLog();
+                },
+          icon: _isLoading
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                   ),
-                  backgroundColor: AppColors.primary,
-                  behavior: SnackBarBehavior.floating,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
-                ),
-              );
-              setState(() => _page = 0);
-            }
-          },
-          icon: Icon(
-            _page == 0 ? Icons.arrow_forward : Icons.send_outlined,
-            color: Colors.white,
-          ),
+                )
+              : const Icon(Icons.send_outlined, color: Colors.white),
           label: Text(
-            _page == 0 ? 'LANJUT KE MAKAN SIANG' : 'KIRIM LAPORAN',
-            style: GoogleFonts.nunito(
+            'KIRIM LAPORAN',
+            style: GoogleFonts.manrope(
               fontSize: 15,
-              fontWeight: FontWeight.w800,
+              fontWeight: FontWeight.w600,
               letterSpacing: 1.2,
               color: Colors.white,
             ),

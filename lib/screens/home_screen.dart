@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:percent_indicator/percent_indicator.dart';
 import '../theme/app_theme.dart';
+import 'catatan_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -21,7 +22,7 @@ class HomeScreen extends StatelessWidget {
                 _buildTopBar(context),
                 _buildCalorieRing(),
                 _buildNutritionSummary(),
-                _buildReminderCard(),
+                _buildReminderCard(context),
                 _buildDailyReport(),
                 _buildBottomStats(),
                 const SizedBox(height: 16),
@@ -33,7 +34,14 @@ class HomeScreen extends StatelessWidget {
             bottom: 24,
             right: 24,
             child: FloatingActionButton(
-              onPressed: () {},
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const CatatanScreen(),
+                  ),
+                );
+              },
               backgroundColor: AppColors.primary,
               shape: const CircleBorder(),
               child: const Icon(Icons.add, color: Colors.white, size: 28),
@@ -45,6 +53,7 @@ class HomeScreen extends StatelessWidget {
   }
 
   Widget _buildTopBar(BuildContext context) {
+    final firstName = 'Budi'; // Dummy name
     return Container(
       color: AppColors.surface,
       padding: EdgeInsets.only(
@@ -56,25 +65,22 @@ class HomeScreen extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Row(
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: AppColors.primaryLight,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(Icons.monitor_heart_outlined,
-                    color: AppColors.primary, size: 20),
-              ),
-              const SizedBox(width: 8),
               Text(
-                'ClinicalDiet',
-                style: GoogleFonts.nunito(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.primary,
+                'Halo, $firstName 👋',
+                style: GoogleFonts.manrope(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              Text(
+                'Pantau nutrisimu hari ini',
+                style: GoogleFonts.manrope(
+                  fontSize: 12,
+                  color: AppColors.textSecondary,
                 ),
               ),
             ],
@@ -82,27 +88,58 @@ class HomeScreen extends StatelessWidget {
           Row(
             children: [
               OutlinedButton(
-                onPressed: () {},
+                onPressed: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        'Beralih mode pengguna...',
+                        style: GoogleFonts.manrope(),
+                      ),
+                      backgroundColor: AppColors.primary,
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                },
                 style: OutlinedButton.styleFrom(
                   side: const BorderSide(color: AppColors.primary),
-                  padding:
-                  const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 4,
+                  ),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(20),
                   ),
                 ),
                 child: Text(
                   'PASIEN',
-                  style: GoogleFonts.nunito(
+                  style: GoogleFonts.manrope(
                     color: AppColors.primary,
                     fontSize: 12,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ),
               const SizedBox(width: 8),
-              const Icon(Icons.notifications_outlined,
-                  color: AppColors.textSecondary),
+              IconButton(
+                onPressed: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        'Tidak ada notifikasi baru.',
+                        style: GoogleFonts.manrope(),
+                      ),
+                      backgroundColor: AppColors.primary,
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                },
+                icon: const Icon(
+                  Icons.notifications_outlined,
+                  color: AppColors.textSecondary,
+                ),
+                constraints: const BoxConstraints(),
+                padding: EdgeInsets.zero,
+              ),
             ],
           ),
         ],
@@ -111,6 +148,7 @@ class HomeScreen extends StatelessWidget {
   }
 
   Widget _buildCalorieRing() {
+    final isComplete = false;
     return Container(
       color: AppColors.surface,
       padding: const EdgeInsets.symmetric(vertical: 28),
@@ -118,7 +156,7 @@ class HomeScreen extends StatelessWidget {
         child: CircularPercentIndicator(
           radius: 90,
           lineWidth: 12,
-          percent: 0.78,
+          percent: 0.8,
           backgroundColor: AppColors.divider,
           progressColor: AppColors.primary,
           circularStrokeCap: CircularStrokeCap.round,
@@ -127,7 +165,7 @@ class HomeScreen extends StatelessWidget {
             children: [
               Text(
                 'HARI INI',
-                style: GoogleFonts.nunito(
+                style: GoogleFonts.manrope(
                   fontSize: 11,
                   color: AppColors.textMuted,
                   fontWeight: FontWeight.w600,
@@ -135,19 +173,28 @@ class HomeScreen extends StatelessWidget {
                 ),
               ),
               Text(
-                '1.840',
-                style: GoogleFonts.nunito(
+                '1800',
+                style: GoogleFonts.manrope(
                   fontSize: 34,
-                  fontWeight: FontWeight.w900,
+                  fontWeight: FontWeight.w600,
                   color: AppColors.textPrimary,
                   height: 1.1,
                 ),
               ),
               Text(
                 'Kkal dikonsumsi',
-                style: GoogleFonts.nunito(
+                style: GoogleFonts.manrope(
                   fontSize: 11,
                   color: AppColors.textSecondary,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                'Target: 2000 Kkal',
+                style: GoogleFonts.manrope(
+                  fontSize: 10,
+                  color: AppColors.textMuted,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
             ],
@@ -166,25 +213,44 @@ class HomeScreen extends StatelessWidget {
         children: [
           Text(
             'Ringkasan Vitalitas Harian',
-            style: GoogleFonts.nunito(
+            style: GoogleFonts.manrope(
               fontSize: 17,
-              fontWeight: FontWeight.w800,
+              fontWeight: FontWeight.w600,
               color: AppColors.textPrimary,
             ),
           ),
           const SizedBox(height: 16),
-          _buildNutrientRow('PROTEIN', 1.0, AppColors.protein, '110% dari target'),
+          _buildNutrientRow(
+            'PROTEIN',
+            1.0,
+            AppColors.protein,
+            '110% dari target',
+          ),
           const SizedBox(height: 10),
-          _buildNutrientRow('LEMAK SEHAT', 0.72, AppColors.fat, '72% dari target'),
+          _buildNutrientRow(
+            'LEMAK SEHAT',
+            0.72,
+            AppColors.fat,
+            '72% dari target',
+          ),
           const SizedBox(height: 10),
-          _buildNutrientRow('KARBOHIDRAT', 0.92, AppColors.carb, '92% dari target'),
+          _buildNutrientRow(
+            'KARBOHIDRAT',
+            0.92,
+            AppColors.carb,
+            '92% dari target',
+          ),
         ],
       ),
     );
   }
 
   Widget _buildNutrientRow(
-      String label, double percent, Color color, String caption) {
+    String label,
+    double percent,
+    Color color,
+    String caption,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -193,18 +259,18 @@ class HomeScreen extends StatelessWidget {
           children: [
             Text(
               label,
-              style: GoogleFonts.nunito(
+              style: GoogleFonts.manrope(
                 fontSize: 11,
-                fontWeight: FontWeight.w700,
+                fontWeight: FontWeight.w600,
                 letterSpacing: 1,
                 color: AppColors.textSecondary,
               ),
             ),
             Text(
               caption,
-              style: GoogleFonts.nunito(
+              style: GoogleFonts.manrope(
                 fontSize: 12,
-                fontWeight: FontWeight.w700,
+                fontWeight: FontWeight.w600,
                 color: color,
               ),
             ),
@@ -223,7 +289,7 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildReminderCard() {
+  Widget _buildReminderCard(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
       child: Container(
@@ -241,14 +307,17 @@ class HomeScreen extends StatelessWidget {
                 color: const Color(0xFFFEF3C7),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: const Icon(Icons.restaurant_menu_outlined,
-                  color: Color(0xFFF59E0B), size: 22),
+              child: const Icon(
+                Icons.restaurant_menu_outlined,
+                color: Color(0xFFF59E0B),
+                size: 22,
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: Text(
-                'Anda belum mencatat camilan sore hari ini!',
-                style: GoogleFonts.nunito(
+                'Jangan lupa catat makan hari ini!',
+                style: GoogleFonts.manrope(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
                   color: AppColors.textPrimary,
@@ -257,19 +326,31 @@ class HomeScreen extends StatelessWidget {
             ),
             const SizedBox(width: 8),
             TextButton(
-              onPressed: () {},
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const CatatanScreen(),
+                  ),
+                );
+              },
               style: TextButton.styleFrom(
                 backgroundColor: AppColors.primaryLight,
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20)),
+                  borderRadius: BorderRadius.circular(20),
+                ),
               ),
               child: Text(
                 'Catat',
-                style: GoogleFonts.nunito(
-                    color: AppColors.primaryDark,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 12),
+                style: GoogleFonts.manrope(
+                  color: AppColors.primaryDark,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 12,
+                ),
               ),
             ),
           ],
@@ -295,10 +376,10 @@ class HomeScreen extends StatelessWidget {
                 const Icon(Icons.assignment_outlined, color: AppColors.primary),
                 const SizedBox(width: 8),
                 Text(
-                  'Laporan Harian',
-                  style: GoogleFonts.nunito(
+                  'Catatan Ahli Gizi',
+                  style: GoogleFonts.manrope(
                     fontSize: 16,
-                    fontWeight: FontWeight.w800,
+                    fontWeight: FontWeight.w600,
                     color: AppColors.textPrimary,
                   ),
                 ),
@@ -307,9 +388,9 @@ class HomeScreen extends StatelessWidget {
             const SizedBox(height: 6),
             Text(
               'ANALISIS KLINIS',
-              style: GoogleFonts.nunito(
+              style: GoogleFonts.manrope(
                 fontSize: 10,
-                fontWeight: FontWeight.w700,
+                fontWeight: FontWeight.w600,
                 letterSpacing: 1.2,
                 color: AppColors.textMuted,
               ),
@@ -317,7 +398,7 @@ class HomeScreen extends StatelessWidget {
             const SizedBox(height: 6),
             Text(
               'Asupan protein Anda sedikit di atas target, sangat baik untuk pemulihan otot. Namun, pertimbangkan menambah lemak sehat seperti alpukat pada makan malam untuk mencapai keseimbangan lipid.',
-              style: GoogleFonts.nunito(
+              style: GoogleFonts.manrope(
                 fontSize: 13,
                 color: AppColors.textSecondary,
                 height: 1.5,
@@ -326,12 +407,8 @@ class HomeScreen extends StatelessWidget {
             const SizedBox(height: 14),
             Row(
               children: [
-                Expanded(
-                  child: _buildReportStat('Asupan Serat', '24g / 30g'),
-                ),
-                Expanded(
-                  child: _buildReportStat('Hidrasi', '1,8L / 2,5L'),
-                ),
+                Expanded(child: _buildReportStat('Asupan Serat', '24g / 30g')),
+                Expanded(child: _buildReportStat('Hidrasi', '1,8L / 2,5L')),
               ],
             ),
           ],
@@ -351,15 +428,22 @@ class HomeScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label,
-              style: GoogleFonts.nunito(
-                  fontSize: 11, color: AppColors.textSecondary)),
+          Text(
+            label,
+            style: GoogleFonts.manrope(
+              fontSize: 11,
+              color: AppColors.textSecondary,
+            ),
+          ),
           const SizedBox(height: 2),
-          Text(value,
-              style: GoogleFonts.nunito(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.primary)),
+          Text(
+            value,
+            style: GoogleFonts.manrope(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: AppColors.primary,
+            ),
+          ),
         ],
       ),
     );
@@ -370,9 +454,21 @@ class HomeScreen extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
       child: Row(
         children: [
-          Expanded(child: _buildStatChip(Icons.biotech_outlined, '82g', 'PROTEIN NETTO')),
+          Expanded(
+            child: _buildStatChip(
+              Icons.biotech_outlined,
+              '82g',
+              'PROTEIN NETTO',
+            ),
+          ),
           const SizedBox(width: 12),
-          Expanded(child: _buildStatChip(Icons.water_drop_outlined, '12g', 'LEMAK JENUH')),
+          Expanded(
+            child: _buildStatChip(
+              Icons.water_drop_outlined,
+              '12g',
+              'LEMAK JENUH',
+            ),
+          ),
         ],
       ),
     );
@@ -392,17 +488,17 @@ class HomeScreen extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             value,
-            style: GoogleFonts.nunito(
+            style: GoogleFonts.manrope(
               fontSize: 22,
-              fontWeight: FontWeight.w900,
+              fontWeight: FontWeight.w600,
               color: AppColors.textPrimary,
             ),
           ),
           Text(
             label,
-            style: GoogleFonts.nunito(
+            style: GoogleFonts.manrope(
               fontSize: 10,
-              fontWeight: FontWeight.w700,
+              fontWeight: FontWeight.w600,
               color: AppColors.textSecondary,
               letterSpacing: 0.8,
             ),

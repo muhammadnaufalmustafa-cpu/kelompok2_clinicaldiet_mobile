@@ -1,26 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../theme/app_theme.dart';
-import 'home_screen.dart';
-import 'catatan_screen.dart';
-import 'edukasi_screen.dart';
-import 'profil_screen.dart';
+import '../../theme/app_theme.dart';
+import 'ahli_gizi_dashboard_screen.dart';
+import 'ahli_gizi_pasien_screen.dart';
+import 'ahli_gizi_edukasi_screen.dart';
+import 'ahli_gizi_profil_screen.dart';
 
-class MainScreen extends StatefulWidget {
-  const MainScreen({super.key});
+class AhliGiziMainScreen extends StatefulWidget {
+  const AhliGiziMainScreen({super.key});
 
   @override
-  State<MainScreen> createState() => _MainScreenState();
+  State<AhliGiziMainScreen> createState() => _AhliGiziMainScreenState();
 }
 
-class _MainScreenState extends State<MainScreen> {
+class _AhliGiziMainScreenState extends State<AhliGiziMainScreen> {
   int _currentIndex = 0;
 
   final List<Widget> _screens = const [
-    HomeScreen(),
-    CatatanScreen(),
-    EdukasiScreen(),
-    ProfilScreen(),
+    AhliGiziDashboardScreen(),
+    AhliGiziPasienScreen(),
+    AhliGiziEdukasiScreen(),
+    AhliGiziProfilScreen(),
   ];
 
   @override
@@ -48,10 +48,13 @@ class _MainScreenState extends State<MainScreen> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _buildNavItem(0, Icons.grid_view_rounded, Icons.grid_view_outlined, 'Beranda'),
-                _buildNavItem(1, Icons.book, Icons.book_outlined, 'Catatan'),
-                _buildNavItem(2, Icons.school, Icons.school_outlined, 'Edukasi'),
-                _buildNavItem(3, Icons.person, Icons.person_outline, 'Profil'),
+                _buildNavItem(0, Icons.dashboard, Icons.dashboard_outlined,
+                    'Dashboard'),
+                _buildNavItem(1, Icons.people, Icons.people_outline, 'Pasien'),
+                _buildNavItem(2, Icons.menu_book, Icons.menu_book_outlined,
+                    'Edukasi'),
+                _buildNavItem(
+                    3, Icons.person, Icons.person_outline, 'Profil'),
               ],
             ),
           ),
@@ -71,14 +74,18 @@ class _MainScreenState extends State<MainScreen> {
         children: [
           AnimatedContainer(
             duration: const Duration(milliseconds: 200),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
             decoration: BoxDecoration(
-              color: isActive ? AppColors.primaryLight : Colors.transparent,
+              color:
+                  isActive ? const Color(0xFFE0F2FE) : Colors.transparent,
               borderRadius: BorderRadius.circular(20),
             ),
             child: Icon(
               isActive ? activeIcon : inactiveIcon,
-              color: isActive ? AppColors.primary : AppColors.textMuted,
+              color: isActive
+                  ? const Color(0xFF0284C7)
+                  : AppColors.textMuted,
               size: 22,
             ),
           ),
@@ -87,8 +94,11 @@ class _MainScreenState extends State<MainScreen> {
             label,
             style: GoogleFonts.manrope(
               fontSize: 11,
-              fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
-              color: isActive ? AppColors.primary : AppColors.textMuted,
+              fontWeight:
+                  isActive ? FontWeight.w600 : FontWeight.w500,
+              color: isActive
+                  ? const Color(0xFF0284C7)
+                  : AppColors.textMuted,
             ),
           ),
         ],
