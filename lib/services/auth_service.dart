@@ -485,4 +485,102 @@ class AuthService {
     final user = await getLoggedInUser();
     return user?['role'] as String?;
   }
+
+  // ─────────────────────────── NUTRISI PASIEN ──────────────────────────────
+
+  static const String _nutrisiKey = 'nutrisi_pasien';
+
+  /// Simpan data nutrisi pasien (target & realisasi) oleh ahli gizi.
+  static Future<bool> saveNutrisiPasien({
+    required String rmPasien,
+    double kaloriTarget = 0,
+    double proteinTarget = 0,
+    double lemakTarget = 0,
+    double karboTarget = 0,
+    double kaloriAktual = 0,
+    double proteinAktual = 0,
+    double lemakAktual = 0,
+    double karboAktual = 0,
+    double seratAktual = 0,
+    double seratTarget = 30,
+    double hidrasiAktual = 0,
+    double hidrasiTarget = 2.5,
+    String catatan = '',
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final json = prefs.getString(_nutrisiKey);
+    List<Map<String, dynamic>> list = [];
+    if (json != null) {
+      final decoded = jsonDecode(json) as List;
+      list = decoded.cast<Map<String, dynamic>>();
+    }
+
+    final idx = list.indexWhere((n) => n['rm_pasien'] == rmPasien);
+    final data = {
+      'rm_pasien': rmPasien,
+      'kalori_target': kaloriTarget,
+      'protein_target': proteinTarget,
+      'lemak_target': lemakTarget,
+      'karbo_target': karboTarget,
+      'kalori_aktual': kaloriAktual,
+      'protein_aktual': proteinAktual,
+      'lemak_aktual': lemakAktual,
+      'karbo_aktual': karboAktual,
+      'serat_aktual': seratAktual,
+      'serat_target': seratTarget,
+      'hidrasi_aktual': hidrasiAktual,
+      'hidrasi_target': hidrasiTarget,
+      'catatan': catatan,
+      'updated_at': DateTime.now().toIso8601String(),
+    };
+
+    if (idx != -1) {
+      list[idx] = data;
+    } else {
+      list.add(data);
+    }
+
+    await prefs.setString(_nutrisiKey, jsonEncode(list));
+    return true;
+  }
+
+  /// Ambil data nutrisi pasien berdasarkan RM.
+  static Future<Map<String, dynamic>?> getNutrisiPasien(String rmPasien) async {
+    final prefs = await SharedPreferences.getInstance();
+    final json = prefs.getString(_nutrisiKey);
+    if (json == null) return null;
+
+    final decoded = jsonDecode(json) as List;
+    final list = decoded.cast<Map<String, dynamic>>();
+
+    try {
+      return list.firstWhere((n) => n['rm_pasien'] == rmPasien);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Simpan target diet teks dan catatan evaluasi (CPPT) ke record pasien.
+  static Future<bool> saveTargetDietPasien({
+    required String rm,
+    required String targetDiet,
+    required String catatanEvaluasi,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final usersJson = prefs.getString(_usersKey);
+    if (usersJson == null) return false;
+
+    final decoded = jsonDecode(usersJson) as List;
+    final users = decoded.cast<Map<String, dynamic>>();
+
+    final idx = users.indexWhere(
+        (u) => u['rm'].toString().toLowerCase() == rm.toLowerCase());
+    if (idx == -1) return false;
+
+    users[idx]['target_diet'] = targetDiet;
+    users[idx]['catatan_evaluasi'] = catatanEvaluasi;
+
+    await prefs.setString(_usersKey, jsonEncode(users));
+    return true;
+  }
 }
