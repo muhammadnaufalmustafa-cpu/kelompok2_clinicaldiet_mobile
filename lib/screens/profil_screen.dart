@@ -385,11 +385,23 @@ class _ProfilScreenState extends State<ProfilScreen> {
                     width: double.infinity,
                     child: ElevatedButton(
                       onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('Membuka WhatsApp Ahli Gizi...', style: GoogleFonts.manrope()),
-                            backgroundColor: AppColors.primary,
-                            behavior: SnackBarBehavior.floating,
+                        showDialog(
+                          context: context,
+                          builder: (ctx) => AlertDialog(
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                            title: Text('Hubungi Ahli Gizi', style: GoogleFonts.manrope(fontWeight: FontWeight.w700, fontSize: 18)),
+                            content: Text('Apakah Anda ingin memanggil WhatsApp ke nomor:\n\n+62 812-3456-7890', style: GoogleFonts.manrope()),
+                            actions: [
+                              TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Batal', style: GoogleFonts.manrope(color: AppColors.textSecondary))),
+                              ElevatedButton(
+                                onPressed: () {
+                                  Navigator.pop(ctx);
+                                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Membuka WhatsApp...'), backgroundColor: AppColors.primary));
+                                },
+                                style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+                                child: Text('Chat', style: GoogleFonts.manrope(color: Colors.white)),
+                              ),
+                            ],
                           ),
                         );
                       },
@@ -620,11 +632,37 @@ class _ProfilScreenState extends State<ProfilScreen> {
       trailing:
           const Icon(Icons.chevron_right, color: AppColors.textMuted, size: 20),
       onTap: () {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Fitur $title akan segera hadir.', style: GoogleFonts.manrope()),
-            backgroundColor: AppColors.primary,
-            behavior: SnackBarBehavior.floating,
+        showModalBottomSheet(
+          context: context,
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          builder: (ctx) => Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(icon, color: AppColors.primary, size: 28),
+                    const SizedBox(width: 12),
+                    Text(title, style: GoogleFonts.manrope(fontSize: 20, fontWeight: FontWeight.w700)),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Text('Pengaturan untuk $title akan segera diimplementasikan secara penuh pada update berikutnya.', style: GoogleFonts.manrope(color: AppColors.textSecondary, height: 1.5)),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, padding: const EdgeInsets.symmetric(vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                    child: Text('Tutup', style: GoogleFonts.manrope(fontWeight: FontWeight.w600, color: Colors.white)),
+                  ),
+                ),
+              ],
+            ),
           ),
         );
       },
