@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../theme/app_theme.dart';
 import '../services/auth_service.dart';
 import 'login_screen.dart';
@@ -26,6 +27,64 @@ class _ProfilScreenState extends State<ProfilScreen> {
       setState(() {
         _user = user;
       });
+      // Load also selected ahli gizi for WhatsApp
+      if (user != null && user['rm'] != null) {
+        final ag = await AuthService.getSelectedAhliGizi(user['rm'] as String);
+        if (mounted) setState(() => _selectedAhliGizi = ag);
+      }
+    }
+  }
+
+  Map<String, dynamic>? _selectedAhliGizi;
+
+  Future<void> _launchWhatsApp() async {
+    // Prioritaskan nomor dari ahli gizi yang dipilih
+    String? phone = _selectedAhliGizi?['phone'] as String?;
+
+    if (phone == null || phone.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Nomor telepon ahli gizi tidak tersedia. Pastikan Anda sudah memilih ahli gizi.',
+            style: GoogleFonts.manrope(),
+          ),
+          backgroundColor: Colors.orange,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    // Normalisasi nomor: hilangkan spasi, dash, dan pastikan format internasional
+    phone = phone.replaceAll(RegExp(r'[\s\-()]'), '');
+    if (phone.startsWith('0')) {
+      phone = '62${phone.substring(1)}';
+    } else if (!phone.startsWith('62')) {
+      phone = '62$phone';
+    }
+
+    final ahliGiziName = _selectedAhliGizi?['name'] ?? 'Ahli Gizi';
+    final pasienName = _user?['name'] ?? 'Pasien';
+    final message = Uri.encodeComponent(
+      'Halo $ahliGiziName, saya $pasienName. Saya ingin berkonsultasi mengenai program diet saya melalui aplikasi ClinicalDiet. Terima kasih.'
+    );
+
+    final uri = Uri.parse('https://wa.me/$phone?text=$message');
+
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } else {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Tidak dapat membuka WhatsApp. Pastikan WhatsApp sudah terinstall.',
+            style: GoogleFonts.manrope(),
+          ),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
     }
   }
 
@@ -140,6 +199,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
                               // Reload user data
                               await _loadUser();
 
+                              if (!context.mounted) return;
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
                                   content: Text(
@@ -151,6 +211,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
                                 ),
                               );
                             } else {
+                              if (!context.mounted) return;
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
                                   content: Text(
@@ -163,6 +224,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
                               );
                             }
                           } catch (e) {
+                            if (!context.mounted) return;
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
                                 content: Text(
@@ -478,29 +540,9 @@ class _ProfilScreenState extends State<ProfilScreen> {
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
-                      onPressed: () {
-                        showDialog(
-                          context: context,
-                          builder: (ctx) => AlertDialog(
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                            title: Text('Hubungi Ahli Gizi', style: GoogleFonts.manrope(fontWeight: FontWeight.w700, fontSize: 18)),
-                            content: Text('Apakah Anda ingin memanggil WhatsApp ke nomor:\n\n+62 812-3456-7890', style: GoogleFonts.manrope()),
-                            actions: [
-                              TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Batal', style: GoogleFonts.manrope(color: AppColors.textSecondary))),
-                              ElevatedButton(
-                                onPressed: () {
-                                  Navigator.pop(ctx);
-                                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Membuka WhatsApp...'), backgroundColor: AppColors.primary));
-                                },
-                                style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
-                                child: Text('Chat', style: GoogleFonts.manrope(color: Colors.white)),
-                              ),
-                            ],
-                          ),
-                        );
-                      },
+                      onPressed: _launchWhatsApp,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
+                        backgroundColor: const Color(0xFF25D366), // WhatsApp green
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(14)),
@@ -509,14 +551,16 @@ class _ProfilScreenState extends State<ProfilScreen> {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Icon(Icons.chat_outlined,
+                          const Icon(Icons.chat_rounded,
                               color: Colors.white, size: 20),
                           const SizedBox(width: 10),
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Chat  WhatsApp dengan Ahli Gizi',
+                                _selectedAhliGizi != null
+                                    ? 'Chat dengan ${_selectedAhliGizi!['name']}'
+                                    : 'Chat WhatsApp dengan Ahli Gizi',
                                 style: GoogleFonts.manrope(
                                   fontSize: 14,
                                   fontWeight: FontWeight.w600,
@@ -524,7 +568,9 @@ class _ProfilScreenState extends State<ProfilScreen> {
                                 ),
                               ),
                               Text(
-                                'PAKAR TERSEDIA',
+                                _selectedAhliGizi != null
+                                    ? _selectedAhliGizi!['specialization'] ?? 'AHLI GIZI'
+                                    : 'PILIH AHLI GIZI TERLEBIH DAHULU',
                                 style: GoogleFonts.manrope(
                                   fontSize: 10,
                                   color: Colors.white70,
@@ -533,7 +579,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
                               ),
                             ],
                           ),
-                          const SizedBox(width: 8),
+                          const Spacer(),
                           const Icon(Icons.arrow_forward,
                               color: Colors.white, size: 18),
                         ],

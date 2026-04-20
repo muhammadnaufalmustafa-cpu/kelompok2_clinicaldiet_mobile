@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../theme/app_theme.dart';
 import '../services/auth_service.dart';
 
@@ -65,6 +66,55 @@ class _EvaluasiPasienScreenState extends State<EvaluasiPasienScreen> {
     super.dispose();
   }
 
+  Future<void> _launchWhatsAppPasien() async {
+    String? phone = _pasienData?['phone'] as String?;
+
+    if (phone == null || phone.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Nomor telepon pasien tidak tersedia.',
+            style: GoogleFonts.manrope(),
+          ),
+          backgroundColor: Colors.orange,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    // Normalisasi nomor ke format internasional
+    phone = phone.replaceAll(RegExp(r'[\s\-()]'), '');
+    if (phone.startsWith('0')) {
+      phone = '62${phone.substring(1)}';
+    } else if (!phone.startsWith('62')) {
+      phone = '62$phone';
+    }
+
+    final pasienName = _pasienData?['name'] ?? 'Pasien';
+    final message = Uri.encodeComponent(
+      'Halo $pasienName, ini adalah pesan dari ahli gizi Anda melalui aplikasi ClinicalDiet. Ada yang ingin saya sampaikan mengenai perkembangan program diet Anda.'
+    );
+
+    final uri = Uri.parse('https://wa.me/$phone?text=$message');
+
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } else {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Tidak dapat membuka WhatsApp. Pastikan WhatsApp sudah terinstall.',
+            style: GoogleFonts.manrope(),
+          ),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -103,20 +153,13 @@ class _EvaluasiPasienScreenState extends State<EvaluasiPasienScreen> {
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton.icon(
-                          onPressed: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('Membuka WhatsApp Pasien...',
-                                    style: GoogleFonts.manrope()),
-                                backgroundColor: AppColors.primary,
-                                behavior: SnackBarBehavior.floating,
-                              ),
-                            );
-                          },
-                          icon: const Icon(Icons.chat_outlined,
+                          onPressed: _launchWhatsAppPasien,
+                          icon: const Icon(Icons.chat_rounded,
                               color: Colors.white, size: 20),
                           label: Text(
-                            'Chat WhatsApp Pasien',
+                            _pasienData?['phone'] != null
+                                ? 'Chat WA: ${_pasienData!['phone']}'
+                                : 'Chat WhatsApp Pasien',
                             style: GoogleFonts.manrope(
                               fontSize: 15,
                               fontWeight: FontWeight.w600,
@@ -124,7 +167,7 @@ class _EvaluasiPasienScreenState extends State<EvaluasiPasienScreen> {
                             ),
                           ),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.primary,
+                            backgroundColor: const Color(0xFF25D366), // WhatsApp green
                             padding: const EdgeInsets.symmetric(vertical: 14),
                             shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(14)),
