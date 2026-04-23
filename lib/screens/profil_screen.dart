@@ -543,45 +543,58 @@ class _ProfilScreenState extends State<ProfilScreen> {
                       onPressed: _launchWhatsApp,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF25D366), // WhatsApp green
-                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(14)),
                         elevation: 0,
                       ),
                       child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Icon(Icons.chat_rounded,
-                              color: Colors.white, size: 20),
-                          const SizedBox(width: 10),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                _selectedAhliGizi != null
-                                    ? 'Chat dengan ${_selectedAhliGizi!['name']}'
-                                    : 'Chat WhatsApp dengan Ahli Gizi',
-                                style: GoogleFonts.manrope(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.white,
-                                ),
-                              ),
-                              Text(
-                                _selectedAhliGizi != null
-                                    ? _selectedAhliGizi!['specialization'] ?? 'AHLI GIZI'
-                                    : 'PILIH AHLI GIZI TERLEBIH DAHULU',
-                                style: GoogleFonts.manrope(
-                                  fontSize: 10,
-                                  color: Colors.white70,
-                                  letterSpacing: 0.8,
-                                ),
-                              ),
-                            ],
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.2),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.chat_rounded,
+                                color: Colors.white, size: 22),
                           ),
-                          const Spacer(),
-                          const Icon(Icons.arrow_forward,
-                              color: Colors.white, size: 18),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  _selectedAhliGizi != null
+                                      ? 'Chat dengan ${_selectedAhliGizi!['name']}'
+                                      : 'Chat WhatsApp dengan Ahli Gizi',
+                                  style: GoogleFonts.manrope(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.white,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  _selectedAhliGizi != null
+                                      ? _selectedAhliGizi!['specialization'] ?? 'AHLI GIZI'
+                                      : 'PILIH AHLI GIZI TERLEBIH DAHULU',
+                                  style: GoogleFonts.manrope(
+                                    fontSize: 11,
+                                    color: Colors.white.withValues(alpha: 0.85),
+                                    letterSpacing: 0.5,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          const Icon(Icons.arrow_forward_ios_rounded,
+                              color: Colors.white, size: 16),
                         ],
                       ),
                     ),
