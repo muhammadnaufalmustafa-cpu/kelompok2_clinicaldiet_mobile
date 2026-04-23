@@ -9,6 +9,9 @@ class MealLog {
   final String mealMalam;
   final DateTime createdAt;
   DateTime? updatedAt;
+  // ── Poin #7: BB & TB disimpan bersama log harian ──
+  double? beratBadan; // kg
+  double? tinggiBadan; // cm
 
   MealLog({
     required this.id,
@@ -21,6 +24,8 @@ class MealLog {
     required this.mealMalam,
     required this.createdAt,
     this.updatedAt,
+    this.beratBadan,
+    this.tinggiBadan,
   });
 
   // Convert to Map for SharedPreferences storage
@@ -36,6 +41,8 @@ class MealLog {
       'meal_malam': mealMalam,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt?.toIso8601String(),
+      'berat_badan': beratBadan,
+      'tinggi_badan': tinggiBadan,
     };
   }
 
@@ -50,8 +57,13 @@ class MealLog {
       mealSiang: map['meal_siang'] ?? '',
       selinganSore: map['selingan_sore'] ?? '',
       mealMalam: map['meal_malam'] ?? '',
-      createdAt: DateTime.parse(map['created_at'] ?? DateTime.now().toIso8601String()),
-      updatedAt: map['updated_at'] != null ? DateTime.parse(map['updated_at']) : null,
+      createdAt:
+          DateTime.parse(map['created_at'] ?? DateTime.now().toIso8601String()),
+      updatedAt: map['updated_at'] != null
+          ? DateTime.parse(map['updated_at'])
+          : null,
+      beratBadan: (map['berat_badan'] as num?)?.toDouble(),
+      tinggiBadan: (map['tinggi_badan'] as num?)?.toDouble(),
     );
   }
 
@@ -72,5 +84,13 @@ class MealLog {
     if (selinganSore.isNotEmpty) meals.add('Selingan Sore');
     if (mealMalam.isNotEmpty) meals.add('Malam');
     return meals;
+  }
+
+  // Hitung IMT jika BB & TB tersedia
+  double? get imt {
+    if (beratBadan == null || tinggiBadan == null || tinggiBadan == 0) {
+      return null;
+    }
+    return beratBadan! / ((tinggiBadan! / 100) * (tinggiBadan! / 100));
   }
 }
