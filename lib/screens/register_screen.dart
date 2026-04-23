@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_theme.dart';
@@ -13,42 +14,64 @@ class RegisterScreen extends StatefulWidget {
 
 class _RegisterScreenState extends State<RegisterScreen> {
   final _nameController = TextEditingController();
+  final _usernameController = TextEditingController();
   final _rmController = TextEditingController();
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
   final _weightController = TextEditingController();
   final _heightController = TextEditingController();
+  final _nikController = TextEditingController();
+  final _agamaController = TextEditingController();
+  final _pendidikanController = TextEditingController();
+  final _pekerjaanController = TextEditingController();
+  final _alamatController = TextEditingController();
+  
   final _passController = TextEditingController();
   final _confirmPassController = TextEditingController();
+  final _captchaController = TextEditingController();
 
   String _selectedGender = 'Laki-laki';
-  String _selectedDiet = 'Normal';
   DateTime? _selectedBirthdate;
   bool _obscurePass = true;
   bool _obscureConfirmPass = true;
   bool _isLoading = false;
 
   final List<String> _genders = ['Laki-laki', 'Perempuan'];
-  final List<String> _dietTypes = [
-    'Normal',
-    'Diet Jantung',
-    'Diabetes Mellitus',
-    'Diet Gizi Kurang',
-    'Tinggi Kalori Tinggi Protein (TKTP)',
-    'Diet Rendah Garam',
-    'Diet Rendah Lemak',
-  ];
+  
+  // CAPTCHA Math variables
+  late int _captchaVal1;
+  late int _captchaVal2;
+
+  @override
+  void initState() {
+    super.initState();
+    _generateCaptcha();
+  }
+
+  void _generateCaptcha() {
+    final random = Random();
+    _captchaVal1 = random.nextInt(10) + 1; // 1-10
+    _captchaVal2 = random.nextInt(10) + 1; // 1-10
+    _captchaController.clear();
+  }
 
   @override
   void dispose() {
     _nameController.dispose();
+    _usernameController.dispose();
     _rmController.dispose();
     _emailController.dispose();
     _phoneController.dispose();
     _weightController.dispose();
     _heightController.dispose();
+    _nikController.dispose();
+    _agamaController.dispose();
+    _pendidikanController.dispose();
+    _pekerjaanController.dispose();
+    _alamatController.dispose();
     _passController.dispose();
     _confirmPassController.dispose();
+    _captchaController.dispose();
     super.dispose();
   }
 
@@ -75,17 +98,24 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   Future<void> _register() async {
     final name = _nameController.text.trim();
+    final username = _usernameController.text.trim();
     final rm = _rmController.text.trim();
     final email = _emailController.text.trim();
     final phone = _phoneController.text.trim();
     final weight = _weightController.text.trim();
     final height = _heightController.text.trim();
+    final nik = _nikController.text.trim();
+    final agama = _agamaController.text.trim();
+    final pendidikan = _pendidikanController.text.trim();
+    final pekerjaan = _pekerjaanController.text.trim();
+    final alamat = _alamatController.text.trim();
     final password = _passController.text;
     final confirmPass = _confirmPassController.text;
+    final captchaInput = _captchaController.text.trim();
 
     if (name.isEmpty || rm.isEmpty || email.isEmpty || phone.isEmpty ||
-        weight.isEmpty || height.isEmpty || password.isEmpty) {
-      _showSnackBar('Semua field harus diisi.', isError: true);
+        weight.isEmpty || height.isEmpty || password.isEmpty || username.isEmpty) {
+      _showSnackBar('Semua field wajib (yang bukan opsional) harus diisi.', isError: true);
       return;
     }
     if (_selectedBirthdate == null) {
@@ -98,6 +128,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
     if (password.length < 6) {
       _showSnackBar('Kata sandi minimal 6 karakter.', isError: true);
+      return;
+    }
+    
+    // Validasi Captcha
+    if (captchaInput.isEmpty || int.tryParse(captchaInput) != (_captchaVal1 + _captchaVal2)) {
+      _showSnackBar('Jawaban pertanyaan keamanan (CAPTCHA) salah.', isError: true);
+      setState(() {
+        _generateCaptcha();
+      });
       return;
     }
 
@@ -116,7 +155,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
       password: password,
       gender: _selectedGender,
       birthdate: birthdateStr,
-      dietType: _selectedDiet,
+      username: username,
+      nik: nik,
+      agama: agama,
+      pendidikan: pendidikan,
+      pekerjaan: pekerjaan,
+      alamat: alamat,
     );
 
     if (!mounted) return;
@@ -132,6 +176,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
       );
     } else {
       _showSnackBar(result['message'] ?? 'Registrasi gagal.', isError: true);
+      setState(() {
+        _generateCaptcha(); // regenerate if fail
+      });
     }
   }
 
@@ -189,26 +236,33 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     fontSize: 14, color: AppColors.textSecondary)),
             const SizedBox(height: 24),
 
-            // ── Identitas ──
-            _sectionLabel('DATA IDENTITAS'),
+            // ── Identitas Utama ──
+            _sectionLabel('DATA IDENTITAS UTAMA'),
             const SizedBox(height: 10),
             _buildTextField(
               controller: _nameController,
-              label: 'Nama Lengkap',
+              label: 'Nama Lengkap *',
               hint: 'Masukkan nama lengkap',
               prefixIcon: Icons.person_outline,
             ),
             const SizedBox(height: 14),
             _buildTextField(
+              controller: _usernameController,
+              label: 'Username *',
+              hint: 'Pilih username untuk login',
+              prefixIcon: Icons.alternate_email,
+            ),
+            const SizedBox(height: 14),
+            _buildTextField(
               controller: _rmController,
-              label: 'Nomor Rekam Medis (RM)',
+              label: 'Nomor Rekam Medis (RM) *',
               hint: 'RM-12345',
               prefixIcon: Icons.badge_outlined,
             ),
             const SizedBox(height: 14),
 
             // Jenis Kelamin
-            Text('Jenis Kelamin',
+            Text('Jenis Kelamin *',
                 style: GoogleFonts.manrope(
                     fontSize: 13, color: AppColors.textPrimary)),
             const SizedBox(height: 8),
@@ -264,7 +318,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             const SizedBox(height: 14),
 
             // Tanggal Lahir
-            Text('Tanggal Lahir',
+            Text('Tanggal Lahir *',
                 style: GoogleFonts.manrope(
                     fontSize: 13, color: AppColors.textPrimary)),
             const SizedBox(height: 8),
@@ -301,7 +355,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             const SizedBox(height: 14),
             _buildTextField(
               controller: _phoneController,
-              label: 'No. Telepon / WA',
+              label: 'No. Telepon / WA *',
               hint: '0812XXXXXXXX',
               prefixIcon: Icons.phone_outlined,
               keyboardType: TextInputType.phone,
@@ -309,22 +363,59 @@ class _RegisterScreenState extends State<RegisterScreen> {
             const SizedBox(height: 14),
             _buildTextField(
               controller: _emailController,
-              label: 'Email',
+              label: 'Email *',
               hint: 'alamat@email.com',
               prefixIcon: Icons.email_outlined,
               keyboardType: TextInputType.emailAddress,
             ),
             const SizedBox(height: 20),
 
+            // ── Identitas Tambahan ──
+            _sectionLabel('DATA IDENTITAS TAMBAHAN (Opsional)'),
+            const SizedBox(height: 10),
+            _buildTextField(
+              controller: _nikController,
+              label: 'NIK',
+              hint: 'Masukkan NIK KTP',
+              prefixIcon: Icons.credit_card_outlined,
+              keyboardType: TextInputType.number,
+            ),
+            const SizedBox(height: 14),
+            _buildTextField(
+              controller: _agamaController,
+              label: 'Agama',
+              hint: 'Contoh: Islam, Kristen, dll',
+            ),
+            const SizedBox(height: 14),
+            _buildTextField(
+              controller: _pendidikanController,
+              label: 'Pendidikan Terakhir',
+              hint: 'Contoh: SMA, S1, dll',
+            ),
+            const SizedBox(height: 14),
+            _buildTextField(
+              controller: _pekerjaanController,
+              label: 'Pekerjaan',
+              hint: 'Contoh: Wiraswasta',
+            ),
+            const SizedBox(height: 14),
+            _buildTextField(
+              controller: _alamatController,
+              label: 'Alamat Lengkap',
+              hint: 'Masukkan alamat domisili',
+              maxLines: 3,
+            ),
+            const SizedBox(height: 20),
+
             // ── Data Medis ──
-            _sectionLabel('DATA MEDIS'),
+            _sectionLabel('DATA FISIK'),
             const SizedBox(height: 10),
             Row(
               children: [
                 Expanded(
                   child: _buildNumberField(
                     controller: _weightController,
-                    label: 'Berat Badan',
+                    label: 'Berat Badan *',
                     hint: '00',
                     suffixText: 'kg',
                   ),
@@ -333,42 +424,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 Expanded(
                   child: _buildNumberField(
                     controller: _heightController,
-                    label: 'Tinggi Badan',
+                    label: 'Tinggi Badan *',
                     hint: '000',
                     suffixText: 'cm',
                   ),
                 ),
               ],
-            ),
-            const SizedBox(height: 14),
-
-            // Jenis Diet
-            Text('Jenis Diet',
-                style: GoogleFonts.manrope(
-                    fontSize: 13, color: AppColors.textPrimary)),
-            const SizedBox(height: 8),
-            Container(
-              decoration: BoxDecoration(
-                color: const Color(0xFFF3F4F6),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(
-                    color: AppColors.divider.withValues(alpha: 0.5)),
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: DropdownButtonHideUnderline(
-                child: DropdownButton<String>(
-                  value: _selectedDiet,
-                  isExpanded: true,
-                  icon: const Icon(Icons.keyboard_arrow_down,
-                      color: AppColors.textSecondary),
-                  style: GoogleFonts.manrope(
-                      fontSize: 15, color: AppColors.textPrimary),
-                  items: _dietTypes
-                      .map((d) => DropdownMenuItem(value: d, child: Text(d)))
-                      .toList(),
-                  onChanged: (val) => setState(() => _selectedDiet = val!),
-                ),
-              ),
             ),
             const SizedBox(height: 20),
 
@@ -377,7 +438,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             const SizedBox(height: 10),
             _buildTextField(
               controller: _passController,
-              label: 'Kata Sandi',
+              label: 'Kata Sandi *',
               hint: '••••••••',
               prefixIcon: Icons.lock_outline,
               obscure: _obscurePass,
@@ -395,7 +456,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             const SizedBox(height: 14),
             _buildTextField(
               controller: _confirmPassController,
-              label: 'Konfirmasi Kata Sandi',
+              label: 'Konfirmasi Kata Sandi *',
               hint: '••••••••',
               prefixIcon: Icons.lock_outline,
               obscure: _obscureConfirmPass,
@@ -410,6 +471,39 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   size: 20,
                 ),
               ),
+            ),
+            const SizedBox(height: 20),
+            
+            // ── CAPTCHA Sederhana ──
+            _sectionLabel('VERIFIKASI KEAMANAN'),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryLight,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    '$_captchaVal1 + $_captchaVal2 = ?',
+                    style: GoogleFonts.manrope(
+                      fontSize: 18, 
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.primaryDark,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: _buildTextField(
+                    controller: _captchaController,
+                    label: 'Jawaban',
+                    hint: 'Hasil',
+                    keyboardType: TextInputType.number,
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 28),
 
@@ -490,6 +584,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     Widget? suffix,
     bool obscure = false,
     TextInputType keyboardType = TextInputType.text,
+    int maxLines = 1,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -509,6 +604,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             controller: controller,
             obscureText: obscure,
             keyboardType: keyboardType,
+            maxLines: maxLines,
             style: GoogleFonts.manrope(
                 fontSize: 15, color: AppColors.textPrimary),
             decoration: InputDecoration(

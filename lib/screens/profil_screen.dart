@@ -1,9 +1,12 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../theme/app_theme.dart';
 import '../services/auth_service.dart';
 import 'login_screen.dart';
+import 'pilih_ahli_gizi_screen.dart';
 
 class ProfilScreen extends StatefulWidget {
   const ProfilScreen({super.key});
@@ -14,6 +17,8 @@ class ProfilScreen extends StatefulWidget {
 
 class _ProfilScreenState extends State<ProfilScreen> {
   Map<String, dynamic>? _user;
+  Map<String, dynamic>? _selectedAhliGizi;
+  final ImagePicker _picker = ImagePicker();
 
   @override
   void initState() {
@@ -27,7 +32,6 @@ class _ProfilScreenState extends State<ProfilScreen> {
       setState(() {
         _user = user;
       });
-      // Load also selected ahli gizi for WhatsApp
       if (user != null && user['rm'] != null) {
         final ag = await AuthService.getSelectedAhliGizi(user['rm'] as String);
         if (mounted) setState(() => _selectedAhliGizi = ag);
@@ -35,10 +39,31 @@ class _ProfilScreenState extends State<ProfilScreen> {
     }
   }
 
-  Map<String, dynamic>? _selectedAhliGizi;
+  Future<void> _pickImage() async {
+    try {
+      final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+      if (image != null && _user != null) {
+        final rm = _user!['rm'];
+        await AuthService.updateProfilePhoto(rm, image.path, true);
+        await _loadUser();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('Foto profil berhasil diperbarui.', style: GoogleFonts.manrope()),
+            backgroundColor: AppColors.primary,
+          ));
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Gagal mengambil foto: $e', style: GoogleFonts.manrope()),
+          backgroundColor: Colors.red,
+        ));
+      }
+    }
+  }
 
   Future<void> _launchWhatsApp() async {
-    // Prioritaskan nomor dari ahli gizi yang dipilih
     String? phone = _selectedAhliGizi?['phone'] as String?;
 
     if (phone == null || phone.isEmpty) {
@@ -55,7 +80,6 @@ class _ProfilScreenState extends State<ProfilScreen> {
       return;
     }
 
-    // Normalisasi nomor: hilangkan spasi, dash, dan pastikan format internasional
     phone = phone.replaceAll(RegExp(r'[\s\-()]'), '');
     if (phone.startsWith('0')) {
       phone = '62${phone.substring(1)}';
@@ -162,16 +186,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
                           final height = double.tryParse(heightCtrl.text);
 
                           if (weight == null || height == null) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  'Masukkan nilai yang valid',
-                                  style: GoogleFonts.manrope(),
-                                ),
-                                backgroundColor: Colors.red,
-                                behavior: SnackBarBehavior.floating,
-                              ),
-                            );
+                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Masukkan nilai yang valid', style: GoogleFonts.manrope()), backgroundColor: Colors.red));
                             return;
                           }
 
@@ -179,62 +194,20 @@ class _ProfilScreenState extends State<ProfilScreen> {
 
                           try {
                             final rm = _user?['rm'];
-                            if (rm == null) {
-                              throw Exception('User RM tidak ditemukan');
-                            }
-
-                            final success = await AuthService.updatePasienBBTB(
-                              rm,
-                              weight,
-                              height,
-                            );
+                            final success = await AuthService.updatePasienBBTB(rm, weight, height);
 
                             if (success) {
                               weightCtrl.dispose();
                               heightCtrl.dispose();
-                              
                               if (!context.mounted) return;
                               Navigator.pop(context);
-
-                              // Reload user data
                               await _loadUser();
-
                               if (!context.mounted) return;
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(
-                                    'Data BB & TB berhasil diperbarui!',
-                                    style: GoogleFonts.manrope(),
-                                  ),
-                                  backgroundColor: AppColors.primary,
-                                  behavior: SnackBarBehavior.floating,
-                                ),
-                              );
+                              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Data berhasil diperbarui!', style: GoogleFonts.manrope()), backgroundColor: AppColors.primary));
                             } else {
                               if (!context.mounted) return;
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(
-                                    'Gagal memperbarui data. Coba lagi.',
-                                    style: GoogleFonts.manrope(),
-                                  ),
-                                  backgroundColor: Colors.red,
-                                  behavior: SnackBarBehavior.floating,
-                                ),
-                              );
+                              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal memperbarui data.', style: GoogleFonts.manrope()), backgroundColor: Colors.red));
                             }
-                          } catch (e) {
-                            if (!context.mounted) return;
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  'Error: ${e.toString()}',
-                                  style: GoogleFonts.manrope(),
-                                ),
-                                backgroundColor: Colors.red,
-                                behavior: SnackBarBehavior.floating,
-                              ),
-                            );
                           } finally {
                             setStateDialog(() => isLoading = false);
                           }
@@ -246,20 +219,8 @@ class _ProfilScreenState extends State<ProfilScreen> {
                         borderRadius: BorderRadius.circular(12)),
                   ),
                   child: isLoading
-                      ? SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              Colors.white.withValues(alpha: 0.7),
-                            ),
-                            strokeWidth: 2,
-                          ),
-                        )
-                      : Text('SIMPAN',
-                          style: GoogleFonts.manrope(
-                              fontWeight: FontWeight.w600,
-                              color: Colors.white)),
+                      ? SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                      : Text('SIMPAN', style: GoogleFonts.manrope(fontWeight: FontWeight.w600, color: Colors.white)),
                 ),
               ),
             ],
@@ -272,6 +233,8 @@ class _ProfilScreenState extends State<ProfilScreen> {
   int _selectedRating = 5;
 
   void _showRatingDialog() {
+    final reviewCtrl = TextEditingController();
+    
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
@@ -282,32 +245,47 @@ class _ProfilScreenState extends State<ProfilScreen> {
                   fontWeight: FontWeight.w700,
                   fontSize: 18,
                   color: AppColors.textPrimary)),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('Seberapa puas Anda dengan pelayanan ahli gizi Anda?',
-                  style: GoogleFonts.manrope(
-                      fontSize: 14, color: AppColors.textSecondary),
-                  textAlign: TextAlign.center),
-              const SizedBox(height: 20),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(5, (index) {
-                  return IconButton(
-                    onPressed: () {
-                      setStateDialog(() {
-                        _selectedRating = index + 1;
-                      });
-                    },
-                    icon: Icon(
-                      index < _selectedRating ? Icons.star : Icons.star_border,
-                      color: const Color(0xFFF59E0B),
-                      size: 32,
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('Seberapa puas Anda dengan pelayanan ahli gizi Anda?',
+                    style: GoogleFonts.manrope(
+                        fontSize: 14, color: AppColors.textSecondary),
+                    textAlign: TextAlign.center),
+                const SizedBox(height: 20),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: List.generate(5, (index) {
+                    return IconButton(
+                      onPressed: () {
+                        setStateDialog(() {
+                          _selectedRating = index + 1;
+                        });
+                      },
+                      icon: Icon(
+                        index < _selectedRating ? Icons.star : Icons.star_border,
+                        color: const Color(0xFFF59E0B),
+                        size: 32,
+                      ),
+                    );
+                  }),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: reviewCtrl,
+                  maxLines: 3,
+                  decoration: InputDecoration(
+                    hintText: 'Tuliskan ulasan Anda (opsional)...',
+                    hintStyle: GoogleFonts.manrope(color: AppColors.textMuted, fontSize: 14),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: AppColors.divider),
                     ),
-                  );
-                }),
-              ),
-            ],
+                  ),
+                ),
+              ],
+            ),
           ),
           actions: [
             TextButton(
@@ -319,18 +297,32 @@ class _ProfilScreenState extends State<ProfilScreen> {
             ),
             ElevatedButton(
               onPressed: () async {
+                final ulasan = reviewCtrl.text.trim();
                 Navigator.pop(context);
                 
-                // Ambil daftar ahli gizi untuk simulasikan update
-                final ahliGiziList = await AuthService.getAllAhliGizi();
-                if (ahliGiziList.isNotEmpty) {
-                  final ag = ahliGiziList.first; // Ambil ahli gizi pertama sementara karena UI blm simpan ID
-                  await AuthService.submitRatingAhliGizi(ag['nip'], _selectedRating.toDouble());
+                if (_selectedAhliGizi != null) {
+                  await AuthService.submitRatingAhliGizi(
+                    _selectedAhliGizi!['nip'], 
+                    _selectedRating.toDouble(), 
+                    ulasan: ulasan,
+                    pasienName: _user?['name'] ?? 'Pasien'
+                  );
+                } else {
+                  final ahliGiziList = await AuthService.getAllAhliGizi();
+                  if (ahliGiziList.isNotEmpty) {
+                    final ag = ahliGiziList.first;
+                    await AuthService.submitRatingAhliGizi(
+                      ag['nip'], 
+                      _selectedRating.toDouble(),
+                      ulasan: ulasan,
+                      pasienName: _user?['name'] ?? 'Pasien'
+                    );
+                  }
                 }
 
                 if (!context.mounted) return;
                 ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                  content: Text('Terima kasih atas penilaian Anda!',
+                  content: Text('Terima kasih atas ulasan dan penilaian Anda!',
                       style: GoogleFonts.manrope()),
                   backgroundColor: AppColors.primary,
                   behavior: SnackBarBehavior.floating,
@@ -351,13 +343,216 @@ class _ProfilScreenState extends State<ProfilScreen> {
     );
   }
 
+  void _showEditProfileDialog() {
+    final nameCtrl = TextEditingController(text: _user?['name'] ?? '');
+    final usernameCtrl = TextEditingController(text: _user?['username'] ?? '');
+    final phoneCtrl = TextEditingController(text: _user?['phone'] ?? '');
+    final emailCtrl = TextEditingController(text: _user?['email'] ?? '');
+    final nikCtrl = TextEditingController(text: _user?['nik'] ?? '');
+    final agamaCtrl = TextEditingController(text: _user?['agama'] ?? '');
+    final alamatCtrl = TextEditingController(text: _user?['alamat'] ?? '');
+    final pendidikanCtrl = TextEditingController(text: _user?['pendidikan'] ?? '');
+    final pekerjaanCtrl = TextEditingController(text: _user?['pekerjaan'] ?? '');
+    bool isLoading = false;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setStateDialog) => Padding(
+          padding: EdgeInsets.fromLTRB(
+              24, 24, 24, MediaQuery.of(ctx).viewInsets.bottom + 24),
+          child: SizedBox(
+            height: MediaQuery.of(context).size.height * 0.75,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('Edit Profil',
+                        style: GoogleFonts.manrope(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.textPrimary)),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.pop(context),
+                    )
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      children: [
+                        _buildDialogTextField(nameCtrl, 'Nama Lengkap'),
+                        _buildDialogTextField(usernameCtrl, 'Username'),
+                        _buildDialogTextField(phoneCtrl, 'No. Telepon'),
+                        _buildDialogTextField(emailCtrl, 'Email'),
+                        _buildDialogTextField(nikCtrl, 'NIK'),
+                        _buildDialogTextField(agamaCtrl, 'Agama'),
+                        _buildDialogTextField(pendidikanCtrl, 'Pendidikan Terakhir'),
+                        _buildDialogTextField(pekerjaanCtrl, 'Pekerjaan'),
+                        _buildDialogTextField(alamatCtrl, 'Alamat', maxLines: 3),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: isLoading
+                        ? null
+                        : () async {
+                            setStateDialog(() => isLoading = true);
+                            try {
+                              final rm = _user?['rm'];
+                              if (rm != null) {
+                                final success = await AuthService.updatePasienProfile(
+                                  rm: rm,
+                                  name: nameCtrl.text.trim(),
+                                  username: usernameCtrl.text.trim(),
+                                  phone: phoneCtrl.text.trim(),
+                                  email: emailCtrl.text.trim(),
+                                  nik: nikCtrl.text.trim(),
+                                  agama: agamaCtrl.text.trim(),
+                                  alamat: alamatCtrl.text.trim(),
+                                  pendidikan: pendidikanCtrl.text.trim(),
+                                  pekerjaan: pekerjaanCtrl.text.trim(),
+                                );
+
+                                if (success) {
+                                  if (!context.mounted) return;
+                                  Navigator.pop(context);
+                                  await _loadUser();
+                                  if (!context.mounted) return;
+                                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Profil berhasil diperbarui.', style: GoogleFonts.manrope()), backgroundColor: AppColors.primary));
+                                } else {
+                                  if (!context.mounted) return;
+                                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal memperbarui profil (Username mungkin sudah dipakai).', style: GoogleFonts.manrope()), backgroundColor: Colors.red));
+                                }
+                              }
+                            } finally {
+                              setStateDialog(() => isLoading = false);
+                            }
+                          },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                    ),
+                    child: isLoading
+                        ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                        : Text('SIMPAN PERUBAHAN', style: GoogleFonts.manrope(fontWeight: FontWeight.w600, color: Colors.white)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDialogTextField(TextEditingController controller, String label, {int maxLines = 1}) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: TextField(
+        controller: controller,
+        maxLines: maxLines,
+        style: GoogleFonts.manrope(fontSize: 14),
+        decoration: InputDecoration(
+          labelText: label,
+          labelStyle: GoogleFonts.manrope(fontSize: 14, color: AppColors.textSecondary),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: const BorderSide(color: AppColors.divider),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: const BorderSide(color: AppColors.divider),
+          ),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        ),
+      ),
+    );
+  }
+
+  void _showLogoutConfirmation() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text('Konfirmasi Logout', style: GoogleFonts.manrope(fontWeight: FontWeight.w700)),
+        content: Text('Apakah Anda yakin ingin keluar dari akun?', style: GoogleFonts.manrope(color: AppColors.textSecondary)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text('Batal', style: GoogleFonts.manrope(fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              await AuthService.logout();
+              if (!mounted) return;
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(builder: (_) => const LoginScreen()),
+                (route) => false,
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.red,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            child: Text('Keluar', style: GoogleFonts.manrope(color: Colors.white, fontWeight: FontWeight.w600)),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final weight = (_user?['weight'] as num?)?.toDouble() ?? 0;
+    final height = (_user?['height'] as num?)?.toDouble() ?? 0;
+    
+    double bmi = 0;
+    String bmiStatus = 'N/A';
+    Color bmiColor = AppColors.textMuted;
+    
+    if (weight > 0 && height > 0) {
+      final heightM = height / 100;
+      bmi = weight / (heightM * heightM);
+      if (bmi < 18.5) {
+        bmiStatus = 'KURANG';
+        bmiColor = Colors.orange;
+      } else if (bmi >= 18.5 && bmi < 25) {
+        bmiStatus = 'NORMAL';
+        bmiColor = AppColors.primary;
+      } else if (bmi >= 25 && bmi < 30) {
+        bmiStatus = 'BERLEBIH';
+        bmiColor = Colors.orange;
+      } else {
+        bmiStatus = 'OBESITAS';
+        bmiColor = AppColors.red;
+      }
+    }
+
+    final profilePhoto = _user?['profile_photo_path'] as String?;
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: CustomScrollView(
         slivers: [
-          // App Bar
           SliverAppBar(
             pinned: true,
             backgroundColor: AppColors.surface,
@@ -389,49 +584,52 @@ class _ProfilScreenState extends State<ProfilScreen> {
               ],
             ),
           ),
-
-          // Profile Header
           SliverToBoxAdapter(
             child: Container(
               color: AppColors.surface,
               padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
               child: Column(
                 children: [
-                  // Avatar with edit button
-                  Stack(
-                    children: [
-                      Container(
-                        width: 88,
-                        height: 88,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          gradient: const LinearGradient(
-                            colors: [Color(0xFF6EE7B7), Color(0xFF10B981)],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          border: Border.all(
-                              color: AppColors.primaryLight, width: 3),
-                        ),
-                        child: const Icon(Icons.person,
-                            color: Colors.white, size: 48),
-                      ),
-                      Positioned(
-                        bottom: 2,
-                        right: 2,
-                        child: Container(
-                          width: 26,
-                          height: 26,
+                  GestureDetector(
+                    onTap: _pickImage,
+                    child: Stack(
+                      children: [
+                        Container(
+                          width: 88,
+                          height: 88,
                           decoration: BoxDecoration(
-                            color: AppColors.primary,
                             shape: BoxShape.circle,
-                            border: Border.all(color: Colors.white, width: 2),
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFF6EE7B7), Color(0xFF10B981)],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            border: Border.all(
+                                color: AppColors.primaryLight, width: 3),
                           ),
-                          child: const Icon(Icons.edit,
-                              color: Colors.white, size: 13),
+                          child: ClipOval(
+                            child: profilePhoto != null && profilePhoto.isNotEmpty
+                                ? Image.file(File(profilePhoto), fit: BoxFit.cover)
+                                : const Icon(Icons.person, color: Colors.white, size: 48),
+                          ),
                         ),
-                      ),
-                    ],
+                        Positioned(
+                          bottom: 2,
+                          right: 2,
+                          child: Container(
+                            width: 26,
+                            height: 26,
+                            decoration: BoxDecoration(
+                              color: AppColors.primary,
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.white, width: 2),
+                            ),
+                            child: const Icon(Icons.camera_alt,
+                                color: Colors.white, size: 13),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                   const SizedBox(height: 12),
                   Text(
@@ -452,17 +650,15 @@ class _ProfilScreenState extends State<ProfilScreen> {
                   ),
                   const SizedBox(height: 20),
 
-                  // Berat & Tinggi
                   Row(
                     children: [
-                      Expanded(child: _buildBodyStat('BERAT BADAN', _user?['weight']?.toString() ?? '-', 'kg')),
+                      Expanded(child: _buildBodyStat('BERAT BADAN', weight > 0 ? weight.toString() : '-', 'kg')),
                       const SizedBox(width: 12),
-                      Expanded(child: _buildBodyStat('TINGGI BADAN', _user?['height']?.toString() ?? '-', 'cm')),
+                      Expanded(child: _buildBodyStat('TINGGI BADAN', height > 0 ? height.toString() : '-', 'cm')),
                     ],
                   ),
                   const SizedBox(height: 12),
 
-                  // BMI card
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(16),
@@ -470,8 +666,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
                       color: AppColors.background,
                       borderRadius: BorderRadius.circular(14),
                       border: Border(
-                        left: BorderSide(
-                            color: AppColors.primary, width: 4),
+                        left: BorderSide(color: bmiColor, width: 4),
                       ),
                     ),
                     child: Column(
@@ -490,7 +685,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
                         Row(
                           children: [
                             Text(
-                              '22.8',
+                              bmi > 0 ? bmi.toStringAsFixed(1) : '-',
                               style: GoogleFonts.manrope(
                                 fontSize: 26,
                                 fontWeight: FontWeight.w600,
@@ -498,22 +693,22 @@ class _ProfilScreenState extends State<ProfilScreen> {
                               ),
                             ),
                             const SizedBox(width: 10),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 10, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: AppColors.primaryLight,
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: Text(
-                                'NORMAL',
-                                style: GoogleFonts.manrope(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppColors.primaryDark,
+                            if (bmi > 0)
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: bmiColor.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Text(
+                                  bmiStatus,
+                                  style: GoogleFonts.manrope(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                    color: bmiColor,
+                                  ),
                                 ),
                               ),
-                            ),
                           ],
                         ),
                       ],
@@ -536,65 +731,65 @@ class _ProfilScreenState extends State<ProfilScreen> {
                   ),
                   const SizedBox(height: 16),
 
-                  // WhatsApp button
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
                       onPressed: _launchWhatsApp,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF25D366), // WhatsApp green
+                        backgroundColor: const Color(0xFF25D366),
                         padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14)),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                         elevation: 0,
                       ),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Icon(Icons.chat_rounded,
-                              color: Colors.white, size: 20),
+                          const Icon(Icons.chat_rounded, color: Colors.white, size: 20),
                           const SizedBox(width: 10),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                _selectedAhliGizi != null
-                                    ? 'Chat dengan ${_selectedAhliGizi!['name']}'
-                                    : 'Chat WhatsApp dengan Ahli Gizi',
-                                style: GoogleFonts.manrope(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.white,
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  _selectedAhliGizi != null
+                                      ? 'Chat dengan ${_selectedAhliGizi!['name']}'
+                                      : 'Chat WhatsApp dengan Ahli Gizi',
+                                  style: GoogleFonts.manrope(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.white,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
-                              ),
-                              Text(
-                                _selectedAhliGizi != null
-                                    ? _selectedAhliGizi!['specialization'] ?? 'AHLI GIZI'
-                                    : 'PILIH AHLI GIZI TERLEBIH DAHULU',
-                                style: GoogleFonts.manrope(
-                                  fontSize: 10,
-                                  color: Colors.white70,
-                                  letterSpacing: 0.8,
+                                Text(
+                                  _selectedAhliGizi != null
+                                      ? 'AHLI GIZI KLINIS'
+                                      : 'PILIH AHLI GIZI TERLEBIH DAHULU',
+                                  style: GoogleFonts.manrope(
+                                    fontSize: 10,
+                                    color: Colors.white70,
+                                    letterSpacing: 0.8,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
-                          const Spacer(),
-                          const Icon(Icons.arrow_forward,
-                              color: Colors.white, size: 18),
+                          const Icon(Icons.arrow_forward, color: Colors.white, size: 18),
                         ],
                       ),
                     ),
                   ),
                   const SizedBox(height: 12),
 
-                  // Rating button
                   SizedBox(
                     width: double.infinity,
                     child: OutlinedButton.icon(
                       onPressed: _showRatingDialog,
                       icon: const Icon(Icons.star_outline, size: 20, color: Color(0xFFD97706)),
-                      label: Text('Beri Rating Ahli Gizi', style: GoogleFonts.manrope(fontWeight: FontWeight.w600, color: const Color(0xFFD97706))),
+                      label: Text('Beri Rating & Ulasan Ahli Gizi', style: GoogleFonts.manrope(fontWeight: FontWeight.w600, color: const Color(0xFFD97706))),
                       style: OutlinedButton.styleFrom(
                         side: const BorderSide(color: Color(0xFFFDE68A)),
                         backgroundColor: const Color(0xFFFEF3C7),
@@ -610,7 +805,6 @@ class _ProfilScreenState extends State<ProfilScreen> {
 
           const SliverToBoxAdapter(child: SizedBox(height: 12)),
 
-          // Settings section
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -636,61 +830,47 @@ class _ProfilScreenState extends State<ProfilScreen> {
                     ),
                     child: Column(
                       children: [
-                        _buildMenuItem(
-                          context,
-                          icon: Icons.favorite_border,
-                          title: 'Informasi Kesehatan',
+                        _buildActionItem(
+                          icon: Icons.person_outline,
+                          title: 'Edit Identitas',
+                          onTap: _showEditProfileDialog,
                         ),
                         _divider(),
-                        _buildMenuItem(
-                          context,
+                        _buildActionItem(
+                          icon: Icons.swap_horiz,
+                          title: 'Ganti Ahli Gizi',
+                          onTap: () {
+                            Navigator.push(context, MaterialPageRoute(builder: (_) => const PilihAhliGiziScreen())).then((_) => _loadUser());
+                          },
+                        ),
+                        _divider(),
+                        _buildActionItem(
                           icon: Icons.track_changes_outlined,
-                          title: 'Target Diet',
-                        ),
-                        _divider(),
-                        _buildMenuItem(
-                          context,
-                          icon: Icons.shield_outlined,
-                          title: 'Privasi & Keamanan',
-                        ),
-                        _divider(),
-                        _buildMenuItem(
-                          context,
-                          icon: Icons.settings_outlined,
-                          title: 'Pengaturan Akun',
+                          title: 'Target Diet (Segera)',
+                          onTap: () {},
                         ),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 24),
 
-                  // Keluar
                   Center(
                     child: TextButton.icon(
-                      onPressed: () async {
-                        await AuthService.logout();
-                        if (!context.mounted) return;
-                        Navigator.pushAndRemoveUntil(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) => const LoginScreen()),
-                          (route) => false,
-                        );
-                      },
+                      onPressed: _showLogoutConfirmation,
                       icon: const Icon(Icons.logout,
                           color: AppColors.red, size: 18),
                       label: Text(
                         'KELUAR AKUN',
                         style: GoogleFonts.manrope(
                           fontSize: 14,
-                          fontWeight: FontWeight.w600,
+                          fontWeight: FontWeight.w700,
                           color: AppColors.red,
                           letterSpacing: 1,
                         ),
                       ),
                     ),
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 32),
                 ],
               ),
             ),
@@ -750,7 +930,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
   Widget _divider() =>
       Divider(height: 1, thickness: 1, color: AppColors.divider, indent: 56);
 
-  Widget _buildMenuItem(BuildContext context, {required IconData icon, required String title}) {
+  Widget _buildActionItem({required IconData icon, required String title, required VoidCallback onTap}) {
     return ListTile(
       leading: Container(
         width: 36,
@@ -771,41 +951,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
       ),
       trailing:
           const Icon(Icons.chevron_right, color: AppColors.textMuted, size: 20),
-      onTap: () {
-        showModalBottomSheet(
-          context: context,
-          shape: const RoundedRectangleBorder(
-            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-          ),
-          builder: (ctx) => Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(icon, color: AppColors.primary, size: 28),
-                    const SizedBox(width: 12),
-                    Text(title, style: GoogleFonts.manrope(fontSize: 20, fontWeight: FontWeight.w700)),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                Text('Pengaturan untuk $title akan segera diimplementasikan secara penuh pada update berikutnya.', style: GoogleFonts.manrope(color: AppColors.textSecondary, height: 1.5)),
-                const SizedBox(height: 24),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () => Navigator.pop(ctx),
-                    style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, padding: const EdgeInsets.symmetric(vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-                    child: Text('Tutup', style: GoogleFonts.manrope(fontWeight: FontWeight.w600, color: Colors.white)),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
+      onTap: onTap,
     );
   }
 }

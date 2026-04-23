@@ -2,6 +2,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:percent_indicator/percent_indicator.dart';
+import 'package:fl_chart/fl_chart.dart';
 import '../theme/app_theme.dart';
 import 'catatan_screen.dart';
 import '../services/auth_service.dart';
@@ -113,6 +114,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       ? _buildNoDataState()
                       : _buildCalorieRing(),
                   if (_nutrisi != null) _buildNutritionSummary(),
+                  if (_nutrisi != null) _buildDailyTargetChart(),
                   _buildReminderCard(context),
                   if (_nutrisi != null) _buildDailyReport(),
                   if (_nutrisi != null) _buildBottomStats(),
@@ -408,6 +410,89 @@ class _HomeScreenState extends State<HomeScreen> {
           barRadius: const Radius.circular(4),
         ),
       ],
+    );
+  }
+
+  Widget _buildDailyTargetChart() {
+    return Container(
+      color: AppColors.surface,
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Grafik Target Harian',
+            style: GoogleFonts.manrope(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Container(
+            height: 200,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColors.background,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppColors.divider),
+            ),
+            child: BarChart(
+              BarChartData(
+                alignment: BarChartAlignment.spaceAround,
+                maxY: 1.2, // 120% max
+                barTouchData: BarTouchData(enabled: false),
+                titlesData: FlTitlesData(
+                  show: true,
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      getTitlesWidget: (value, meta) {
+                        const style = TextStyle(
+                          color: AppColors.textSecondary,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 10,
+                        );
+                        String text;
+                        switch (value.toInt()) {
+                          case 0: text = 'Kalori'; break;
+                          case 1: text = 'Protein'; break;
+                          case 2: text = 'Lemak'; break;
+                          case 3: text = 'Karbo'; break;
+                          default: text = ''; break;
+                        }
+                        return Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Text(text, style: style),
+                        );
+                      },
+                    ),
+                  ),
+                  leftTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 30,
+                      getTitlesWidget: (value, meta) {
+                        return Text('${(value * 100).toInt()}%', style: const TextStyle(fontSize: 10, color: AppColors.textSecondary));
+                      },
+                    ),
+                  ),
+                  topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                ),
+                borderData: FlBorderData(show: false),
+                gridData: const FlGridData(show: true, drawVerticalLine: false),
+                barGroups: [
+                  BarChartGroupData(x: 0, barRods: [BarChartRodData(toY: _kaloriPercent, color: AppColors.primary, width: 16, borderRadius: BorderRadius.circular(4))]),
+                  BarChartGroupData(x: 1, barRods: [BarChartRodData(toY: _proteinPercent, color: AppColors.protein, width: 16, borderRadius: BorderRadius.circular(4))]),
+                  BarChartGroupData(x: 2, barRods: [BarChartRodData(toY: _lemakPercent, color: AppColors.fat, width: 16, borderRadius: BorderRadius.circular(4))]),
+                  BarChartGroupData(x: 3, barRods: [BarChartRodData(toY: _karboPercent, color: AppColors.carb, width: 16, borderRadius: BorderRadius.circular(4))]),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_theme.dart';
 import '../services/auth_service.dart';
-import 'main_screen.dart';
+import 'pilih_jenis_diet_screen.dart';
 
 class PilihAhliGiziScreen extends StatefulWidget {
   const PilihAhliGiziScreen({super.key});
@@ -65,7 +65,7 @@ class _PilihAhliGiziScreenState extends State<PilihAhliGiziScreen> {
           ElevatedButton(
             onPressed: () {
               Navigator.pushReplacement(
-                  context, MaterialPageRoute(builder: (_) => const MainScreen()));
+                  context, MaterialPageRoute(builder: (_) => const PilihJenisDietScreen()));
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary,
@@ -110,7 +110,7 @@ class _PilihAhliGiziScreenState extends State<PilihAhliGiziScreen> {
                 );
                 Navigator.pushReplacement(
                   context,
-                  MaterialPageRoute(builder: (_) => const MainScreen()),
+                  MaterialPageRoute(builder: (_) => const PilihJenisDietScreen()),
                 );
               }
             }
@@ -160,7 +160,7 @@ class _PilihAhliGiziScreenState extends State<PilihAhliGiziScreen> {
                               fontWeight: FontWeight.w600,
                               color: AppColors.textPrimary)),
                       const SizedBox(height: 2),
-                      Text(ag['specialization'] ?? '-',
+                      Text('Ahli Gizi Klinis',
                           style: GoogleFonts.manrope(
                               fontSize: 13, color: AppColors.textSecondary)),
                       const SizedBox(height: 6),

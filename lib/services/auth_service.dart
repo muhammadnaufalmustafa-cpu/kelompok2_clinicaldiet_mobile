@@ -18,7 +18,12 @@ class AuthService {
     required String gender,
     required String birthdate,
     required String phone,
-    required String dietType,
+    String? username,
+    String? alamat,
+    String? pendidikan,
+    String? pekerjaan,
+    String? nik,
+    String? agama,
   }) async {
     final prefs = await SharedPreferences.getInstance();
 
@@ -34,20 +39,35 @@ class AuthService {
     if (alreadyExists) {
       return {'success': false, 'message': 'Nomor RM sudah terdaftar!'};
     }
+    
+    // Check if username already exists
+    if (username != null && username.isNotEmpty) {
+      final usernameExists = users.any((u) => 
+        u['username']?.toString().toLowerCase() == username.toLowerCase());
+      if (usernameExists) {
+        return {'success': false, 'message': 'Username sudah digunakan!'};
+      }
+    }
 
     final newUser = {
       'role': 'pasien',
       'name': name,
       'rm': rm,
       'email': email,
-      'weight': weight,
-      'height': height,
+      'weight': double.tryParse(weight) ?? 0.0,
+      'height': double.tryParse(height) ?? 0.0,
       'password': password,
       'gender': gender,
       'birthdate': birthdate,
       'phone': phone,
-      'diet_type': dietType,
-      'status': 'aktif', // aktif | berhasil | meninggal
+      'diet_type': '', // Kosong di awal, diisi setelah login
+      'status': 'aktif',
+      'username': username,
+      'alamat': alamat,
+      'pendidikan': pendidikan,
+      'pekerjaan': pekerjaan,
+      'nik': nik,
+      'agama': agama,
     };
     users.add(newUser);
     await prefs.setString(_usersKey, jsonEncode(users));
@@ -63,7 +83,6 @@ class AuthService {
     required String email,
     required String phone,
     required String password,
-    required String specialization,
   }) async {
     final prefs = await SharedPreferences.getInstance();
 
@@ -87,9 +106,10 @@ class AuthService {
       'email': email,
       'phone': phone,
       'password': password,
-      'specialization': specialization,
+      'specialization': '', // tidak dipakai saat registrasi lagi
       'rating': 0.0,
       'rating_count': 0,
+      'reviews': [],
     };
     ahliGiziList.add(newAhliGizi);
     await prefs.setString(_ahliGiziKey, jsonEncode(ahliGiziList));
@@ -109,7 +129,7 @@ class AuthService {
 
   // ─────────────────────────── RATING AHLI GIZI ────────────────────────────
 
-  static Future<void> submitRatingAhliGizi(String nip, double newRating) async {
+  static Future<void> submitRatingAhliGizi(String nip, double newRating, {String ulasan = '', String pasienName = 'Pasien'}) async {
     final prefs = await SharedPreferences.getInstance();
     final ahliGiziJson = prefs.getString(_ahliGiziKey);
     if (ahliGiziJson != null) {
@@ -128,6 +148,15 @@ class AuthService {
         ag['rating'] = updatedRating;
         ag['rating_count'] = newCount;
         
+        List reviews = ag['reviews'] ?? [];
+        reviews.insert(0, {
+          'pasienName': pasienName,
+          'rating': newRating,
+          'ulasan': ulasan,
+          'tanggal': DateTime.now().toIso8601String(),
+        });
+        ag['reviews'] = reviews;
+        
         ahliGiziList[index] = ag;
         await prefs.setString(_ahliGiziKey, jsonEncode(ahliGiziList));
       }
@@ -137,7 +166,7 @@ class AuthService {
   // ─────────────────────────── LOGIN (PASIEN & AHLI GIZI) ──────────────────
 
   static Future<Map<String, dynamic>> loginPasien({
-    required String rm,
+    required String identifier, // bisa rm, email, atau username
     required String password,
   }) async {
     final prefs = await SharedPreferences.getInstance();
@@ -156,7 +185,9 @@ class AuthService {
     try {
       final user = users.firstWhere(
         (u) =>
-            u['rm'].toString().toLowerCase() == rm.toLowerCase() &&
+            (u['rm'].toString().toLowerCase() == identifier.toLowerCase() ||
+             u['email']?.toString().toLowerCase() == identifier.toLowerCase() ||
+             u['username']?.toString().toLowerCase() == identifier.toLowerCase()) &&
             u['password'].toString() == password,
       );
       await prefs.setString(_loggedInUserKey, jsonEncode(user));
@@ -164,13 +195,13 @@ class AuthService {
     } catch (_) {
       return {
         'success': false,
-        'message': 'Nomor RM atau kata sandi salah.'
+        'message': 'Username/Email/RM atau kata sandi salah.'
       };
     }
   }
 
   static Future<Map<String, dynamic>> loginAhliGizi({
-    required String nip,
+    required String identifier, // bisa nip atau email
     required String password,
   }) async {
     final prefs = await SharedPreferences.getInstance();
@@ -189,7 +220,8 @@ class AuthService {
     try {
       final user = ahliGiziList.firstWhere(
         (u) =>
-            u['nip'].toString().toLowerCase() == nip.toLowerCase() &&
+            (u['nip'].toString().toLowerCase() == identifier.toLowerCase() ||
+             u['email']?.toString().toLowerCase() == identifier.toLowerCase()) &&
             u['password'].toString() == password,
       );
       await prefs.setString(_loggedInUserKey, jsonEncode(user));
@@ -197,19 +229,119 @@ class AuthService {
     } catch (_) {
       return {
         'success': false,
-        'message': 'NIP atau kata sandi salah.'
+        'message': 'NIP/Email atau kata sandi salah.'
       };
     }
   }
+  
+  // ─────────────────────────── LUPA KATA SANDI ─────────────────────────────
+  
+  static Future<Map<String, dynamic>> resetPassword({required String email, required String newPassword}) async {
+    final prefs = await SharedPreferences.getInstance();
+    
+    // Cek di tabel Pasien
+    final usersJson = prefs.getString(_usersKey);
+    if (usersJson != null) {
+      final decoded = jsonDecode(usersJson) as List;
+      final users = decoded.cast<Map<String, dynamic>>();
+      final idx = users.indexWhere((u) => u['email']?.toString().toLowerCase() == email.toLowerCase());
+      if (idx != -1) {
+        users[idx]['password'] = newPassword;
+        await prefs.setString(_usersKey, jsonEncode(users));
+        return {'success': true, 'message': 'Kata sandi berhasil direset'};
+      }
+    }
+    
+    // Cek di tabel Ahli Gizi
+    final agJson = prefs.getString(_ahliGiziKey);
+    if (agJson != null) {
+      final decoded = jsonDecode(agJson) as List;
+      final ag = decoded.cast<Map<String, dynamic>>();
+      final idx = ag.indexWhere((u) => u['email']?.toString().toLowerCase() == email.toLowerCase());
+      if (idx != -1) {
+        ag[idx]['password'] = newPassword;
+        await prefs.setString(_ahliGiziKey, jsonEncode(ag));
+        return {'success': true, 'message': 'Kata sandi berhasil direset'};
+      }
+    }
+    
+    return {'success': false, 'message': 'Email tidak terdaftar'};
+  }
 
-  // ─────────────────────────── SEMUA PASIEN (untuk ahli gizi) ──────────────
+  // ─────────────────────────── PROFIL PASIEN ───────────────────────────────
 
-  static Future<List<Map<String, dynamic>>> getAllPasien() async {
+  static Future<bool> updatePasienProfile({
+    required String rm,
+    required String name,
+    required String username,
+    required String phone,
+    required String email,
+    required String nik,
+    required String agama,
+    required String alamat,
+    required String pendidikan,
+    required String pekerjaan,
+  }) async {
     final prefs = await SharedPreferences.getInstance();
     final usersJson = prefs.getString(_usersKey);
-    if (usersJson == null) return [];
+    if (usersJson == null) return false;
+
     final decoded = jsonDecode(usersJson) as List;
-    return decoded.cast<Map<String, dynamic>>();
+    final users = decoded.cast<Map<String, dynamic>>();
+
+    final idx = users.indexWhere(
+      (u) => u['rm'].toString().toLowerCase() == rm.toLowerCase(),
+    );
+    if (idx == -1) return false;
+
+    // Check username uniqueness if changed
+    if (users[idx]['username'] != username && username.isNotEmpty) {
+      final usernameExists = users.any((u) => 
+        u['username']?.toString().toLowerCase() == username.toLowerCase());
+      if (usernameExists) return false;
+    }
+
+    users[idx]['name'] = name;
+    users[idx]['username'] = username;
+    users[idx]['phone'] = phone;
+    users[idx]['email'] = email;
+    users[idx]['nik'] = nik;
+    users[idx]['agama'] = agama;
+    users[idx]['alamat'] = alamat;
+    users[idx]['pendidikan'] = pendidikan;
+    users[idx]['pekerjaan'] = pekerjaan;
+
+    await prefs.setString(_usersKey, jsonEncode(users));
+    
+    final loggedIn = await getLoggedInUser();
+    if (loggedIn != null && loggedIn['rm'] == rm) {
+      await prefs.setString(_loggedInUserKey, jsonEncode(users[idx]));
+    }
+    return true;
+  }
+  
+  static Future<bool> updateProfilePhoto(String id, String photoPath, bool isPasien) async {
+    final prefs = await SharedPreferences.getInstance();
+    final key = isPasien ? _usersKey : _ahliGiziKey;
+    final fieldId = isPasien ? 'rm' : 'nip';
+    
+    final jsonStr = prefs.getString(key);
+    if (jsonStr == null) return false;
+
+    final decoded = jsonDecode(jsonStr) as List;
+    final users = decoded.cast<Map<String, dynamic>>();
+
+    final idx = users.indexWhere((u) => u[fieldId].toString() == id);
+    if (idx == -1) return false;
+
+    users[idx]['profile_photo_path'] = photoPath;
+    await prefs.setString(key, jsonEncode(users));
+    
+    final loggedIn = await getLoggedInUser();
+    if (loggedIn != null && loggedIn[fieldId] == id) {
+      await prefs.setString(_loggedInUserKey, jsonEncode(users[idx]));
+    }
+    return true;
   }
 
   static Future<void> updatePasienStatus(String rm, String status) async {
@@ -226,7 +358,6 @@ class AuthService {
       users[idx]['status'] = status;
       await prefs.setString(_usersKey, jsonEncode(users));
 
-      // Jika user yang di-update adalah user yang sedang login, update sesi juga
       final loggedIn = await getLoggedInUser();
       if (loggedIn != null &&
           loggedIn['rm'].toString().toLowerCase() == rm.toLowerCase()) {
@@ -235,30 +366,13 @@ class AuthService {
     }
   }
 
-  // ─────────────────────────── RATING AHLI GIZI ────────────────────────────
-
-  static Future<void> rateAhliGizi(String nip, double rating) async {
+  static Future<List<Map<String, dynamic>>> getAllPasien() async {
     final prefs = await SharedPreferences.getInstance();
-    final ahliGiziJson = prefs.getString(_ahliGiziKey);
-    if (ahliGiziJson == null) return;
-
-    final decoded = jsonDecode(ahliGiziJson) as List;
-    final ahliGiziList = decoded.cast<Map<String, dynamic>>();
-
-    final idx = ahliGiziList.indexWhere(
-        (u) => u['nip'].toString().toLowerCase() == nip.toLowerCase());
-    if (idx != -1) {
-      final oldRating = (ahliGiziList[idx]['rating'] as num).toDouble();
-      final oldCount = (ahliGiziList[idx]['rating_count'] as num).toInt();
-      final newCount = oldCount + 1;
-      final newRating = ((oldRating * oldCount) + rating) / newCount;
-      ahliGiziList[idx]['rating'] = newRating;
-      ahliGiziList[idx]['rating_count'] = newCount;
-      await prefs.setString(_ahliGiziKey, jsonEncode(ahliGiziList));
-    }
+    final usersJson = prefs.getString(_usersKey);
+    if (usersJson == null) return [];
+    final decoded = jsonDecode(usersJson) as List;
+    return decoded.cast<Map<String, dynamic>>();
   }
-
-  // ─────────────────────────── GET SPECIFIC PASIEN ─────────────────────────
 
   static Future<Map<String, dynamic>?> getPasienByRm(String rm) async {
     final prefs = await SharedPreferences.getInstance();
@@ -301,7 +415,6 @@ class AuthService {
 
     await prefs.setString(_usersKey, jsonEncode(users));
 
-    // Update logged-in user session jika pasien yang diupdate sedang login
     final loggedIn = await getLoggedInUser();
     if (loggedIn != null &&
         loggedIn['rm'].toString().toLowerCase() == rm.toLowerCase()) {
@@ -311,7 +424,7 @@ class AuthService {
     return true;
   }
 
-  // ───────────────────────── PILIH AHLI GIZI ──────────────────────────────
+  // ───────────────────────── PILIH AHLI GIZI & DIET ──────────────────────────
 
   static Future<bool> selectAhliGizi(String rmPasien, String nipAhliGizi) async {
     final prefs = await SharedPreferences.getInstance();
@@ -330,7 +443,32 @@ class AuthService {
 
     await prefs.setString(_usersKey, jsonEncode(users));
 
-    // Update logged-in user session jika pasien yang diupdate sedang login
+    final loggedIn = await getLoggedInUser();
+    if (loggedIn != null &&
+        loggedIn['rm'].toString().toLowerCase() == rmPasien.toLowerCase()) {
+      await prefs.setString(_loggedInUserKey, jsonEncode(users[idx]));
+    }
+
+    return true;
+  }
+  
+  static Future<bool> updateDietType(String rmPasien, String dietType) async {
+    final prefs = await SharedPreferences.getInstance();
+    final usersJson = prefs.getString(_usersKey);
+    if (usersJson == null) return false;
+
+    final decoded = jsonDecode(usersJson) as List;
+    final users = decoded.cast<Map<String, dynamic>>();
+
+    final idx = users.indexWhere(
+      (u) => u['rm'].toString().toLowerCase() == rmPasien.toLowerCase(),
+    );
+    if (idx == -1) return false;
+
+    users[idx]['diet_type'] = dietType;
+
+    await prefs.setString(_usersKey, jsonEncode(users));
+
     final loggedIn = await getLoggedInUser();
     if (loggedIn != null &&
         loggedIn['rm'].toString().toLowerCase() == rmPasien.toLowerCase()) {
@@ -366,10 +504,11 @@ class AuthService {
     required String mealSiang,
     required String selinganSore,
     required String mealMalam,
+    double? beratBadan,
+    double? tinggiBadan,
   }) async {
     final prefs = await SharedPreferences.getInstance();
 
-    // Ambil existing logs
     final logsJson = prefs.getString(_mealLogsKey);
     List<Map<String, dynamic>> logs = [];
     if (logsJson != null) {
@@ -380,7 +519,6 @@ class AuthService {
     final today = DateTime.now();
     final todayString = '${today.year}-${today.month}-${today.day}';
 
-    // Cek apakah sudah ada log untuk hari ini
     final existingLogIndex = logs.indexWhere(
       (log) =>
           log['rm_pasien'] == rmPasien &&
@@ -396,15 +534,18 @@ class AuthService {
       'meal_siang': mealSiang,
       'selingan_sore': selinganSore,
       'meal_malam': mealMalam,
+      'berat_badan': beratBadan,
+      'tinggi_badan': tinggiBadan,
       'created_at': DateTime.now().toIso8601String(),
       'updated_at': DateTime.now().toIso8601String(),
     };
 
     if (existingLogIndex != -1) {
-      // Update existing log
+      // Pertahankan ID dan created_at yang lama jika update
+      newLog['id'] = logs[existingLogIndex]['id'];
+      newLog['created_at'] = logs[existingLogIndex]['created_at'];
       logs[existingLogIndex] = newLog;
     } else {
-      // Add new log
       logs.add(newLog);
     }
 
@@ -454,7 +595,6 @@ class AuthService {
             DateTime.parse(log['date']).isAfter(cutoffDate))
         .toList();
 
-    // Sort by date descending (newest first)
     result.sort((a, b) => DateTime.parse(b['date']).compareTo(
       DateTime.parse(a['date']),
     ));
@@ -490,7 +630,6 @@ class AuthService {
 
   static const String _nutrisiKey = 'nutrisi_pasien';
 
-  /// Simpan data nutrisi pasien (target & realisasi) oleh ahli gizi.
   static Future<bool> saveNutrisiPasien({
     required String rmPasien,
     double kaloriTarget = 0,
@@ -544,7 +683,6 @@ class AuthService {
     return true;
   }
 
-  /// Ambil data nutrisi pasien berdasarkan RM.
   static Future<Map<String, dynamic>?> getNutrisiPasien(String rmPasien) async {
     final prefs = await SharedPreferences.getInstance();
     final json = prefs.getString(_nutrisiKey);
@@ -560,7 +698,6 @@ class AuthService {
     }
   }
 
-  /// Simpan target diet teks dan catatan evaluasi (CPPT) ke record pasien.
   static Future<bool> saveTargetDietPasien({
     required String rm,
     required String targetDiet,

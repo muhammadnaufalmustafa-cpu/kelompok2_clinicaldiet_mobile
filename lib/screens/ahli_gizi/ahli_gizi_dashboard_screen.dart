@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:fl_chart/fl_chart.dart';
 import '../../theme/app_theme.dart';
 import '../../services/auth_service.dart';
 import 'ahli_gizi_detail_pasien_screen.dart';
@@ -66,7 +67,7 @@ class _AhliGiziDashboardScreenState extends State<AhliGiziDashboardScreen> {
               title: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Selamat Datang 👋',
+                  Text('Clinical Diet',
                       style: GoogleFonts.manrope(
                           fontSize: 13, color: AppColors.textSecondary)),
                   Text(_user?['name'] ?? 'Ahli Gizi',
@@ -76,24 +77,6 @@ class _AhliGiziDashboardScreenState extends State<AhliGiziDashboardScreen> {
                           color: AppColors.textPrimary)),
                 ],
               ),
-              actions: [
-                Container(
-                  margin: const EdgeInsets.only(right: 16),
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFE0F2FE),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    _user?['specialization'] ?? 'Ahli Gizi',
-                    style: GoogleFonts.manrope(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: const Color(0xFF0284C7)),
-                  ),
-                ),
-              ],
             ),
 
             SliverToBoxAdapter(
@@ -102,6 +85,40 @@ class _AhliGiziDashboardScreenState extends State<AhliGiziDashboardScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // Welcome Banner
+                    Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF0284C7), Color(0xFF0369A1)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Selamat Datang, ${_user?['name'] ?? 'Ahli Gizi'}! 👋',
+                            style: GoogleFonts.manrope(
+                                fontSize: 20,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.white),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Pantau dan kelola program diet pasien Anda hari ini. Pastikan untuk mengevaluasi target gizi mereka secara berkala untuk mencapai hasil yang maksimal.',
+                            style: GoogleFonts.manrope(
+                                fontSize: 13,
+                                color: Colors.white.withValues(alpha: 0.9),
+                                height: 1.5),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+
                     // Stats cards
                     Text('Ringkasan Pasien',
                         style: GoogleFonts.manrope(
@@ -129,13 +146,93 @@ class _AhliGiziDashboardScreenState extends State<AhliGiziDashboardScreen> {
                                 Icons.info_outline)),
                       ],
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 24),
 
-                    // Pasien aktif list
+                    // Chart overview
+                    Text('Grafik Status Pasien',
+                        style: GoogleFonts.manrope(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textPrimary)),
+                    const SizedBox(height: 12),
+                    Container(
+                      height: 200,
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: BarChart(
+                        BarChartData(
+                          alignment: BarChartAlignment.spaceAround,
+                          maxY: (_allPasien.length.toDouble() + 2),
+                          barTouchData: BarTouchData(enabled: false),
+                          titlesData: FlTitlesData(
+                            show: true,
+                            bottomTitles: AxisTitles(
+                              sideTitles: SideTitles(
+                                showTitles: true,
+                                getTitlesWidget: (value, meta) {
+                                  const style = TextStyle(
+                                    color: AppColors.textSecondary,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 12,
+                                  );
+                                  String text;
+                                  switch (value.toInt()) {
+                                    case 0:
+                                      text = 'Aktif';
+                                      break;
+                                    case 1:
+                                      text = 'Berhasil';
+                                      break;
+                                    case 2:
+                                      text = 'Meninggal';
+                                      break;
+                                    default:
+                                      text = '';
+                                      break;
+                                  }
+                                  return Padding(
+                                    padding: const EdgeInsets.only(top: 4),
+                                    child: Text(text, style: style),
+                                  );
+                                },
+                              ),
+                            ),
+                            leftTitles: const AxisTitles(
+                              sideTitles: SideTitles(showTitles: false),
+                            ),
+                            topTitles: const AxisTitles(
+                              sideTitles: SideTitles(showTitles: false),
+                            ),
+                            rightTitles: const AxisTitles(
+                              sideTitles: SideTitles(showTitles: false),
+                            ),
+                          ),
+                          borderData: FlBorderData(show: false),
+                          gridData: const FlGridData(show: false),
+                          barGroups: [
+                            BarChartGroupData(x: 0, barRods: [
+                              BarChartRodData(toY: _aktifCount.toDouble(), color: AppColors.primary, width: 22, borderRadius: BorderRadius.circular(4)),
+                            ]),
+                            BarChartGroupData(x: 1, barRods: [
+                              BarChartRodData(toY: _berhasilCount.toDouble(), color: const Color(0xFF0284C7), width: 22, borderRadius: BorderRadius.circular(4)),
+                            ]),
+                            BarChartGroupData(x: 2, barRods: [
+                              BarChartRodData(toY: _meninggalCount.toDouble(), color: const Color(0xFF6B7280), width: 22, borderRadius: BorderRadius.circular(4)),
+                            ]),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Pasien list
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('Pasien Aktif',
+                        Text('Daftar Pasien Aktif',
                             style: GoogleFonts.manrope(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
@@ -172,6 +269,11 @@ class _AhliGiziDashboardScreenState extends State<AhliGiziDashboardScreen> {
                       ..._allPasien
                           .where((p) => (p['status'] ?? 'aktif') == 'aktif')
                           .map((pasien) => _buildPasienCard(pasien)),
+                          
+                    const SizedBox(height: 24),
+                    _buildUlasanSection(),
+
+                    const SizedBox(height: 80), // spacing
                   ],
                 ),
               ),
@@ -256,7 +358,7 @@ class _AhliGiziDashboardScreenState extends State<AhliGiziDashboardScreen> {
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
                           color: AppColors.textPrimary)),
-                  Text('RM: ${pasien['rm'] ?? '-'} • ${pasien['diet_type'] ?? 'Normal'}',
+                  Text('RM: ${pasien['rm'] ?? '-'} • Diet: ${pasien['diet_type'] != null && pasien['diet_type'] != '' ? pasien['diet_type'] : 'Belum Dipilih'}',
                       style: GoogleFonts.manrope(
                           fontSize: 12, color: AppColors.textSecondary)),
                 ],
@@ -267,6 +369,68 @@ class _AhliGiziDashboardScreenState extends State<AhliGiziDashboardScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildUlasanSection() {
+    List reviews = _user?['reviews'] ?? [];
+    if (reviews.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Ulasan Terbaru dari Pasien',
+            style: GoogleFonts.manrope(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textPrimary)),
+        const SizedBox(height: 12),
+        ...reviews.take(3).map((r) {
+          final rating = (r['rating'] as num?)?.toDouble() ?? 5.0;
+          final dtStr = r['tanggal'] as String? ?? '';
+          String dtShow = '';
+          if (dtStr.isNotEmpty) {
+            try {
+              final d = DateTime.parse(dtStr);
+              dtShow = '${d.day}/${d.month}/${d.year}';
+            } catch (_) {}
+          }
+          return Container(
+            margin: const EdgeInsets.only(bottom: 10),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(r['pasienName'] ?? 'Pasien', style: GoogleFonts.manrope(fontWeight: FontWeight.w600, fontSize: 13)),
+                    Row(
+                      children: [
+                        const Icon(Icons.star, color: Color(0xFFF59E0B), size: 14),
+                        const SizedBox(width: 4),
+                        Text(rating.toStringAsFixed(1), style: GoogleFonts.manrope(fontWeight: FontWeight.w700, fontSize: 12)),
+                      ],
+                    ),
+                  ],
+                ),
+                if (dtShow.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Text(dtShow, style: GoogleFonts.manrope(fontSize: 10, color: AppColors.textMuted)),
+                ],
+                if ((r['ulasan'] as String?)?.isNotEmpty == true) ...[
+                  const SizedBox(height: 8),
+                  Text('"${r['ulasan']}"', style: GoogleFonts.manrope(fontSize: 12, color: AppColors.textSecondary, fontStyle: FontStyle.italic)),
+                ]
+              ],
+            ),
+          );
+        }),
+      ],
     );
   }
 }

@@ -19,17 +19,9 @@ class _RegisterAhliGiziScreenState extends State<RegisterAhliGiziScreen> {
   final _passController = TextEditingController();
   final _confirmPassController = TextEditingController();
 
-  String _selectedSpecialization = 'Gizi Klinik';
   bool _obscurePass = true;
   bool _obscureConfirmPass = true;
   bool _isLoading = false;
-
-  final List<String> _specializations = [
-    'Gizi Klinik',
-    'Gizi Masyarakat',
-    'Dietetik',
-    'Gizi Olahraga',
-  ];
 
   @override
   void dispose() {
@@ -70,7 +62,6 @@ class _RegisterAhliGiziScreenState extends State<RegisterAhliGiziScreen> {
       email: email,
       phone: phone,
       password: password,
-      specialization: _selectedSpecialization,
     );
     if (!mounted) return;
     setState(() => _isLoading = false);
@@ -151,7 +142,7 @@ class _RegisterAhliGiziScreenState extends State<RegisterAhliGiziScreen> {
             const SizedBox(height: 24),
 
             _buildField(label: 'Nama Lengkap', controller: _nameController,
-                hint: 'dr. Siti Rahmadhani, M.Gz', icon: Icons.person_outline),
+                hint: 'Siti Rahmadhani, S.Gz', icon: Icons.person_outline),
             const SizedBox(height: 14),
             _buildField(label: 'NIP (Nomor Induk Pegawai)',
                 controller: _nipController,
@@ -170,36 +161,7 @@ class _RegisterAhliGiziScreenState extends State<RegisterAhliGiziScreen> {
                 keyboardType: TextInputType.phone),
             const SizedBox(height: 14),
 
-            // Spesialisasi dropdown
-            Text('Spesialisasi',
-                style: GoogleFonts.manrope(
-                    fontSize: 13, color: AppColors.textPrimary)),
-            const SizedBox(height: 8),
-            Container(
-              decoration: BoxDecoration(
-                color: const Color(0xFFF3F4F6),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(
-                    color: AppColors.divider.withValues(alpha: 0.5)),
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: DropdownButtonHideUnderline(
-                child: DropdownButton<String>(
-                  value: _selectedSpecialization,
-                  isExpanded: true,
-                  icon: const Icon(Icons.keyboard_arrow_down,
-                      color: AppColors.textSecondary),
-                  style: GoogleFonts.manrope(
-                      fontSize: 15, color: AppColors.textPrimary),
-                  items: _specializations
-                      .map((s) => DropdownMenuItem(value: s, child: Text(s)))
-                      .toList(),
-                  onChanged: (val) =>
-                      setState(() => _selectedSpecialization = val!),
-                ),
-              ),
-            ),
-            const SizedBox(height: 14),
+
             _buildField(label: 'Kata Sandi', controller: _passController,
                 hint: '••••••••',
                 icon: Icons.lock_outline,

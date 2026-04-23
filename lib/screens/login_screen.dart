@@ -6,6 +6,7 @@ import 'welcome_screen.dart';
 import 'register_screen.dart';
 import 'ahli_gizi/ahli_gizi_main_screen.dart';
 import 'ahli_gizi/register_ahli_gizi_screen.dart';
+import 'lupa_kata_sandi_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -19,13 +20,13 @@ class _LoginScreenState extends State<LoginScreen>
   late TabController _tabController;
 
   // Pasien
-  final _rmController = TextEditingController();
+  final _identifierController = TextEditingController();
   final _passController = TextEditingController();
   bool _obscurePass = true;
   bool _isLoadingPasien = false;
 
   // Ahli Gizi
-  final _nipController = TextEditingController();
+  final _identifierAGController = TextEditingController();
   final _passAGController = TextEditingController();
   bool _obscurePassAG = true;
   bool _isLoadingAG = false;
@@ -39,24 +40,24 @@ class _LoginScreenState extends State<LoginScreen>
   @override
   void dispose() {
     _tabController.dispose();
-    _rmController.dispose();
+    _identifierController.dispose();
     _passController.dispose();
-    _nipController.dispose();
+    _identifierAGController.dispose();
     _passAGController.dispose();
     super.dispose();
   }
 
   Future<void> _loginPasien() async {
-    final rm = _rmController.text.trim();
+    final identifier = _identifierController.text.trim();
     final password = _passController.text;
 
-    if (rm.isEmpty || password.isEmpty) {
-      _showError('Nomor RM dan kata sandi tidak boleh kosong.');
+    if (identifier.isEmpty || password.isEmpty) {
+      _showError('Email/Username/RM dan kata sandi tidak boleh kosong.');
       return;
     }
 
     setState(() => _isLoadingPasien = true);
-    final result = await AuthService.loginPasien(rm: rm, password: password);
+    final result = await AuthService.loginPasien(identifier: identifier, password: password);
     if (!mounted) return;
     setState(() => _isLoadingPasien = false);
 
@@ -70,17 +71,17 @@ class _LoginScreenState extends State<LoginScreen>
   }
 
   Future<void> _loginAhliGizi() async {
-    final nip = _nipController.text.trim();
+    final identifier = _identifierAGController.text.trim();
     final password = _passAGController.text;
 
-    if (nip.isEmpty || password.isEmpty) {
-      _showError('NIP dan kata sandi tidak boleh kosong.');
+    if (identifier.isEmpty || password.isEmpty) {
+      _showError('Email/NIP dan kata sandi tidak boleh kosong.');
       return;
     }
 
     setState(() => _isLoadingAG = true);
     final result =
-        await AuthService.loginAhliGizi(nip: nip, password: password);
+        await AuthService.loginAhliGizi(identifier: identifier, password: password);
     if (!mounted) return;
     setState(() => _isLoadingAG = false);
 
@@ -188,7 +189,7 @@ class _LoginScreenState extends State<LoginScreen>
                     ),
 
                     SizedBox(
-                      height: 320,
+                      height: 350,
                       child: TabBarView(
                         controller: _tabController,
                         children: [
@@ -218,7 +219,7 @@ class _LoginScreenState extends State<LoginScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('NOMOR REKAM MEDIS (RM)',
+          Text('USERNAME / EMAIL / NO. RM',
               style: GoogleFonts.manrope(
                   fontSize: 11,
                   fontWeight: FontWeight.w600,
@@ -226,11 +227,11 @@ class _LoginScreenState extends State<LoginScreen>
                   color: AppColors.textSecondary)),
           const SizedBox(height: 6),
           _buildTextField(
-            controller: _rmController,
-            hint: 'Contoh: 12-34-56',
-            suffix: const Icon(Icons.dialpad,
+            controller: _identifierController,
+            hint: 'Contoh: budi123 atau RM-12345',
+            suffix: const Icon(Icons.person_outline,
                 color: AppColors.textMuted, size: 20),
-            keyboardType: TextInputType.number,
+            keyboardType: TextInputType.text,
           ),
           const SizedBox(height: 16),
           Text('KATA SANDI',
@@ -252,6 +253,22 @@ class _LoginScreenState extends State<LoginScreen>
                     : Icons.visibility_outlined,
                 color: AppColors.textMuted,
                 size: 20,
+              ),
+            ),
+          ),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton(
+              onPressed: () {
+                Navigator.push(context, MaterialPageRoute(builder: (_) => const LupaKataSandiScreen()));
+              },
+              child: Text(
+                'Lupa Kata Sandi?',
+                style: GoogleFonts.manrope(
+                  color: AppColors.primary,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
           ),
@@ -290,7 +307,7 @@ class _LoginScreenState extends State<LoginScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('NOMOR INDUK PEGAWAI (NIP)',
+          Text('EMAIL / NIP',
               style: GoogleFonts.manrope(
                   fontSize: 11,
                   fontWeight: FontWeight.w600,
@@ -298,8 +315,8 @@ class _LoginScreenState extends State<LoginScreen>
                   color: AppColors.textSecondary)),
           const SizedBox(height: 6),
           _buildTextField(
-            controller: _nipController,
-            hint: 'Masukkan NIP',
+            controller: _identifierAGController,
+            hint: 'Masukkan Email atau NIP',
             suffix: const Icon(Icons.badge_outlined,
                 color: AppColors.textMuted, size: 20),
           ),
@@ -323,6 +340,22 @@ class _LoginScreenState extends State<LoginScreen>
                     : Icons.visibility_outlined,
                 color: AppColors.textMuted,
                 size: 20,
+              ),
+            ),
+          ),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton(
+              onPressed: () {
+                Navigator.push(context, MaterialPageRoute(builder: (_) => const LupaKataSandiScreen()));
+              },
+              child: Text(
+                'Lupa Kata Sandi?',
+                style: GoogleFonts.manrope(
+                  color: AppColors.primary,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
           ),

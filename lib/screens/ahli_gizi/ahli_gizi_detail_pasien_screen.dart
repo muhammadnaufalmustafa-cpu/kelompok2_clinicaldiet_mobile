@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../theme/app_theme.dart';
 import '../../services/auth_service.dart';
+import '../grafik_harian_screen.dart';
 
 class AhliGiziDetailPasienScreen extends StatefulWidget {
   final Map<String, dynamic> pasien;
@@ -16,6 +17,7 @@ class _AhliGiziDetailPasienScreenState
     extends State<AhliGiziDetailPasienScreen> {
   late String _status;
   bool _isSaving = false;
+  List<Map<String, dynamic>> _riwayatMakan = [];
 
   // ── Existing controllers ──
   final _evaluasiCtrl = TextEditingController();
@@ -87,6 +89,13 @@ class _AhliGiziDetailPasienScreenState
         _hidrasiAktualCtrl.text = _fmtNum(nutrisi['hidrasi_aktual']);
         _hidrasiTargetCtrl.text = _fmtNum(nutrisi['hidrasi_target']);
         _catatanNutrisiCtrl.text = nutrisi['catatan'] ?? '';
+      });
+    }
+    
+    final logs = await AuthService.getMealLogsForPasien(rm, days: 7);
+    if (mounted) {
+      setState(() {
+        _riwayatMakan = logs;
       });
     }
   }
@@ -231,6 +240,29 @@ class _AhliGiziDetailPasienScreenState
 
             // ── NUTRISI SECTION ──
             _buildNutrisiSection(),
+            const SizedBox(height: 24),
+            
+            // ── RIWAYAT CATATAN MAKANAN ──
+            _buildRiwayatMakanSection(),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () {
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => GrafikHarianScreen(
+                    rmPasien: widget.pasien['rm'],
+                    namaPasien: widget.pasien['name'],
+                  )));
+                },
+                icon: const Icon(Icons.show_chart, size: 18, color: AppColors.primary),
+                label: Text('Lihat Grafik Perkembangan Pasien', style: GoogleFonts.manrope(fontWeight: FontWeight.w600, color: AppColors.primary)),
+                style: OutlinedButton.styleFrom(
+                  side: const BorderSide(color: AppColors.primary),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                ),
+              ),
+            ),
             const SizedBox(height: 24),
 
             // ── Ubah Status ──
@@ -508,6 +540,94 @@ class _AhliGiziDetailPasienScreenState
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildRiwayatMakanSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionLabel('Riwayat Catatan Makanan (7 Hari Terakhir)'),
+        const SizedBox(height: 8),
+        if (_riwayatMakan.isEmpty)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: AppColors.divider),
+            ),
+            child: Text(
+              'Belum ada catatan makanan yang diinput pasien.',
+              style: GoogleFonts.manrope(
+                fontSize: 13,
+                color: AppColors.textSecondary,
+                fontStyle: FontStyle.italic,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          )
+        else
+          ..._riwayatMakan.map((log) {
+            final dateStr = log['date'] as String? ?? '';
+            String displayDate = '';
+            if (dateStr.isNotEmpty) {
+              try {
+                final dt = DateTime.parse(dateStr);
+                displayDate = '${dt.day}/${dt.month}/${dt.year}';
+              } catch (_) {}
+            }
+            return Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: AppColors.divider),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('Tanggal: $displayDate', style: GoogleFonts.manrope(fontWeight: FontWeight.w700, fontSize: 13, color: AppColors.primary)),
+                      if (log['berat_badan'] != null)
+                        Text('BB: ${log['berat_badan']} kg', style: GoogleFonts.manrope(fontSize: 11, color: AppColors.textSecondary)),
+                    ],
+                  ),
+                  const Divider(height: 16),
+                  _buildMealLogItem('Pagi', log['meal_pagi']),
+                  _buildMealLogItem('Selingan Pagi', log['selingan_pagi']),
+                  _buildMealLogItem('Siang', log['meal_siang']),
+                  _buildMealLogItem('Selingan Sore', log['selingan_sore']),
+                  _buildMealLogItem('Malam', log['meal_malam']),
+                ],
+              ),
+            );
+          }),
+      ],
+    );
+  }
+
+  Widget _buildMealLogItem(String label, dynamic value) {
+    final text = (value as String?) ?? '';
+    if (text.trim().isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 90,
+            child: Text('$label:', style: GoogleFonts.manrope(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+          ),
+          Expanded(
+            child: Text(text, style: GoogleFonts.manrope(fontSize: 12, color: AppColors.textPrimary)),
+          ),
+        ],
+      ),
     );
   }
 
