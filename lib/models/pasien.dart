@@ -1,17 +1,25 @@
 class Pasien {
   final String role;
-  final String name;
+  String name;
   final String rm;
-  final String email;
+  String email;
   double weight; // Berat badan dalam kg
   double height; // Tinggi badan dalam cm
-  final String password;
+  String password;
   final String gender;
   final String birthdate;
-  final String phone;
-  final String dietType;
+  String phone;
+  final String dietType; // kept for backward compat, not shown in register
   final String status; // aktif | berhasil | meninggal
   String? selectedAhliGiziNip; // NIP ahli gizi yang dipilih
+  // ── Field baru ──
+  String? username;
+  String? alamat;
+  String? pendidikan;
+  String? pekerjaan;
+  String? nik;
+  String? agama;
+  String? profilePhotoPath;
 
   Pasien({
     this.role = 'pasien',
@@ -24,9 +32,16 @@ class Pasien {
     required this.gender,
     required this.birthdate,
     required this.phone,
-    required this.dietType,
+    this.dietType = '',
     this.status = 'aktif',
     this.selectedAhliGiziNip,
+    this.username,
+    this.alamat,
+    this.pendidikan,
+    this.pekerjaan,
+    this.nik,
+    this.agama,
+    this.profilePhotoPath,
   });
 
   // Convert to Map for SharedPreferences storage
@@ -45,6 +60,13 @@ class Pasien {
       'diet_type': dietType,
       'status': status,
       'selected_ahli_gizi_nip': selectedAhliGiziNip,
+      'username': username,
+      'alamat': alamat,
+      'pendidikan': pendidikan,
+      'pekerjaan': pekerjaan,
+      'nik': nik,
+      'agama': agama,
+      'profile_photo_path': profilePhotoPath,
     };
   }
 
@@ -64,6 +86,13 @@ class Pasien {
       dietType: map['diet_type'] ?? '',
       status: map['status'] ?? 'aktif',
       selectedAhliGiziNip: map['selected_ahli_gizi_nip'],
+      username: map['username'],
+      alamat: map['alamat'],
+      pendidikan: map['pendidikan'],
+      pekerjaan: map['pekerjaan'],
+      nik: map['nik'],
+      agama: map['agama'],
+      profilePhotoPath: map['profile_photo_path'],
     );
   }
 
