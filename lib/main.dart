@@ -24,6 +24,9 @@ void main() async {
   // Initialize notifications
   await NotificationService().init();
 
+  // Seed dummy accounts if empty
+  await AuthService.seedDummyDataIfNeeded();
+
   Widget homeWidget;
   if (role == 'pasien') {
     homeWidget = const MainScreen();

@@ -720,4 +720,39 @@ class AuthService {
     await prefs.setString(_usersKey, jsonEncode(users));
     return true;
   }
+
+  // ─────────────────────────── SEED DUMMY DATA ─────────────────────────────
+
+  static Future<void> seedDummyDataIfNeeded() async {
+    final prefs = await SharedPreferences.getInstance();
+    
+    // Auto-refresh cache by checking seed version
+    final seedVersion = prefs.getInt('seed_version') ?? 0;
+    if (seedVersion < 4) {
+      await prefs.clear();
+      await prefs.setInt('seed_version', 4);
+    }
+    
+    final usersJson = prefs.getString(_usersKey);
+    if (usersJson == null || (jsonDecode(usersJson) as List).isEmpty) {
+      await register(name: 'Budi Santoso', rm: '100001', email: 'budi@gmail.com', weight: '65', height: '170', password: 'password123', gender: 'Laki-laki', birthdate: '1990-01-01', phone: '08123456789', username: 'budi123');
+      await register(name: 'Andi Pratama', rm: '100002', email: 'andi@gmail.com', weight: '70', height: '175', password: 'password123', gender: 'Laki-laki', birthdate: '1985-05-12', phone: '08129876543', username: 'andi123');
+      await register(name: 'Siti Aminah', rm: '100003', email: 'siti@gmail.com', weight: '55', height: '160', password: 'password123', gender: 'Perempuan', birthdate: '1992-08-17', phone: '08123334445', username: 'siti123');
+      await register(name: 'Dewi Lestari', rm: '100004', email: 'dewi@gmail.com', weight: '60', height: '165', password: 'password123', gender: 'Perempuan', birthdate: '1988-11-20', phone: '08129998887', username: 'dewi123');
+      await register(name: 'Rudi Hermawan', rm: '100005', email: 'rudi@gmail.com', weight: '85', height: '172', password: 'password123', gender: 'Laki-laki', birthdate: '1975-03-30', phone: '08125556667', username: 'rudi123');
+      
+      // Update statuses to make dashboard colorful
+      await updatePasienStatus('100002', 'berhasil');
+      await updatePasienStatus('100004', 'meninggal');
+    }
+
+    final ahliGiziJson = prefs.getString(_ahliGiziKey);
+    if (ahliGiziJson == null || (jsonDecode(ahliGiziJson) as List).isEmpty) {
+      await registerAhliGizi(name: 'Siti Rahmadhani, S.Gz', nip: '200001', email: 'siti.rahmadhani@rsud.go.id', phone: '08129876543', password: 'password123');
+      await registerAhliGizi(name: 'Hendra Wijaya, S.Gz', nip: '200002', email: 'hendra.wijaya@rsud.go.id', phone: '08121112223', password: 'password123');
+      
+      await submitRatingAhliGizi('200001', 5.0, ulasan: 'Sangat ramah dan sabar menjelaskan detail diet saya.', pasienName: 'Budi Santoso');
+      await submitRatingAhliGizi('200001', 4.0, ulasan: 'Menu diet yang diberikan sangat membantu!', pasienName: 'Siti Aminah');
+    }
+  }
 }
