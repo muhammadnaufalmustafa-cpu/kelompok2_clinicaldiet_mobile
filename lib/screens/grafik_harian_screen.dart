@@ -198,8 +198,9 @@ class _GrafikHarianScreenState extends State<GrafikHarianScreen> {
       
       final pct = (filled / 5) * 100;
       Color barColor = AppColors.primary;
-      if (pct < 50) barColor = AppColors.red;
-      else if (pct < 100) barColor = Colors.orange;
+      if (pct < 50) {
+        barColor = AppColors.red;
+      } else if (pct < 100) barColor = Colors.orange;
 
       barGroups.add(
         BarChartGroupData(
