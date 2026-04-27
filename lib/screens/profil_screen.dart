@@ -773,7 +773,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
                                 const SizedBox(height: 2),
                                 Text(
                                   _selectedAhliGizi != null
-                                      ? _selectedAhliGizi!['specialization'] ?? 'AHLI GIZI'
+                                      ? 'AHLI GIZI KLINIS'
                                       : 'PILIH AHLI GIZI TERLEBIH DAHULU',
                                   style: GoogleFonts.manrope(
                                     fontSize: 11,
