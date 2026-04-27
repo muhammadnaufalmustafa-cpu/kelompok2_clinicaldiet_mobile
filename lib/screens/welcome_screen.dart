@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_theme.dart';
+import '../services/auth_service.dart';
 import 'pilih_ahli_gizi_screen.dart';
+import 'inform_consent_screen.dart';
+import 'main_screen.dart';
 
 class WelcomeScreen extends StatefulWidget {
   final Map<String, dynamic> user;
@@ -122,11 +125,27 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton(
-                          onPressed: () => Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(
-                                builder: (_) => const PilihAhliGiziScreen()),
-                          ),
+                          onPressed: () {
+                            final consentSigned = AuthService.isConsentSigned(widget.user);
+                            final hasAhliGizi = widget.user['selected_ahli_gizi_nip'] != null;
+                            if (hasAhliGizi && !consentSigned) {
+                              Navigator.pushReplacement(
+                                context,
+                                MaterialPageRoute(builder: (_) => const InformConsentScreen()),
+                              );
+                            } else if (hasAhliGizi && consentSigned) {
+                              Navigator.pushAndRemoveUntil(
+                                context,
+                                MaterialPageRoute(builder: (_) => const MainScreen()),
+                                (route) => false,
+                              );
+                            } else {
+                              Navigator.pushReplacement(
+                                context,
+                                MaterialPageRoute(builder: (_) => const PilihAhliGiziScreen()),
+                              );
+                            }
+                          },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppColors.primary,
                             padding: const EdgeInsets.symmetric(vertical: 18),

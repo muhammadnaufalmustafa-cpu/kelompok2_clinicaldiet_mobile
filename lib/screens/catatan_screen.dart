@@ -21,6 +21,13 @@ class _CatatanScreenState extends State<CatatanScreen> {
   final _selinganSoreCtrl = TextEditingController();
   final _malamCtrl = TextEditingController();
 
+  // Jam untuk setiap sesi
+  TimeOfDay? _jamPagi;
+  TimeOfDay? _jamSelinganPagi;
+  TimeOfDay? _jamSiang;
+  TimeOfDay? _jamSelinganSore;
+  TimeOfDay? _jamMalam;
+
   @override
   void initState() {
     super.initState();
@@ -51,21 +58,35 @@ class _CatatanScreenState extends State<CatatanScreen> {
     super.dispose();
   }
 
-  final List<String> _hariNames = [
-    '', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'
-  ];
-  final List<String> _bulanNames = [
-    '', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
-  ];
+  final List<String> _hariNames = ['', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
+  final List<String> _bulanNames = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
 
-  String _formatTanggal(DateTime dt) {
-    return '${_hariNames[dt.weekday]}, ${dt.day} ${_bulanNames[dt.month]} ${dt.year}';
-  }
+  String _formatTanggal(DateTime dt) => '${_hariNames[dt.weekday]}, ${dt.day} ${_bulanNames[dt.month]} ${dt.year}';
+  String _formatJam(DateTime dt) => '${dt.hour.toString().padLeft(2, '0')}.${dt.minute.toString().padLeft(2, '0')} WIB';
+  String _timeOfDayToStr(TimeOfDay t) => '${t.hour.toString().padLeft(2, '0')}.${t.minute.toString().padLeft(2, '0')} WIB';
 
-  String _formatJam(DateTime dt) {
-    final h = dt.hour.toString().padLeft(2, '0');
-    final m = dt.minute.toString().padLeft(2, '0');
-    return '$h.$m WIB';
+  Future<void> _pickTime(String session) async {
+    final now = TimeOfDay.now();
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: now,
+      helpText: 'Jam makan – $session',
+      builder: (context, child) => MediaQuery(
+        data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true),
+        child: child!,
+      ),
+    );
+    if (picked != null && mounted) {
+      setState(() {
+        switch (session) {
+          case 'Pagi': _jamPagi = picked; break;
+          case 'Selingan Pagi': _jamSelinganPagi = picked; break;
+          case 'Siang': _jamSiang = picked; break;
+          case 'Selingan Sore': _jamSelinganSore = picked; break;
+          case 'Malam': _jamMalam = picked; break;
+        }
+      });
+    }
   }
 
   Future<void> _confirmSave() async {
@@ -88,14 +109,8 @@ class _CatatanScreenState extends State<CatatanScreen> {
               child: Text('Batal', style: GoogleFonts.manrope(fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
             ),
             ElevatedButton(
-              onPressed: () {
-                Navigator.pop(ctx);
-                _saveMealLog();
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-              ),
+              onPressed: () { Navigator.pop(ctx); _saveMealLog(); },
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
               child: Text('Tetap Kirim', style: GoogleFonts.manrope(color: Colors.white, fontWeight: FontWeight.w600)),
             ),
           ],
@@ -108,7 +123,6 @@ class _CatatanScreenState extends State<CatatanScreen> {
 
   Future<void> _saveMealLog() async {
     setState(() => _isLoading = true);
-
     try {
       final user = await AuthService.getLoggedInUser();
       if (user == null) {
@@ -116,14 +130,12 @@ class _CatatanScreenState extends State<CatatanScreen> {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Silakan login terlebih dahulu', style: GoogleFonts.manrope()), backgroundColor: Colors.red));
         return;
       }
-
       final rm = user['rm'] as String;
       final bb = double.tryParse(_bbCtrl.text);
       final tb = double.tryParse(_tbCtrl.text);
 
-      // Simpan BB TB juga ke profil kalau diisi
       if (bb != null && tb != null) {
-        await AuthService.updatePasienBBTB(rm, bb, tb);
+        await AuthService.updateBBTBWithHistory(rm, bb, tb);
       }
 
       final success = await AuthService.saveMealLog(
@@ -135,23 +147,29 @@ class _CatatanScreenState extends State<CatatanScreen> {
         mealMalam: _malamCtrl.text,
         beratBadan: bb,
         tinggiBadan: tb,
+        jamPagi: _jamPagi != null ? _timeOfDayToStr(_jamPagi!) : '',
+        jamSelinganPagi: _jamSelinganPagi != null ? _timeOfDayToStr(_jamSelinganPagi!) : '',
+        jamSiang: _jamSiang != null ? _timeOfDayToStr(_jamSiang!) : '',
+        jamSelinganSore: _jamSelinganSore != null ? _timeOfDayToStr(_jamSelinganSore!) : '',
+        jamMalam: _jamMalam != null ? _timeOfDayToStr(_jamMalam!) : '',
       );
 
       if (success) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Catatan makan berhasil disimpan!', style: GoogleFonts.manrope()), backgroundColor: AppColors.primary));
-        _pagiCtrl.clear();
-        _selinganPagiCtrl.clear();
-        _siangCtrl.clear();
-        _selinganSoreCtrl.clear();
-        _malamCtrl.clear();
+        _pagiCtrl.clear(); _selinganPagiCtrl.clear();
+        _siangCtrl.clear(); _selinganSoreCtrl.clear(); _malamCtrl.clear();
+        setState(() {
+          _jamPagi = null; _jamSelinganPagi = null;
+          _jamSiang = null; _jamSelinganSore = null; _jamMalam = null;
+        });
       } else {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal menyimpan catatan makan. Coba lagi.', style: GoogleFonts.manrope()), backgroundColor: Colors.red));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal menyimpan catatan makan.', style: GoogleFonts.manrope()), backgroundColor: Colors.red));
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: ${e.toString()}', style: GoogleFonts.manrope()), backgroundColor: Colors.red));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e', style: GoogleFonts.manrope()), backgroundColor: Colors.red));
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -174,60 +192,23 @@ class _CatatanScreenState extends State<CatatanScreen> {
                   const SizedBox(height: 12),
                   Row(
                     children: [
-                      Expanded(
-                        child: _buildPhysicalField('Berat Badan (kg)', _bbCtrl),
-                      ),
+                      Expanded(child: _buildPhysicalField('Berat Badan (kg)', _bbCtrl)),
                       const SizedBox(width: 16),
-                      Expanded(
-                        child: _buildPhysicalField('Tinggi Badan (cm)', _tbCtrl),
-                      ),
+                      Expanded(child: _buildPhysicalField('Tinggi Badan (cm)', _tbCtrl)),
                     ],
                   ),
                   const SizedBox(height: 24),
-                  
                   Text('CATATAN MAKANAN', style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w700, letterSpacing: 1.2, color: AppColors.textSecondary)),
                   const SizedBox(height: 16),
-
-                  _buildMealSection(
-                    icon: Icons.wb_sunny_outlined,
-                    iconBg: const Color(0xFFD1FAE5),
-                    label: 'MAKAN PAGI',
-                    controller: _pagiCtrl,
-                    hint: 'Ketik di sini (contoh: Nasi 1 centong, sayur bayam, telur dadar)',
-                    tip: 'Saran: Catat porsi dengan ukuran rumah tangga.',
-                  ),
+                  _buildMealSection(icon: Icons.wb_sunny_outlined, iconBg: const Color(0xFFD1FAE5), label: 'MAKAN PAGI', controller: _pagiCtrl, hint: 'Contoh: Nasi 1 centong, sayur bayam, telur dadar', session: 'Pagi', jam: _jamPagi, tip: 'Saran: Catat porsi dengan ukuran rumah tangga.'),
                   const SizedBox(height: 20),
-                  _buildMealSection(
-                    icon: Icons.storefront_outlined,
-                    iconBg: const Color(0xFFD1FAE5),
-                    label: 'SELINGAN PAGI',
-                    controller: _selinganPagiCtrl,
-                    hint: 'Ketik di sini (contoh: Pisang rebus 1 buah, teh tawar)',
-                  ),
+                  _buildMealSection(icon: Icons.storefront_outlined, iconBg: const Color(0xFFD1FAE5), label: 'SELINGAN PAGI', controller: _selinganPagiCtrl, hint: 'Contoh: Pisang rebus 1 buah, teh tawar', session: 'Selingan Pagi', jam: _jamSelinganPagi),
                   const SizedBox(height: 20),
-                  _buildMealSection(
-                    icon: Icons.restaurant_outlined,
-                    iconBg: const Color(0xFFFEF3C7),
-                    label: 'MAKAN SIANG',
-                    controller: _siangCtrl,
-                    hint: 'Ketik di sini...',
-                  ),
+                  _buildMealSection(icon: Icons.restaurant_outlined, iconBg: const Color(0xFFFEF3C7), label: 'MAKAN SIANG', controller: _siangCtrl, hint: 'Ketik di sini...', session: 'Siang', jam: _jamSiang),
                   const SizedBox(height: 20),
-                  _buildMealSection(
-                    icon: Icons.storefront_outlined,
-                    iconBg: const Color(0xFFD1FAE5),
-                    label: 'SELINGAN SORE',
-                    controller: _selinganSoreCtrl,
-                    hint: 'Ketik di sini...',
-                  ),
+                  _buildMealSection(icon: Icons.storefront_outlined, iconBg: const Color(0xFFD1FAE5), label: 'SELINGAN SORE', controller: _selinganSoreCtrl, hint: 'Ketik di sini...', session: 'Selingan Sore', jam: _jamSelinganSore),
                   const SizedBox(height: 20),
-                  _buildMealSection(
-                    icon: Icons.nightlight_outlined,
-                    iconBg: const Color(0xFFEDE9FE),
-                    label: 'MAKAN MALAM',
-                    controller: _malamCtrl,
-                    hint: 'Ketik di sini...',
-                  ),
+                  _buildMealSection(icon: Icons.nightlight_outlined, iconBg: const Color(0xFFEDE9FE), label: 'MAKAN MALAM', controller: _malamCtrl, hint: 'Ketik di sini...', session: 'Malam', jam: _jamMalam),
                 ],
               ),
             ),
@@ -241,12 +222,7 @@ class _CatatanScreenState extends State<CatatanScreen> {
   Widget _buildTopBar(BuildContext context) {
     return Container(
       color: AppColors.surface,
-      padding: EdgeInsets.only(
-        top: MediaQuery.of(context).padding.top + 12,
-        left: 20,
-        right: 20,
-        bottom: 16,
-      ),
+      padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top + 12, left: 20, right: 20, bottom: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -257,35 +233,20 @@ class _CatatanScreenState extends State<CatatanScreen> {
                 children: [
                   Image.asset('assets/images/icon.png', width: 32, height: 32),
                   const SizedBox(width: 8),
-                  Text(
-                    'Clinical Diet',
-                    style: GoogleFonts.manrope(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.primary),
-                  ),
+                  Text('Clinical Diet', style: GoogleFonts.manrope(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.primary)),
                 ],
               ),
               const Icon(Icons.notifications_outlined, color: AppColors.textSecondary),
             ],
           ),
           const SizedBox(height: 16),
-          Text(
-            'Catatan Makan Hari Ini',
-            style: GoogleFonts.manrope(fontSize: 20, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
-          ),
+          Text('Catatan Makan Hari Ini', style: GoogleFonts.manrope(fontSize: 20, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
           const SizedBox(height: 12),
-          Text(
-            'HARI INI',
-            style: GoogleFonts.manrope(fontSize: 10, fontWeight: FontWeight.w600, letterSpacing: 1.2, color: AppColors.textMuted),
-          ),
+          Text('HARI INI', style: GoogleFonts.manrope(fontSize: 10, fontWeight: FontWeight.w600, letterSpacing: 1.2, color: AppColors.textMuted)),
           const SizedBox(height: 2),
-          Text(
-            _formatTanggal(DateTime.now()),
-            style: GoogleFonts.manrope(fontSize: 18, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
-          ),
+          Text(_formatTanggal(DateTime.now()), style: GoogleFonts.manrope(fontSize: 18, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
           const SizedBox(height: 4),
-          Text(
-            'Waktu pengisian: ${_formatJam(DateTime.now())}',
-            style: GoogleFonts.manrope(fontSize: 12, color: AppColors.textSecondary),
-          ),
+          Text('Waktu pengisian: ${_formatJam(DateTime.now())}', style: GoogleFonts.manrope(fontSize: 12, color: AppColors.textSecondary)),
         ],
       ),
     );
@@ -293,11 +254,7 @@ class _CatatanScreenState extends State<CatatanScreen> {
 
   Widget _buildPhysicalField(String label, TextEditingController controller) {
     return Container(
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.divider),
-      ),
+      decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(12), border: Border.all(color: AppColors.divider)),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: TextField(
         controller: controller,
@@ -318,6 +275,8 @@ class _CatatanScreenState extends State<CatatanScreen> {
     required String label,
     required TextEditingController controller,
     required String hint,
+    required String session,
+    required TimeOfDay? jam,
     String? tip,
   }) {
     return Column(
@@ -326,22 +285,41 @@ class _CatatanScreenState extends State<CatatanScreen> {
         Row(
           children: [
             Container(
-              width: 40,
-              height: 40,
+              width: 40, height: 40,
               decoration: BoxDecoration(color: iconBg, borderRadius: BorderRadius.circular(10)),
               child: Icon(icon, color: AppColors.primary, size: 20),
             ),
             const SizedBox(width: 10),
-            Text(label, style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w600, letterSpacing: 0.8, color: AppColors.textPrimary)),
+            Expanded(child: Text(label, style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w600, letterSpacing: 0.8, color: AppColors.textPrimary))),
+            // Tombol jam
+            GestureDetector(
+              onTap: () => _pickTime(session),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: jam != null ? AppColors.primaryLight : AppColors.background,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: jam != null ? AppColors.primary : AppColors.divider),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.access_time, size: 14, color: jam != null ? AppColors.primary : AppColors.textMuted),
+                    const SizedBox(width: 4),
+                    Text(
+                      jam != null ? _timeOfDayToStr(jam) : 'Set Jam',
+                      style: GoogleFonts.manrope(fontSize: 11, fontWeight: FontWeight.w600,
+                          color: jam != null ? AppColors.primaryDark : AppColors.textMuted),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ],
         ),
         const SizedBox(height: 10),
         Container(
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: AppColors.divider),
-          ),
+          decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(14), border: Border.all(color: AppColors.divider)),
           child: TextField(
             controller: controller,
             maxLines: 3,
@@ -354,10 +332,7 @@ class _CatatanScreenState extends State<CatatanScreen> {
             ),
           ),
         ),
-        if (tip != null) ...[
-          const SizedBox(height: 8),
-          Text(tip, style: GoogleFonts.manrope(fontSize: 12, color: AppColors.textSecondary, height: 1.5)),
-        ],
+        if (tip != null) ...[const SizedBox(height: 8), Text(tip, style: GoogleFonts.manrope(fontSize: 12, color: AppColors.textSecondary, height: 1.5))],
       ],
     );
   }
@@ -365,12 +340,7 @@ class _CatatanScreenState extends State<CatatanScreen> {
   Widget _buildBottomButton(BuildContext context) {
     return Container(
       color: AppColors.surface,
-      padding: EdgeInsets.only(
-        left: 16,
-        right: 16,
-        bottom: MediaQuery.of(context).padding.bottom + 16,
-        top: 12,
-      ),
+      padding: EdgeInsets.only(left: 16, right: 16, bottom: MediaQuery.of(context).padding.bottom + 16, top: 12),
       child: SizedBox(
         width: double.infinity,
         child: ElevatedButton.icon(

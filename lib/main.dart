@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'theme/app_theme.dart';
 import 'screens/login_screen.dart';
 import 'screens/main_screen.dart';
+import 'screens/inform_consent_screen.dart';
 import 'screens/ahli_gizi/ahli_gizi_main_screen.dart';
 import 'services/auth_service.dart';
 import 'services/notification_service.dart';
@@ -26,12 +27,16 @@ void main() async {
 
   Widget homeWidget;
   if (role == 'pasien') {
-    homeWidget = const MainScreen();
-    // Schedule atau cancel notifikasi berdasarkan status pasien
-    if (status == 'aktif' || status == null) {
-      await NotificationService().scheduleMealNotifications();
+    final consentSigned = AuthService.isConsentSigned(user);
+    if (!consentSigned) {
+      homeWidget = const InformConsentScreen();
     } else {
-      await NotificationService().cancelAllNotifications();
+      homeWidget = const MainScreen();
+      if (status == 'aktif' || status == null) {
+        await NotificationService().scheduleMealNotifications();
+      } else {
+        await NotificationService().cancelAllNotifications();
+      }
     }
   } else if (role == 'ahli_gizi') {
     homeWidget = const AhliGiziMainScreen();

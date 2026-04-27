@@ -142,11 +142,11 @@ class _AhliGiziDetailPasienScreenState
       // 1. Simpan data nutrisi
       await AuthService.saveNutrisiPasien(
         rmPasien: rm,
-        kaloriTarget: kaloriTarget,
+        energiTarget: kaloriTarget,
         proteinTarget: proteinTarget,
         lemakTarget: lemakTarget,
         karboTarget: karboTarget,
-        kaloriAktual: kaloriAktual,
+        energiAktual: kaloriAktual,
         proteinAktual: proteinAktual,
         lemakAktual: lemakAktual,
         karboAktual: karboAktual,

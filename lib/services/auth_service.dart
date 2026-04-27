@@ -497,61 +497,8 @@ class AuthService {
 
   static const String _mealLogsKey = 'meal_logs';
 
-  static Future<bool> saveMealLog({
-    required String rmPasien,
-    required String mealPagi,
-    required String selinganPagi,
-    required String mealSiang,
-    required String selinganSore,
-    required String mealMalam,
-    double? beratBadan,
-    double? tinggiBadan,
-  }) async {
-    final prefs = await SharedPreferences.getInstance();
 
-    final logsJson = prefs.getString(_mealLogsKey);
-    List<Map<String, dynamic>> logs = [];
-    if (logsJson != null) {
-      final decoded = jsonDecode(logsJson) as List;
-      logs = decoded.cast<Map<String, dynamic>>();
-    }
 
-    final today = DateTime.now();
-    final todayString = '${today.year}-${today.month}-${today.day}';
-
-    final existingLogIndex = logs.indexWhere(
-      (log) =>
-          log['rm_pasien'] == rmPasien &&
-          log['date'].toString().startsWith(todayString),
-    );
-
-    final newLog = {
-      'id': '${rmPasien}_${today.millisecondsSinceEpoch}',
-      'rm_pasien': rmPasien,
-      'date': today.toIso8601String(),
-      'meal_pagi': mealPagi,
-      'selingan_pagi': selinganPagi,
-      'meal_siang': mealSiang,
-      'selingan_sore': selinganSore,
-      'meal_malam': mealMalam,
-      'berat_badan': beratBadan,
-      'tinggi_badan': tinggiBadan,
-      'created_at': DateTime.now().toIso8601String(),
-      'updated_at': DateTime.now().toIso8601String(),
-    };
-
-    if (existingLogIndex != -1) {
-      // Pertahankan ID dan created_at yang lama jika update
-      newLog['id'] = logs[existingLogIndex]['id'];
-      newLog['created_at'] = logs[existingLogIndex]['created_at'];
-      logs[existingLogIndex] = newLog;
-    } else {
-      logs.add(newLog);
-    }
-
-    await prefs.setString(_mealLogsKey, jsonEncode(logs));
-    return true;
-  }
 
   static Future<Map<String, dynamic>?> getMealLogForDate(
     String rmPasien,
@@ -626,77 +573,7 @@ class AuthService {
     return user?['role'] as String?;
   }
 
-  // ─────────────────────────── NUTRISI PASIEN ──────────────────────────────
 
-  static const String _nutrisiKey = 'nutrisi_pasien';
-
-  static Future<bool> saveNutrisiPasien({
-    required String rmPasien,
-    double kaloriTarget = 0,
-    double proteinTarget = 0,
-    double lemakTarget = 0,
-    double karboTarget = 0,
-    double kaloriAktual = 0,
-    double proteinAktual = 0,
-    double lemakAktual = 0,
-    double karboAktual = 0,
-    double seratAktual = 0,
-    double seratTarget = 30,
-    double hidrasiAktual = 0,
-    double hidrasiTarget = 2.5,
-    String catatan = '',
-  }) async {
-    final prefs = await SharedPreferences.getInstance();
-    final json = prefs.getString(_nutrisiKey);
-    List<Map<String, dynamic>> list = [];
-    if (json != null) {
-      final decoded = jsonDecode(json) as List;
-      list = decoded.cast<Map<String, dynamic>>();
-    }
-
-    final idx = list.indexWhere((n) => n['rm_pasien'] == rmPasien);
-    final data = {
-      'rm_pasien': rmPasien,
-      'kalori_target': kaloriTarget,
-      'protein_target': proteinTarget,
-      'lemak_target': lemakTarget,
-      'karbo_target': karboTarget,
-      'kalori_aktual': kaloriAktual,
-      'protein_aktual': proteinAktual,
-      'lemak_aktual': lemakAktual,
-      'karbo_aktual': karboAktual,
-      'serat_aktual': seratAktual,
-      'serat_target': seratTarget,
-      'hidrasi_aktual': hidrasiAktual,
-      'hidrasi_target': hidrasiTarget,
-      'catatan': catatan,
-      'updated_at': DateTime.now().toIso8601String(),
-    };
-
-    if (idx != -1) {
-      list[idx] = data;
-    } else {
-      list.add(data);
-    }
-
-    await prefs.setString(_nutrisiKey, jsonEncode(list));
-    return true;
-  }
-
-  static Future<Map<String, dynamic>?> getNutrisiPasien(String rmPasien) async {
-    final prefs = await SharedPreferences.getInstance();
-    final json = prefs.getString(_nutrisiKey);
-    if (json == null) return null;
-
-    final decoded = jsonDecode(json) as List;
-    final list = decoded.cast<Map<String, dynamic>>();
-
-    try {
-      return list.firstWhere((n) => n['rm_pasien'] == rmPasien);
-    } catch (_) {
-      return null;
-    }
-  }
 
   static Future<bool> saveTargetDietPasien({
     required String rm,
@@ -706,18 +583,379 @@ class AuthService {
     final prefs = await SharedPreferences.getInstance();
     final usersJson = prefs.getString(_usersKey);
     if (usersJson == null) return false;
-
     final decoded = jsonDecode(usersJson) as List;
     final users = decoded.cast<Map<String, dynamic>>();
-
     final idx = users.indexWhere(
         (u) => u['rm'].toString().toLowerCase() == rm.toLowerCase());
     if (idx == -1) return false;
-
     users[idx]['target_diet'] = targetDiet;
     users[idx]['catatan_evaluasi'] = catatanEvaluasi;
-
     await prefs.setString(_usersKey, jsonEncode(users));
     return true;
   }
+
+  // ─────────────────────────── MULTI-DIET ──────────────────────────────────
+
+  static Future<bool> updateDietTypes(String rmPasien, List<String> dietTypes) async {
+    final prefs = await SharedPreferences.getInstance();
+    final usersJson = prefs.getString(_usersKey);
+    if (usersJson == null) return false;
+    final decoded = jsonDecode(usersJson) as List;
+    final users = decoded.cast<Map<String, dynamic>>();
+    final idx = users.indexWhere((u) => u['rm'].toString().toLowerCase() == rmPasien.toLowerCase());
+    if (idx == -1) return false;
+    users[idx]['diet_types'] = dietTypes;
+    users[idx]['diet_type'] = dietTypes.isNotEmpty ? dietTypes.join(', ') : '';
+    await prefs.setString(_usersKey, jsonEncode(users));
+    final loggedIn = await getLoggedInUser();
+    if (loggedIn != null && loggedIn['rm'].toString().toLowerCase() == rmPasien.toLowerCase()) {
+      await prefs.setString(_loggedInUserKey, jsonEncode(users[idx]));
+    }
+    return true;
+  }
+
+  static List<String> getDietTypesList(Map<String, dynamic> pasien) {
+    final raw = pasien['diet_types'];
+    if (raw is List) return raw.cast<String>();
+    final single = pasien['diet_type'] as String? ?? '';
+    return single.isEmpty ? [] : [single];
+  }
+
+  // ─────────────────────────── INFORM CONSENT ──────────────────────────────
+
+  static Future<bool> saveInformConsent(String rm, String signaturePath) async {
+    final prefs = await SharedPreferences.getInstance();
+    final usersJson = prefs.getString(_usersKey);
+    if (usersJson == null) return false;
+    final decoded = jsonDecode(usersJson) as List;
+    final users = decoded.cast<Map<String, dynamic>>();
+    final idx = users.indexWhere((u) => u['rm'].toString().toLowerCase() == rm.toLowerCase());
+    if (idx == -1) return false;
+    users[idx]['inform_consent_signed'] = true;
+    users[idx]['consent_signature_path'] = signaturePath;
+    users[idx]['consent_signed_at'] = DateTime.now().toIso8601String();
+    await prefs.setString(_usersKey, jsonEncode(users));
+    final loggedIn = await getLoggedInUser();
+    if (loggedIn != null && loggedIn['rm'].toString().toLowerCase() == rm.toLowerCase()) {
+      await prefs.setString(_loggedInUserKey, jsonEncode(users[idx]));
+    }
+    return true;
+  }
+
+  static bool isConsentSigned(Map<String, dynamic>? user) {
+    return user?['inform_consent_signed'] == true;
+  }
+
+  // ─────────────────────────── BB/TB HISTORY ───────────────────────────────
+
+  static Future<bool> updateBBTBWithHistory(String rm, double weight, double height) async {
+    final prefs = await SharedPreferences.getInstance();
+    final usersJson = prefs.getString(_usersKey);
+    if (usersJson == null) return false;
+    final decoded = jsonDecode(usersJson) as List;
+    final users = decoded.cast<Map<String, dynamic>>();
+    final idx = users.indexWhere((u) => u['rm'].toString().toLowerCase() == rm.toLowerCase());
+    if (idx == -1) return false;
+    users[idx]['weight'] = weight;
+    users[idx]['height'] = height;
+    final history = (users[idx]['bb_history'] as List? ?? []).cast<Map<String, dynamic>>();
+    history.insert(0, {
+      'weight': weight,
+      'height': height,
+      'recorded_at': DateTime.now().toIso8601String(),
+    });
+    users[idx]['bb_history'] = history.take(30).toList();
+    await prefs.setString(_usersKey, jsonEncode(users));
+    final loggedIn = await getLoggedInUser();
+    if (loggedIn != null && loggedIn['rm'].toString().toLowerCase() == rm.toLowerCase()) {
+      await prefs.setString(_loggedInUserKey, jsonEncode(users[idx]));
+    }
+    return true;
+  }
+
+  static List<Map<String, dynamic>> getBBTBHistory(Map<String, dynamic> pasien) {
+    final raw = pasien['bb_history'];
+    if (raw is List) return raw.cast<Map<String, dynamic>>();
+    return [];
+  }
+
+  // ─────────────────────────── NUTRISI (6 KOMPONEN) ────────────────────────
+
+  static const String _nutrisiKey = 'nutrisi_pasien_v2';
+
+  static Future<bool> saveNutrisiPasien({
+    required String rmPasien,
+    double energiTarget = 0,
+    double proteinTarget = 0,
+    double lemakTarget = 0,
+    double karboTarget = 0,
+    double natriumTarget = 0,
+    double kaliumTarget = 0,
+    double energiAktual = 0,
+    double proteinAktual = 0,
+    double lemakAktual = 0,
+    double karboAktual = 0,
+    double natriumAktual = 0,
+    double kaliumAktual = 0,
+    double seratAktual = 0,
+    double seratTarget = 30,
+    double hidrasiAktual = 0,
+    double hidrasiTarget = 2.5,
+    String catatan = '',
+    String rambuPeringatan = '',
+    List<String> monitoredComponents = const [],
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final json = prefs.getString(_nutrisiKey);
+    List<Map<String, dynamic>> list = [];
+    if (json != null) {
+      final decoded = jsonDecode(json) as List;
+      list = decoded.cast<Map<String, dynamic>>();
+    }
+    final idx = list.indexWhere((n) => n['rm_pasien'] == rmPasien);
+    final data = {
+      'rm_pasien': rmPasien,
+      'energi_target': energiTarget,
+      'protein_target': proteinTarget,
+      'lemak_target': lemakTarget,
+      'karbo_target': karboTarget,
+      'natrium_target': natriumTarget,
+      'kalium_target': kaliumTarget,
+      'energi_aktual': energiAktual,
+      'protein_aktual': proteinAktual,
+      'lemak_aktual': lemakAktual,
+      'karbo_aktual': karboAktual,
+      'natrium_aktual': natriumAktual,
+      'kalium_aktual': kaliumAktual,
+      'kalori_target': energiTarget,
+      'kalori_aktual': energiAktual,
+      'serat_aktual': seratAktual,
+      'serat_target': seratTarget,
+      'hidrasi_aktual': hidrasiAktual,
+      'hidrasi_target': hidrasiTarget,
+      'catatan': catatan,
+      'rambu_peringatan': rambuPeringatan,
+      'monitored_components': monitoredComponents,
+      'updated_at': DateTime.now().toIso8601String(),
+    };
+    if (idx != -1) {
+      list[idx] = data;
+    } else {
+      list.add(data);
+    }
+    await prefs.setString(_nutrisiKey, jsonEncode(list));
+    // Also save to legacy key for backward compat
+    final legacyKey = 'nutrisi_pasien';
+    final legacyJson = prefs.getString(legacyKey);
+    List<Map<String, dynamic>> legacyList = [];
+    if (legacyJson != null) {
+      final decoded2 = jsonDecode(legacyJson) as List;
+      legacyList = decoded2.cast<Map<String, dynamic>>();
+    }
+    final legacyIdx = legacyList.indexWhere((n) => n['rm_pasien'] == rmPasien);
+    if (legacyIdx != -1) {
+      legacyList[legacyIdx] = data;
+    } else {
+      legacyList.add(data);
+    }
+    await prefs.setString(legacyKey, jsonEncode(legacyList));
+    return true;
+  }
+
+  static Future<Map<String, dynamic>?> getNutrisiPasien(String rmPasien) async {
+    final prefs = await SharedPreferences.getInstance();
+    // Try new key first
+    final json = prefs.getString(_nutrisiKey);
+    if (json != null) {
+      final decoded = jsonDecode(json) as List;
+      final list = decoded.cast<Map<String, dynamic>>();
+      try {
+        return list.firstWhere((n) => n['rm_pasien'] == rmPasien);
+      } catch (_) {}
+    }
+    // Fallback to legacy
+    final legacyJson = prefs.getString('nutrisi_pasien');
+    if (legacyJson == null) return null;
+    final decoded2 = jsonDecode(legacyJson) as List;
+    final list2 = decoded2.cast<Map<String, dynamic>>();
+    try {
+      return list2.firstWhere((n) => n['rm_pasien'] == rmPasien);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  // ─────────────────────────── DROPOUT DETECTION ───────────────────────────
+
+  static Future<List<Map<String, dynamic>>> getDropoutPasien() async {
+    final allPasien = await getAllPasien();
+    final prefs = await SharedPreferences.getInstance();
+    final logsJson = prefs.getString(_mealLogsKey);
+    List<Map<String, dynamic>> logs = [];
+    if (logsJson != null) {
+      logs = (jsonDecode(logsJson) as List).cast<Map<String, dynamic>>();
+    }
+    final dropouts = <Map<String, dynamic>>[];
+    final now = DateTime.now();
+    for (final pasien in allPasien) {
+      final rm = pasien['rm'] as String;
+      if ((pasien['status'] ?? 'aktif') != 'aktif') continue;
+      final pasienLogs = logs.where((l) => l['rm_pasien'] == rm).toList();
+      if (pasienLogs.isEmpty) {
+        // Check if registered more than 3 days ago
+        continue;
+      }
+      int consecutive = 0;
+      for (int i = 1; i <= 3; i++) {
+        final checkDate = now.subtract(Duration(days: i));
+        final dateStr = '${checkDate.year}-${checkDate.month}-${checkDate.day}';
+        final hasLog = pasienLogs.any((l) => l['date'].toString().startsWith(dateStr));
+        if (!hasLog) {
+          consecutive++;
+        } else {
+          break;
+        }
+      }
+      if (consecutive >= 3) {
+        dropouts.add({...pasien, 'consecutive_missed': consecutive});
+      }
+    }
+    return dropouts;
+  }
+
+  // ─────────────────────────── HASIL LAB ───────────────────────────────────
+
+  static const String _labKey = 'hasil_lab';
+
+  static Future<bool> saveHasilLab({
+    required String rmPasien,
+    required Map<String, dynamic> labData,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final json = prefs.getString(_labKey);
+    List<Map<String, dynamic>> list = [];
+    if (json != null) {
+      final decoded = jsonDecode(json) as List;
+      list = decoded.cast<Map<String, dynamic>>();
+    }
+    list.removeWhere((l) => l['rm_pasien'] == rmPasien);
+    list.add({
+      'rm_pasien': rmPasien,
+      ...labData,
+      'updated_at': DateTime.now().toIso8601String(),
+    });
+    await prefs.setString(_labKey, jsonEncode(list));
+    return true;
+  }
+
+  static Future<Map<String, dynamic>?> getHasilLab(String rmPasien) async {
+    final prefs = await SharedPreferences.getInstance();
+    final json = prefs.getString(_labKey);
+    if (json == null) return null;
+    final decoded = jsonDecode(json) as List;
+    final list = decoded.cast<Map<String, dynamic>>();
+    try {
+      return list.firstWhere((l) => l['rm_pasien'] == rmPasien);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  // ─────────────────────────── PROFIL AHLI GIZI (EXTENDED) ─────────────────
+
+  static Future<bool> updateAhliGiziProfile({
+    required String nip,
+    required String name,
+    required String email,
+    required String phone,
+    String pendidikan = '',
+    String instansi = '',
+    String tahunLulus = '',
+    String pengalamanKerja = '',
+    String strNumber = '',
+    String spesialisasi = '',
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final json = prefs.getString(_ahliGiziKey);
+    if (json == null) return false;
+    final decoded = jsonDecode(json) as List;
+    final list = decoded.cast<Map<String, dynamic>>();
+    final idx = list.indexWhere((u) => u['nip'].toString() == nip);
+    if (idx == -1) return false;
+    list[idx]['name'] = name;
+    list[idx]['email'] = email;
+    list[idx]['phone'] = phone;
+    list[idx]['pendidikan'] = pendidikan;
+    list[idx]['instansi'] = instansi;
+    list[idx]['tahun_lulus'] = tahunLulus;
+    list[idx]['pengalaman_kerja'] = pengalamanKerja;
+    list[idx]['str_number'] = strNumber;
+    list[idx]['specialization'] = spesialisasi;
+    await prefs.setString(_ahliGiziKey, jsonEncode(list));
+    final loggedIn = await getLoggedInUser();
+    if (loggedIn != null && loggedIn['nip']?.toString() == nip) {
+      await prefs.setString(_loggedInUserKey, jsonEncode(list[idx]));
+    }
+    return true;
+  }
+
+  // ─────────────────────────── MEAL LOG (dengan JAM) ───────────────────────
+
+  static Future<bool> saveMealLog({
+    required String rmPasien,
+    required String mealPagi,
+    required String selinganPagi,
+    required String mealSiang,
+    required String selinganSore,
+    required String mealMalam,
+    double? beratBadan,
+    double? tinggiBadan,
+    String? jamPagi,
+    String? jamSelinganPagi,
+    String? jamSiang,
+    String? jamSelinganSore,
+    String? jamMalam,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final logsJson = prefs.getString(_mealLogsKey);
+    List<Map<String, dynamic>> logs = [];
+    if (logsJson != null) {
+      final decoded = jsonDecode(logsJson) as List;
+      logs = decoded.cast<Map<String, dynamic>>();
+    }
+    final today = DateTime.now();
+    final todayString = '${today.year}-${today.month}-${today.day}';
+    final existingLogIndex = logs.indexWhere(
+      (log) => log['rm_pasien'] == rmPasien && log['date'].toString().startsWith(todayString),
+    );
+    final newLog = {
+      'id': '${rmPasien}_${today.millisecondsSinceEpoch}',
+      'rm_pasien': rmPasien,
+      'date': today.toIso8601String(),
+      'meal_pagi': mealPagi,
+      'selingan_pagi': selinganPagi,
+      'meal_siang': mealSiang,
+      'selingan_sore': selinganSore,
+      'meal_malam': mealMalam,
+      'jam_pagi': jamPagi ?? '',
+      'jam_selingan_pagi': jamSelinganPagi ?? '',
+      'jam_siang': jamSiang ?? '',
+      'jam_selingan_sore': jamSelinganSore ?? '',
+      'jam_malam': jamMalam ?? '',
+      'berat_badan': beratBadan,
+      'tinggi_badan': tinggiBadan,
+      'created_at': today.toIso8601String(),
+      'updated_at': today.toIso8601String(),
+    };
+    if (existingLogIndex != -1) {
+      newLog['id'] = logs[existingLogIndex]['id'];
+      newLog['created_at'] = logs[existingLogIndex]['created_at'];
+      logs[existingLogIndex] = newLog;
+    } else {
+      logs.add(newLog);
+    }
+    await prefs.setString(_mealLogsKey, jsonEncode(logs));
+    return true;
+  }
 }
+
