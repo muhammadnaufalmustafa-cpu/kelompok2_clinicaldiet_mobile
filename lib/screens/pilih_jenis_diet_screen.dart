@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_theme.dart';
 import '../services/auth_service.dart';
-import 'pilih_ahli_gizi_screen.dart';
+import 'tampil_leaflet_onboarding_screen.dart';
 
 class PilihJenisDietScreen extends StatefulWidget {
-  const PilihJenisDietScreen({super.key});
+  final bool isFromProfil;
+  const PilihJenisDietScreen({super.key, this.isFromProfil = false});
 
   @override
   State<PilihJenisDietScreen> createState() => _PilihJenisDietScreenState();
@@ -14,6 +15,28 @@ class PilihJenisDietScreen extends StatefulWidget {
 class _PilihJenisDietScreenState extends State<PilihJenisDietScreen> {
   bool _isLoading = false;
   final Set<String> _selectedDiets = {};
+
+  // Mapping jenis diet ke URL PDF leaflet
+  static const Map<String, String> _dietPdfUrls = {
+    'Makanan Sehat Ibu Hamil': 'https://drive.google.com/file/d/1DtEIRBLioGTeehUTETRn2dlWY8QjWNoO/view?usp=sharing',
+    'Makanan Sehat Ibu Menyusui': 'https://drive.google.com/file/d/16Uesv76NVgnZ5DPtjAJOkAFpFPxtgb8V/view?usp=sharing',
+    'Makanan Sehat Bayi': 'https://drive.google.com/file/d/1u1EYyFS-gOVI-aiHTcz8VWbgs-qzdheX/view?usp=sharing',
+    'Makanan Sehat Anak Balita': 'https://drive.google.com/file/d/1Fl9rdfVJFzf3G-kChGXHHVcx0XQ3Z67y/view?usp=sharing',
+    'Makanan Sehat Lansia': 'https://drive.google.com/file/d/13yRFdbNbAT6X-e6cvG1xdmGzFqej1BQo/view?usp=sharing',
+    'Makanan Sehat Jemaah Haji': 'https://drive.google.com/file/d/1SdpV1JQwBQw58c2WyUIPzcbqCtgKRX5X/view?usp=sharing',
+    'Diet Hati': 'https://drive.google.com/file/d/1AWJyvHUsXiTSaXB4vJWRV8DuVueeg-11/view?usp=sharing',
+    'Diet Lambung': 'https://drive.google.com/file/d/1gTHCfYnHRpMWlzDg2Fpn174_amfBPB78/view?usp=sharing',
+    'Diet Jantung': 'https://drive.google.com/file/d/1AMmx0UVPXAi-rWn5MdANHgVCz3AjnfE9/view?usp=sharing',
+    'Diet Penyakit Ginjal Kronik': 'https://drive.google.com/file/d/1ULJ2xjXQVqhIL-uwzgyYMbPxGXSJdVbg/view?usp=sharing',
+    'Diet Garam Rendah': 'https://drive.google.com/file/d/1ILDn0y04uS0pbgugZyKKGiQ5pXUQY6ET/view?usp=sharing',
+    'Diet Diabetes Melitus': 'https://drive.google.com/file/d/1rPTX_FR46-CaYOZN-lT-2GwE-ExiKpxY/view?usp=sharing',
+    'Diet Diabetes Melitus Saat Puasa': 'https://drive.google.com/file/d/1WU8gTXow_V4wuPQEjSFZhZ95BA5A4m0h/view?usp=sharing',
+    'Diet Energi Rendah': 'https://drive.google.com/file/d/16aiV08zXHsS_275djT5MXlo6n8aopqVy/view?usp=sharing',
+    'Diet Purin Rendah': 'https://drive.google.com/file/d/1D_dhoFxw8ZoK8sYBcCaKrMZsr_k0R2ZL/view?usp=sharing',
+    'Diet Protein Rendah': 'https://drive.google.com/file/d/1pUfHw-KGuJGi64ujMwzAHwtZyBi-WXUK/view?usp=sharing',
+    'Diet Lemak Rendah': 'https://drive.google.com/file/d/1QREic6oki2pyC2xFQ5Qvulx0-UvTXCm-/view?usp=sharing',
+    'Diet Kekebalan Tubuh Menurun': 'https://drive.google.com/file/d/1oDCEedQNVE-FRyhAXIvky7cHmIWuTnhZ/view?usp=sharing',
+  };
 
   final List<Map<String, dynamic>> _dietTypes = [
     {'title': 'Makanan Sehat Ibu Hamil', 'icon': Icons.pregnant_woman_outlined, 'color': const Color(0xFFFCE7F3)},
@@ -52,13 +75,24 @@ class _PilihJenisDietScreenState extends State<PilihJenisDietScreen> {
       final rm = user['rm'] as String;
       await AuthService.updateDietTypes(rm, _selectedDiets.toList());
     }
-    if (mounted) {
-      setState(() => _isLoading = false);
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const PilihAhliGiziScreen()),
-      );
-    }
+    if (!mounted) return;
+    setState(() => _isLoading = false);
+
+    // Ambil diet pertama yang dipilih untuk ditampilkan leaflet-nya
+    final firstDiet = _selectedDiets.first;
+    final pdfUrl = _dietPdfUrls[firstDiet] ?? '';
+
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (_) => TampilLeafletOnboardingScreen(
+          dietTitle: firstDiet,
+          pdfUrl: pdfUrl,
+          isFromProfil: widget.isFromProfil,
+          allSelectedDiets: _selectedDiets.toList(),
+        ),
+      ),
+    );
   }
 
   @override

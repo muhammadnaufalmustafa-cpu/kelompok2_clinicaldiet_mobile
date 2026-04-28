@@ -7,6 +7,7 @@ import '../theme/app_theme.dart';
 import '../services/auth_service.dart';
 import 'login_screen.dart';
 import 'pilih_ahli_gizi_screen.dart';
+import 'pilih_jenis_diet_screen.dart';
 
 class ProfilScreen extends StatefulWidget {
   const ProfilScreen({super.key});
@@ -852,6 +853,19 @@ class _ProfilScreenState extends State<ProfilScreen> {
                           title: 'Ganti Ahli Gizi',
                           onTap: () {
                             Navigator.push(context, MaterialPageRoute(builder: (_) => const PilihAhliGiziScreen())).then((_) => _loadUser());
+                          },
+                        ),
+                        _divider(),
+                        _buildActionItem(
+                          icon: Icons.restaurant_menu_outlined,
+                          title: 'Ganti Jenis Diet',
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const PilihJenisDietScreen(isFromProfil: true),
+                              ),
+                            ).then((_) => _loadUser());
                           },
                         ),
                         _divider(),

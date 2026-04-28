@@ -1,7 +1,6 @@
 import 'dart:io';
-import 'dart:ui' as ui;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:signature/signature.dart';
@@ -61,16 +60,22 @@ class _InformConsentScreenState extends State<InformConsentScreen> {
       final user = await AuthService.getLoggedInUser();
       if (user == null) return;
 
-      // Export signature as PNG
-      final bytes = await _signatureController.toPngBytes();
-      if (bytes == null) return;
+      String signaturePath = '';
 
-      final dir = await getApplicationDocumentsDirectory();
-      final path = '${dir.path}/consent_${user['rm']}.png';
-      final file = File(path);
-      await file.writeAsBytes(bytes);
+      if (!kIsWeb) {
+        // Mobile/Desktop: simpan file tanda tangan sebagai PNG
+        final bytes = await _signatureController.toPngBytes();
+        if (bytes == null) return;
 
-      await AuthService.saveInformConsent(user['rm'] as String, path);
+        final dir = await getApplicationDocumentsDirectory();
+        signaturePath = '${dir.path}/consent_${user['rm']}.png';
+        final file = File(signaturePath);
+        await file.writeAsBytes(bytes);
+      }
+      // Web: skip penyimpanan file (path_provider tidak support web),
+      // cukup tandai consent sebagai sudah ditandatangani
+
+      await AuthService.saveInformConsent(user['rm'] as String, signaturePath);
 
       if (!mounted) return;
       Navigator.pushAndRemoveUntil(

@@ -97,17 +97,17 @@ class Pasien {
   }
 
   // Calculate BMI
-  double get BMI {
+  double get bmi {
     if (height == 0) return 0;
     return weight / ((height / 100) * (height / 100));
   }
 
   // Get BMI category
-  String get BMICategory {
-    final bmi = BMI;
-    if (bmi < 18.5) return 'Berat Badan Kurang';
-    if (bmi < 25) return 'Berat Badan Normal';
-    if (bmi < 30) return 'Berat Badan Lebih';
+  String get bmiCategory {
+    final currentBmi = bmi;
+    if (currentBmi < 18.5) return 'Berat Badan Kurang';
+    if (currentBmi < 25) return 'Berat Badan Normal';
+    if (currentBmi < 30) return 'Berat Badan Lebih';
     return 'Obesitas';
   }
 }

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_theme.dart';
 import '../services/auth_service.dart';
-import 'pilih_jenis_diet_screen.dart';
+import 'inform_consent_screen.dart';
 
 class PilihAhliGiziScreen extends StatefulWidget {
   const PilihAhliGiziScreen({super.key});
@@ -65,7 +65,7 @@ class _PilihAhliGiziScreenState extends State<PilihAhliGiziScreen> {
           ElevatedButton(
             onPressed: () {
               Navigator.pushReplacement(
-                  context, MaterialPageRoute(builder: (_) => const PilihJenisDietScreen()));
+                context, MaterialPageRoute(builder: (_) => const InformConsentScreen()));
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary,
@@ -97,22 +97,21 @@ class _PilihAhliGiziScreenState extends State<PilihAhliGiziScreen> {
               
               await AuthService.selectAhliGizi(rm, nip);
               
-              if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      'Anda memilih ${ag['name']} sebagai ahli gizi Anda',
-                      style: GoogleFonts.manrope(fontWeight: FontWeight.w600),
-                    ),
-                    backgroundColor: AppColors.primary,
-                    behavior: SnackBarBehavior.floating,
+              if (!mounted) return;
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    'Anda memilih ${ag['name']} sebagai ahli gizi Anda',
+                    style: GoogleFonts.manrope(fontWeight: FontWeight.w600),
                   ),
-                );
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (_) => const PilihJenisDietScreen()),
-                );
-              }
+                  backgroundColor: AppColors.primary,
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (_) => const InformConsentScreen()),
+              );
             }
           },
           child: Container(

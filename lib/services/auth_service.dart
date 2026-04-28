@@ -594,7 +594,6 @@ class AuthService {
     return true;
   }
 
-<<<<<<< HEAD
   // ─────────────────────────── MULTI-DIET ──────────────────────────────────
 
   static Future<bool> updateDietTypes(String rmPasien, List<String> dietTypes) async {
