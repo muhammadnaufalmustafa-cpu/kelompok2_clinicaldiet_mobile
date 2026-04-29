@@ -681,7 +681,89 @@ class AuthService {
 
   // ─────────────────────────── NUTRISI (6 KOMPONEN) ────────────────────────
 
+
   static const String _nutrisiKey = 'nutrisi_pasien_v2';
+  static const String _nutrisiPerDietKey = 'nutrisi_per_diet_v1';
+
+  // ─── Nutrisi per Jenis Diet (NEW) ────────────────────────────────────────
+
+  static Future<bool> saveNutrisiPerDiet({
+    required String rmPasien,
+    required String dietType,
+    double kaloriTarget = 0,
+    double proteinTarget = 0,
+    double lemakTarget = 0,
+    double karboTarget = 0,
+    double seratTarget = 30,
+    double hidrasiTarget = 2.5,
+    double kaloriAktual = 0,
+    double proteinAktual = 0,
+    double lemakAktual = 0,
+    double karboAktual = 0,
+    double seratAktual = 0,
+    double hidrasiAktual = 0,
+    String catatan = '',
+    String evaluasiAhliGizi = '',
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final json = prefs.getString(_nutrisiPerDietKey);
+    List<Map<String, dynamic>> list = [];
+    if (json != null) {
+      final decoded = jsonDecode(json) as List;
+      list = decoded.cast<Map<String, dynamic>>();
+    }
+    // Key unik: rm_pasien + diet_type
+    final idx = list.indexWhere(
+      (n) => n['rm_pasien'] == rmPasien && n['diet_type'] == dietType,
+    );
+    final data = {
+      'rm_pasien': rmPasien,
+      'diet_type': dietType,
+      'kalori_target': kaloriTarget,
+      'protein_target': proteinTarget,
+      'lemak_target': lemakTarget,
+      'karbo_target': karboTarget,
+      'serat_target': seratTarget,
+      'hidrasi_target': hidrasiTarget,
+      'kalori_aktual': kaloriAktual,
+      'protein_aktual': proteinAktual,
+      'lemak_aktual': lemakAktual,
+      'karbo_aktual': karboAktual,
+      'serat_aktual': seratAktual,
+      'hidrasi_aktual': hidrasiAktual,
+      'catatan': catatan,
+      'evaluasi_ahli_gizi': evaluasiAhliGizi,
+      'updated_at': DateTime.now().toIso8601String(),
+    };
+    if (idx != -1) {
+      list[idx] = data;
+    } else {
+      list.add(data);
+    }
+    await prefs.setString(_nutrisiPerDietKey, jsonEncode(list));
+    return true;
+  }
+
+  static Future<List<Map<String, dynamic>>> getAllNutrisiPasien(String rmPasien) async {
+    final prefs = await SharedPreferences.getInstance();
+    final json = prefs.getString(_nutrisiPerDietKey);
+    if (json == null) return [];
+    final decoded = jsonDecode(json) as List;
+    final list = decoded.cast<Map<String, dynamic>>();
+    return list.where((n) => n['rm_pasien'] == rmPasien).toList();
+  }
+
+  static Future<Map<String, dynamic>?> getNutrisiPasienPerDiet(
+      String rmPasien, String dietType) async {
+    final all = await getAllNutrisiPasien(rmPasien);
+    try {
+      return all.firstWhere((n) => n['diet_type'] == dietType);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  // ─── Nutrisi global (legacy, backward compat) ─────────────────────────────
 
   static Future<bool> saveNutrisiPasien({
     required String rmPasien,
@@ -744,27 +826,11 @@ class AuthService {
       list.add(data);
     }
     await prefs.setString(_nutrisiKey, jsonEncode(list));
-    // Also save to legacy key for backward compat
-    final legacyKey = 'nutrisi_pasien';
-    final legacyJson = prefs.getString(legacyKey);
-    List<Map<String, dynamic>> legacyList = [];
-    if (legacyJson != null) {
-      final decoded2 = jsonDecode(legacyJson) as List;
-      legacyList = decoded2.cast<Map<String, dynamic>>();
-    }
-    final legacyIdx = legacyList.indexWhere((n) => n['rm_pasien'] == rmPasien);
-    if (legacyIdx != -1) {
-      legacyList[legacyIdx] = data;
-    } else {
-      legacyList.add(data);
-    }
-    await prefs.setString(legacyKey, jsonEncode(legacyList));
     return true;
   }
 
   static Future<Map<String, dynamic>?> getNutrisiPasien(String rmPasien) async {
     final prefs = await SharedPreferences.getInstance();
-    // Try new key first
     final json = prefs.getString(_nutrisiKey);
     if (json != null) {
       final decoded = jsonDecode(json) as List;
@@ -773,7 +839,6 @@ class AuthService {
         return list.firstWhere((n) => n['rm_pasien'] == rmPasien);
       } catch (_) {}
     }
-    // Fallback to legacy
     final legacyJson = prefs.getString('nutrisi_pasien');
     if (legacyJson == null) return null;
     final decoded2 = jsonDecode(legacyJson) as List;

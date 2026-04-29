@@ -18,8 +18,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _rmController = TextEditingController();
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
-  final _weightController = TextEditingController();
-  final _heightController = TextEditingController();
+
   final _nikController = TextEditingController();
   final _agamaController = TextEditingController();
   final _pendidikanController = TextEditingController();
@@ -62,8 +61,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     _rmController.dispose();
     _emailController.dispose();
     _phoneController.dispose();
-    _weightController.dispose();
-    _heightController.dispose();
+
     _nikController.dispose();
     _agamaController.dispose();
     _pendidikanController.dispose();
@@ -102,8 +100,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final rm = _rmController.text.trim();
     final email = _emailController.text.trim();
     final phone = _phoneController.text.trim();
-    final weight = _weightController.text.trim();
-    final height = _heightController.text.trim();
+
     final nik = _nikController.text.trim();
     final agama = _agamaController.text.trim();
     final pendidikan = _pendidikanController.text.trim();
@@ -113,8 +110,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final confirmPass = _confirmPassController.text;
     final captchaInput = _captchaController.text.trim();
 
-    if (name.isEmpty || rm.isEmpty || email.isEmpty || phone.isEmpty ||
-        weight.isEmpty || height.isEmpty || password.isEmpty || username.isEmpty) {
+    if (name.isEmpty || rm.isEmpty || email.isEmpty || phone.isEmpty || password.isEmpty || username.isEmpty) {
       _showSnackBar('Semua field wajib (yang bukan opsional) harus diisi.', isError: true);
       return;
     }
@@ -150,8 +146,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
       rm: rm,
       email: email,
       phone: phone,
-      weight: weight,
-      height: height,
+      weight: '0',
+      height: '0',
       password: password,
       gender: _selectedGender,
       birthdate: birthdateStr,
@@ -407,31 +403,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             ),
             const SizedBox(height: 20),
 
-            // ── Data Medis ──
-            _sectionLabel('DATA FISIK'),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                Expanded(
-                  child: _buildNumberField(
-                    controller: _weightController,
-                    label: 'Berat Badan *',
-                    hint: '00',
-                    suffixText: 'kg',
-                  ),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: _buildNumberField(
-                    controller: _heightController,
-                    label: 'Tinggi Badan *',
-                    hint: '000',
-                    suffixText: 'cm',
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
+
 
             // ── Kata Sandi ──
             _sectionLabel('KATA SANDI'),

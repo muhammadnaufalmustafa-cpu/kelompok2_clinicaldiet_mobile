@@ -18,6 +18,7 @@ class _AhliGiziDetailPasienScreenState
   late String _status;
   bool _isSaving = false;
   List<Map<String, dynamic>> _riwayatMakan = [];
+  String? _selectedDietType; // Jenis diet yang sedang diedit
 
   // ── Existing controllers ──
   final _evaluasiCtrl = TextEditingController();
@@ -48,6 +49,9 @@ class _AhliGiziDetailPasienScreenState
     _status = widget.pasien['status'] ?? 'aktif';
     _targetCtrl.text = widget.pasien['target_diet'] ?? '';
     _evaluasiCtrl.text = widget.pasien['catatan_evaluasi'] ?? '';
+    // Set default diet ke diet pertama pasien
+    final diets = _getDietList();
+    if (diets.isNotEmpty) _selectedDietType = diets.first;
     _loadNutrisi();
   }
 
@@ -71,33 +75,60 @@ class _AhliGiziDetailPasienScreenState
     super.dispose();
   }
 
+  List<String> _getDietList() {
+    final raw = widget.pasien['diet_types'];
+    if (raw is List && raw.isNotEmpty) return raw.cast<String>();
+    final single = widget.pasien['diet_type'] as String? ?? '';
+    return single.isEmpty ? ['(Belum ada diet)'] : [single];
+  }
+
   Future<void> _loadNutrisi() async {
     final rm = widget.pasien['rm'] as String;
-    final nutrisi = await AuthService.getNutrisiPasien(rm);
-    if (mounted && nutrisi != null) {
-      setState(() {
-        _kaloriTargetCtrl.text = _fmtNum(nutrisi['kalori_target']);
-        _proteinTargetCtrl.text = _fmtNum(nutrisi['protein_target']);
-        _lemakTargetCtrl.text = _fmtNum(nutrisi['lemak_target']);
-        _karboTargetCtrl.text = _fmtNum(nutrisi['karbo_target']);
-        _kaloriAktualCtrl.text = _fmtNum(nutrisi['kalori_aktual']);
-        _proteinAktualCtrl.text = _fmtNum(nutrisi['protein_aktual']);
-        _lemakAktualCtrl.text = _fmtNum(nutrisi['lemak_aktual']);
-        _karboAktualCtrl.text = _fmtNum(nutrisi['karbo_aktual']);
-        _seratAktualCtrl.text = _fmtNum(nutrisi['serat_aktual']);
-        _seratTargetCtrl.text = _fmtNum(nutrisi['serat_target']);
-        _hidrasiAktualCtrl.text = _fmtNum(nutrisi['hidrasi_aktual']);
-        _hidrasiTargetCtrl.text = _fmtNum(nutrisi['hidrasi_target']);
-        _catatanNutrisiCtrl.text = nutrisi['catatan'] ?? '';
-      });
+    // Load per-diet nutrisi if diet selected
+    if (_selectedDietType != null && _selectedDietType != '(Belum ada diet)') {
+      final nutrisiDiet = await AuthService.getNutrisiPasienPerDiet(rm, _selectedDietType!);
+      if (mounted && nutrisiDiet != null) {
+        setState(() {
+          _kaloriTargetCtrl.text = _fmtNum(nutrisiDiet['kalori_target']);
+          _proteinTargetCtrl.text = _fmtNum(nutrisiDiet['protein_target']);
+          _lemakTargetCtrl.text = _fmtNum(nutrisiDiet['lemak_target']);
+          _karboTargetCtrl.text = _fmtNum(nutrisiDiet['karbo_target']);
+          _kaloriAktualCtrl.text = _fmtNum(nutrisiDiet['kalori_aktual']);
+          _proteinAktualCtrl.text = _fmtNum(nutrisiDiet['protein_aktual']);
+          _lemakAktualCtrl.text = _fmtNum(nutrisiDiet['lemak_aktual']);
+          _karboAktualCtrl.text = _fmtNum(nutrisiDiet['karbo_aktual']);
+          _seratAktualCtrl.text = _fmtNum(nutrisiDiet['serat_aktual']);
+          _seratTargetCtrl.text = _fmtNum(nutrisiDiet['serat_target']);
+          _hidrasiAktualCtrl.text = _fmtNum(nutrisiDiet['hidrasi_aktual']);
+          _hidrasiTargetCtrl.text = _fmtNum(nutrisiDiet['hidrasi_target']);
+          _catatanNutrisiCtrl.text = nutrisiDiet['catatan'] ?? '';
+          _evaluasiCtrl.text = nutrisiDiet['evaluasi_ahli_gizi'] ?? widget.pasien['catatan_evaluasi'] ?? '';
+        });
+      }
+    } else {
+      // fallback ke global nutrisi
+      final nutrisi = await AuthService.getNutrisiPasien(rm);
+      if (mounted && nutrisi != null) {
+        setState(() {
+          _kaloriTargetCtrl.text = _fmtNum(nutrisi['kalori_target']);
+          _proteinTargetCtrl.text = _fmtNum(nutrisi['protein_target']);
+          _lemakTargetCtrl.text = _fmtNum(nutrisi['lemak_target']);
+          _karboTargetCtrl.text = _fmtNum(nutrisi['karbo_target']);
+          _kaloriAktualCtrl.text = _fmtNum(nutrisi['kalori_aktual']);
+          _proteinAktualCtrl.text = _fmtNum(nutrisi['protein_aktual']);
+          _lemakAktualCtrl.text = _fmtNum(nutrisi['lemak_aktual']);
+          _karboAktualCtrl.text = _fmtNum(nutrisi['karbo_aktual']);
+          _seratAktualCtrl.text = _fmtNum(nutrisi['serat_aktual']);
+          _seratTargetCtrl.text = _fmtNum(nutrisi['serat_target']);
+          _hidrasiAktualCtrl.text = _fmtNum(nutrisi['hidrasi_aktual']);
+          _hidrasiTargetCtrl.text = _fmtNum(nutrisi['hidrasi_target']);
+          _catatanNutrisiCtrl.text = nutrisi['catatan'] ?? '';
+        });
+      }
     }
-    
+
     final logs = await AuthService.getMealLogsForPasien(rm, days: 7);
-    if (mounted) {
-      setState(() {
-        _riwayatMakan = logs;
-      });
-    }
+    if (mounted) setState(() => _riwayatMakan = logs);
   }
 
   String _fmtNum(dynamic val) {
@@ -125,7 +156,6 @@ class _AhliGiziDetailPasienScreenState
     try {
       final rm = widget.pasien['rm'] as String;
 
-      // Parse nutrition values
       final kaloriTarget = double.tryParse(_kaloriTargetCtrl.text) ?? 0;
       final proteinTarget = double.tryParse(_proteinTargetCtrl.text) ?? 0;
       final lemakTarget = double.tryParse(_lemakTargetCtrl.text) ?? 0;
@@ -139,7 +169,29 @@ class _AhliGiziDetailPasienScreenState
       final hidrasiAktual = double.tryParse(_hidrasiAktualCtrl.text) ?? 0;
       final hidrasiTarget = double.tryParse(_hidrasiTargetCtrl.text) ?? 2.5;
 
-      // 1. Simpan data nutrisi
+      // 1. Simpan nutrisi PER DIET (baru)
+      if (_selectedDietType != null && _selectedDietType != '(Belum ada diet)') {
+        await AuthService.saveNutrisiPerDiet(
+          rmPasien: rm,
+          dietType: _selectedDietType!,
+          kaloriTarget: kaloriTarget,
+          proteinTarget: proteinTarget,
+          lemakTarget: lemakTarget,
+          karboTarget: karboTarget,
+          kaloriAktual: kaloriAktual,
+          proteinAktual: proteinAktual,
+          lemakAktual: lemakAktual,
+          karboAktual: karboAktual,
+          seratAktual: seratAktual,
+          seratTarget: seratTarget,
+          hidrasiAktual: hidrasiAktual,
+          hidrasiTarget: hidrasiTarget,
+          catatan: _catatanNutrisiCtrl.text,
+          evaluasiAhliGizi: _evaluasiCtrl.text,
+        );
+      }
+
+      // 2. Simpan nutrisi global (backward compat)
       await AuthService.saveNutrisiPasien(
         rmPasien: rm,
         energiTarget: kaloriTarget,
@@ -157,7 +209,7 @@ class _AhliGiziDetailPasienScreenState
         catatan: _catatanNutrisiCtrl.text,
       );
 
-      // 2. Simpan target diet & CPPT
+      // 3. Simpan target diet & evaluasi CPPT
       await AuthService.saveTargetDietPasien(
         rm: rm,
         targetDiet: _targetCtrl.text,
@@ -396,6 +448,29 @@ class _AhliGiziDetailPasienScreenState
                 ],
               ),
             ],
+          ),
+        ),
+        const SizedBox(height: 20),
+
+        // ── Pilih Diet ──
+        _buildSubSectionLabel('PILIH JENIS DIET', 'Data nutrisi akan disimpan per jenis diet'),
+        const SizedBox(height: 10),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14), border: Border.all(color: AppColors.divider)),
+          child: DropdownButtonFormField<String>(
+            value: _selectedDietType,
+            decoration: const InputDecoration(border: InputBorder.none),
+            hint: Text('Pilih jenis diet...', style: GoogleFonts.manrope(color: AppColors.textMuted, fontSize: 14)),
+            style: GoogleFonts.manrope(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
+            items: _getDietList().map((d) => DropdownMenuItem(
+              value: d,
+              child: Text(d, style: GoogleFonts.manrope(fontSize: 14)),
+            )).toList(),
+            onChanged: (val) {
+              setState(() => _selectedDietType = val);
+              _loadNutrisi();
+            },
           ),
         ),
         const SizedBox(height: 20),

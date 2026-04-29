@@ -3,6 +3,26 @@ import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_theme.dart';
 import '../services/auth_service.dart';
 
+// ─── Daftar lengkap URT sesuai referensi ahli gizi ───────────────────────────
+const List<String> kDaftarURT = [
+  '1 centong rice cooker', '1 centong plastik', '1 sdm', '1 sds',
+  '1 sd sayur', '1 piring', '1 mangkok', '1 cup',
+  '1 bh besar', '1 bh sdg', '1 bh kcl', '1 bh',
+  '½ bh', '¼ bh', '1 iris', '1 ptg',
+  '1 ptg bsr', '1 ptg sdg', '1 ptg kcl', '1 ptg segitiga',
+  '1 ptg kotak', '1 ptg bundar', '1 ptg dadu',
+  '1 ptg bag. kepala', '1 ptg bag. badan', '1 ptg bag. ekor',
+  '½ ptg presto', '1 lembar ada pinggiran', '1 lembar tanpa pinggiran',
+  '1 lembar kuning', '1 bonggol', '1 bks', '1 kotak',
+  '1 botol', '1 botol besar', '1 botol kcl', '1 gelas',
+  '1 pcs', '1 pcs sdg', '1 pcs kcl',
+  '1 ekor kecil', '1 ekor sdg', '1 ekor kcl', '1 btr',
+  '1 tusuk', '1 porsi', '1 ptg dada', '1 ptg paha', '1 ptg sayap',
+  '1 ptg dada atas', '1 ptg dada bawah', '1 ptg paha atas', '1 ptg paha bawah',
+  '1 bh kepala+leher', '1 bh pentol bsr', '1 bh pentol sdg',
+  '1 genggam', '1 biji', '1 biji montong',
+];
+
 class CatatanScreen extends StatefulWidget {
   const CatatanScreen({super.key});
 
@@ -21,7 +41,6 @@ class _CatatanScreenState extends State<CatatanScreen> {
   final _selinganSoreCtrl = TextEditingController();
   final _malamCtrl = TextEditingController();
 
-  // Jam untuk setiap sesi
   TimeOfDay? _jamPagi;
   TimeOfDay? _jamSelinganPagi;
   TimeOfDay? _jamSiang;
@@ -38,23 +57,29 @@ class _CatatanScreenState extends State<CatatanScreen> {
     final user = await AuthService.getLoggedInUser();
     if (user != null && mounted) {
       setState(() {
-        final weight = (user['weight'] as num?)?.toDouble() ?? 0;
-        final height = (user['height'] as num?)?.toDouble() ?? 0;
-        if (weight > 0) _bbCtrl.text = weight.toString();
-        if (height > 0) _tbCtrl.text = height.toString();
+        // BB/TB dari histori terakhir
+        final history = AuthService.getBBTBHistory(user);
+        if (history.isNotEmpty) {
+          final last = history.first;
+          final w = (last['weight'] as num?)?.toDouble() ?? 0;
+          final h = (last['height'] as num?)?.toDouble() ?? 0;
+          if (w > 0) _bbCtrl.text = w.toString();
+          if (h > 0) _tbCtrl.text = h.toString();
+        } else {
+          final weight = (user['weight'] as num?)?.toDouble() ?? 0;
+          final height = (user['height'] as num?)?.toDouble() ?? 0;
+          if (weight > 0) _bbCtrl.text = weight.toString();
+          if (height > 0) _tbCtrl.text = height.toString();
+        }
       });
     }
   }
 
   @override
   void dispose() {
-    _bbCtrl.dispose();
-    _tbCtrl.dispose();
-    _pagiCtrl.dispose();
-    _selinganPagiCtrl.dispose();
-    _siangCtrl.dispose();
-    _selinganSoreCtrl.dispose();
-    _malamCtrl.dispose();
+    _bbCtrl.dispose(); _tbCtrl.dispose();
+    _pagiCtrl.dispose(); _selinganPagiCtrl.dispose();
+    _siangCtrl.dispose(); _selinganSoreCtrl.dispose(); _malamCtrl.dispose();
     super.dispose();
   }
 
@@ -66,10 +91,9 @@ class _CatatanScreenState extends State<CatatanScreen> {
   String _timeOfDayToStr(TimeOfDay t) => '${t.hour.toString().padLeft(2, '0')}.${t.minute.toString().padLeft(2, '0')} WIB';
 
   Future<void> _pickTime(String session) async {
-    final now = TimeOfDay.now();
     final picked = await showTimePicker(
       context: context,
-      initialTime: now,
+      initialTime: TimeOfDay.now(),
       helpText: 'Jam makan – $session',
       builder: (context, child) => MediaQuery(
         data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true),
@@ -87,6 +111,95 @@ class _CatatanScreenState extends State<CatatanScreen> {
         }
       });
     }
+  }
+
+  // ── URT Picker (Bottom Sheet) ──────────────────────────────────────────────
+  Future<void> _showURTPicker(TextEditingController targetCtrl) async {
+    String query = '';
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModalState) {
+          final filtered = query.isEmpty
+              ? kDaftarURT
+              : kDaftarURT.where((u) => u.toLowerCase().contains(query.toLowerCase())).toList();
+          return Container(
+            height: MediaQuery.of(ctx).size.height * 0.75,
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+            ),
+            child: Column(
+              children: [
+                Container(
+                  margin: const EdgeInsets.symmetric(vertical: 10),
+                  width: 40, height: 4,
+                  decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2)),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Text('Pilih Satuan URT', style: GoogleFonts.manrope(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
+                ),
+                const SizedBox(height: 4),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Text('Tap satuan untuk menambahkan ke catatan', style: GoogleFonts.manrope(fontSize: 12, color: AppColors.textSecondary)),
+                ),
+                const SizedBox(height: 10),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: TextField(
+                    autofocus: false,
+                    decoration: InputDecoration(
+                      hintText: 'Cari satuan URT...',
+                      hintStyle: GoogleFonts.manrope(color: AppColors.textMuted, fontSize: 13),
+                      prefixIcon: const Icon(Icons.search, color: AppColors.textSecondary, size: 20),
+                      filled: true,
+                      fillColor: AppColors.background,
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                      contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+                    ),
+                    style: GoogleFonts.manrope(fontSize: 13),
+                    onChanged: (v) => setModalState(() => query = v),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Divider(height: 1),
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: filtered.length,
+                    itemBuilder: (_, i) => ListTile(
+                      dense: true,
+                      title: Text(filtered[i], style: GoogleFonts.manrope(fontSize: 14, color: AppColors.textPrimary)),
+                      trailing: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: AppColors.primaryLight,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text('Pilih', style: GoogleFonts.manrope(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.primary)),
+                      ),
+                      onTap: () {
+                        final currentText = targetCtrl.text;
+                        final newText = currentText.isEmpty
+                            ? filtered[i]
+                            : '$currentText, ${filtered[i]}';
+                        targetCtrl.text = newText;
+                        targetCtrl.selection = TextSelection.fromPosition(
+                            TextPosition(offset: newText.length));
+                        Navigator.pop(ctx);
+                      },
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
   }
 
   Future<void> _confirmSave() async {
@@ -156,13 +269,14 @@ class _CatatanScreenState extends State<CatatanScreen> {
 
       if (success) {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Catatan makan berhasil disimpan!', style: GoogleFonts.manrope()), backgroundColor: AppColors.primary));
-        _pagiCtrl.clear(); _selinganPagiCtrl.clear();
-        _siangCtrl.clear(); _selinganSoreCtrl.clear(); _malamCtrl.clear();
-        setState(() {
-          _jamPagi = null; _jamSelinganPagi = null;
-          _jamSiang = null; _jamSelinganSore = null; _jamMalam = null;
-        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Catatan makan berhasil disimpan! ✅', style: GoogleFonts.manrope(fontWeight: FontWeight.w600)),
+            backgroundColor: AppColors.primary,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        if (mounted) Navigator.pop(context);
       } else {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal menyimpan catatan makan.', style: GoogleFonts.manrope()), backgroundColor: Colors.red));
@@ -198,11 +312,30 @@ class _CatatanScreenState extends State<CatatanScreen> {
                     ],
                   ),
                   const SizedBox(height: 24),
-                  Text('CATATAN MAKANAN', style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w700, letterSpacing: 1.2, color: AppColors.textSecondary)),
+                  Row(
+                    children: [
+                      Text('CATATAN MAKANAN', style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w700, letterSpacing: 1.2, color: AppColors.textSecondary)),
+                      const Spacer(),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE0F2FE),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.straighten, size: 12, color: Color(0xFF0284C7)),
+                            const SizedBox(width: 4),
+                            Text('Tap URT per sesi', style: GoogleFonts.manrope(fontSize: 10, fontWeight: FontWeight.w600, color: const Color(0xFF0284C7))),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                   const SizedBox(height: 16),
-                  _buildMealSection(icon: Icons.wb_sunny_outlined, iconBg: const Color(0xFFD1FAE5), label: 'MAKAN PAGI', controller: _pagiCtrl, hint: 'Contoh: Nasi 1 centong, sayur bayam, telur dadar', session: 'Pagi', jam: _jamPagi, tip: 'Saran: Catat porsi dengan ukuran rumah tangga.'),
+                  _buildMealSection(icon: Icons.wb_sunny_outlined, iconBg: const Color(0xFFD1FAE5), label: 'MAKAN PAGI', controller: _pagiCtrl, hint: 'Contoh: Nasi 1 centong rice cooker, sayur bayam, telur dadar 1 bh', session: 'Pagi', jam: _jamPagi),
                   const SizedBox(height: 20),
-                  _buildMealSection(icon: Icons.storefront_outlined, iconBg: const Color(0xFFD1FAE5), label: 'SELINGAN PAGI', controller: _selinganPagiCtrl, hint: 'Contoh: Pisang rebus 1 buah, teh tawar', session: 'Selingan Pagi', jam: _jamSelinganPagi),
+                  _buildMealSection(icon: Icons.storefront_outlined, iconBg: const Color(0xFFD1FAE5), label: 'SELINGAN PAGI', controller: _selinganPagiCtrl, hint: 'Contoh: Pisang rebus 1 bh sdg, teh tawar 1 gelas', session: 'Selingan Pagi', jam: _jamSelinganPagi),
                   const SizedBox(height: 20),
                   _buildMealSection(icon: Icons.restaurant_outlined, iconBg: const Color(0xFFFEF3C7), label: 'MAKAN SIANG', controller: _siangCtrl, hint: 'Ketik di sini...', session: 'Siang', jam: _jamSiang),
                   const SizedBox(height: 20),
@@ -229,13 +362,19 @@ class _CatatanScreenState extends State<CatatanScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  Image.asset('assets/images/icon.png', width: 32, height: 32),
-                  const SizedBox(width: 8),
-                  Text('Clinical Diet', style: GoogleFonts.manrope(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.primary)),
-                ],
+              GestureDetector(
+                onTap: () => Navigator.pop(context),
+                child: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppColors.background,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: AppColors.divider),
+                  ),
+                  child: const Icon(Icons.arrow_back_ios_new, size: 16, color: AppColors.textPrimary),
+                ),
               ),
+              Text('Clinical Diet', style: GoogleFonts.manrope(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.primary)),
               const Icon(Icons.notifications_outlined, color: AppColors.textSecondary),
             ],
           ),
@@ -277,7 +416,6 @@ class _CatatanScreenState extends State<CatatanScreen> {
     required String hint,
     required String session,
     required TimeOfDay? jam,
-    String? tip,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -291,6 +429,27 @@ class _CatatanScreenState extends State<CatatanScreen> {
             ),
             const SizedBox(width: 10),
             Expanded(child: Text(label, style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w600, letterSpacing: 0.8, color: AppColors.textPrimary))),
+            // Tombol URT
+            GestureDetector(
+              onTap: () => _showURTPicker(controller),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE0F2FE),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: const Color(0xFF0284C7).withValues(alpha: 0.5)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.straighten, size: 13, color: Color(0xFF0284C7)),
+                    const SizedBox(width: 4),
+                    Text('URT', style: GoogleFonts.manrope(fontSize: 11, fontWeight: FontWeight.w700, color: const Color(0xFF0284C7))),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(width: 6),
             // Tombol jam
             GestureDetector(
               onTap: () => _pickTime(session),
@@ -332,7 +491,6 @@ class _CatatanScreenState extends State<CatatanScreen> {
             ),
           ),
         ),
-        if (tip != null) ...[const SizedBox(height: 8), Text(tip, style: GoogleFonts.manrope(fontSize: 12, color: AppColors.textSecondary, height: 1.5))],
       ],
     );
   }

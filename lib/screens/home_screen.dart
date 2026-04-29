@@ -16,8 +16,12 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   Map<String, dynamic>? _user;
-  Map<String, dynamic>? _nutrisi;
+  Map<String, dynamic>? _nutrisi; // legacy/global nutrisi
+  List<Map<String, dynamic>> _nutrisiPerDiet = []; // per-diet nutrisi
+  List<Map<String, dynamic>> _bbHistory = [];
   bool _isLoading = true;
+  int _dietPageIndex = 0;
+  final PageController _dietPageCtrl = PageController();
 
   @override
   void initState() {
@@ -25,64 +29,81 @@ class _HomeScreenState extends State<HomeScreen> {
     _loadData();
   }
 
+  @override
+  void dispose() {
+    _dietPageCtrl.dispose();
+    super.dispose();
+  }
+
   Future<void> _loadData() async {
     final user = await AuthService.getLoggedInUser();
     Map<String, dynamic>? nutrisi;
+    List<Map<String, dynamic>> nutrisiPerDiet = [];
+    List<Map<String, dynamic>> bbHistory = [];
     if (user != null && user['rm'] != null) {
-      nutrisi = await AuthService.getNutrisiPasien(user['rm'] as String);
+      final rm = user['rm'] as String;
+      nutrisi = await AuthService.getNutrisiPasien(rm);
+      nutrisiPerDiet = await AuthService.getAllNutrisiPasien(rm);
+      // Load fresh user data for bb_history
+      final freshUser = await AuthService.getPasienByRm(rm);
+      bbHistory = AuthService.getBBTBHistory(freshUser ?? user);
     }
     if (mounted) {
       setState(() {
         _user = user;
         _nutrisi = nutrisi;
+        _nutrisiPerDiet = nutrisiPerDiet;
+        _bbHistory = bbHistory;
         _isLoading = false;
       });
     }
   }
 
-  // ── Getters nutrisi ──
-  double get _kaloriTarget =>
-      (_nutrisi?['kalori_target'] as num?)?.toDouble() ?? 0;
-  double get _kaloriAktual =>
-      (_nutrisi?['kalori_aktual'] as num?)?.toDouble() ?? 0;
-  double get _kaloriPercent => _kaloriTarget > 0
-      ? (_kaloriAktual / _kaloriTarget).clamp(0.0, 1.0)
-      : 0.0;
+  // ── Getters nutrisi (dari halaman diet aktif saat ini) ──
+  Map<String, dynamic>? get _currentDietNutrisi =>
+      _nutrisiPerDiet.isNotEmpty ? _nutrisiPerDiet[_dietPageIndex] : _nutrisi;
 
-  double get _proteinTarget =>
-      (_nutrisi?['protein_target'] as num?)?.toDouble() ?? 0;
-  double get _proteinAktual =>
-      (_nutrisi?['protein_aktual'] as num?)?.toDouble() ?? 0;
-  double get _proteinPercent => _proteinTarget > 0
-      ? (_proteinAktual / _proteinTarget).clamp(0.0, 1.0)
-      : 0.0;
+  double get _kaloriTarget => (_currentDietNutrisi?['kalori_target'] as num?)?.toDouble() ?? 0;
+  double get _kaloriAktual => (_currentDietNutrisi?['kalori_aktual'] as num?)?.toDouble() ?? 0;
+  double get _kaloriPercent => _kaloriTarget > 0 ? (_kaloriAktual / _kaloriTarget).clamp(0.0, 1.0) : 0.0;
 
-  double get _lemakTarget =>
-      (_nutrisi?['lemak_target'] as num?)?.toDouble() ?? 0;
-  double get _lemakAktual =>
-      (_nutrisi?['lemak_aktual'] as num?)?.toDouble() ?? 0;
-  double get _lemakPercent => _lemakTarget > 0
-      ? (_lemakAktual / _lemakTarget).clamp(0.0, 1.0)
-      : 0.0;
+  double get _proteinTarget => (_currentDietNutrisi?['protein_target'] as num?)?.toDouble() ?? 0;
+  double get _proteinAktual => (_currentDietNutrisi?['protein_aktual'] as num?)?.toDouble() ?? 0;
+  double get _proteinPercent => _proteinTarget > 0 ? (_proteinAktual / _proteinTarget).clamp(0.0, 1.0) : 0.0;
 
-  double get _karboTarget =>
-      (_nutrisi?['karbo_target'] as num?)?.toDouble() ?? 0;
-  double get _karboAktual =>
-      (_nutrisi?['karbo_aktual'] as num?)?.toDouble() ?? 0;
-  double get _karboPercent => _karboTarget > 0
-      ? (_karboAktual / _karboTarget).clamp(0.0, 1.0)
-      : 0.0;
+  double get _lemakTarget => (_currentDietNutrisi?['lemak_target'] as num?)?.toDouble() ?? 0;
+  double get _lemakAktual => (_currentDietNutrisi?['lemak_aktual'] as num?)?.toDouble() ?? 0;
+  double get _lemakPercent => _lemakTarget > 0 ? (_lemakAktual / _lemakTarget).clamp(0.0, 1.0) : 0.0;
 
-  double get _seratAktual =>
-      (_nutrisi?['serat_aktual'] as num?)?.toDouble() ?? 0;
-  double get _seratTarget =>
-      (_nutrisi?['serat_target'] as num?)?.toDouble() ?? 30;
-  double get _hidrasiAktual =>
-      (_nutrisi?['hidrasi_aktual'] as num?)?.toDouble() ?? 0;
-  double get _hidrasiTarget =>
-      (_nutrisi?['hidrasi_target'] as num?)?.toDouble() ?? 2.5;
+  double get _karboTarget => (_currentDietNutrisi?['karbo_target'] as num?)?.toDouble() ?? 0;
+  double get _karboAktual => (_currentDietNutrisi?['karbo_aktual'] as num?)?.toDouble() ?? 0;
+  double get _karboPercent => _karboTarget > 0 ? (_karboAktual / _karboTarget).clamp(0.0, 1.0) : 0.0;
 
-  /// Format angka: tanpa desimal jika bulat, 1 desimal jika tidak.
+  double get _seratAktual => (_currentDietNutrisi?['serat_aktual'] as num?)?.toDouble() ?? 0;
+  double get _seratTarget => (_currentDietNutrisi?['serat_target'] as num?)?.toDouble() ?? 30;
+  double get _hidrasiAktual => (_currentDietNutrisi?['hidrasi_aktual'] as num?)?.toDouble() ?? 0;
+  double get _hidrasiTarget => (_currentDietNutrisi?['hidrasi_target'] as num?)?.toDouble() ?? 2.5;
+
+  // ── BB/TB dari histori terakhir ──
+  double get _bbTerakhir => _bbHistory.isNotEmpty ? ((_bbHistory.first['weight'] as num?)?.toDouble() ?? 0) : ((_user?['weight'] as num?)?.toDouble() ?? 0);
+  double get _tbTerakhir => _bbHistory.isNotEmpty ? ((_bbHistory.first['height'] as num?)?.toDouble() ?? 0) : ((_user?['height'] as num?)?.toDouble() ?? 0);
+
+  // ── Evaluasi ahli gizi dari nutrisi per diet (diet pertama/aktif) ──
+  String get _evaluasiAhliGizi {
+    if (_nutrisiPerDiet.isNotEmpty) {
+      return _currentDietNutrisi?['evaluasi_ahli_gizi'] ?? '';
+    }
+    return _user?['catatan_evaluasi'] ?? '';
+  }
+
+  // ── Daftar diet aktif pasien ──
+  List<String> get _dietList {
+    final raw = _user?['diet_types'];
+    if (raw is List && raw.isNotEmpty) return raw.cast<String>();
+    final single = _user?['diet_type'] as String? ?? '';
+    return single.isEmpty ? [] : [single];
+  }
+
   String _fmt(double val) =>
       val == val.truncateToDouble() ? val.toInt().toString() : val.toStringAsFixed(1);
 
@@ -110,38 +131,34 @@ class _HomeScreenState extends State<HomeScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildTopBar(context),
-                  _nutrisi == null
-                      ? _buildNoDataState()
-                      : _buildCalorieRing(),
-                  if (_nutrisi != null) _buildNutritionSummary(),
-                  if (_nutrisi != null) _buildDailyTargetChart(),
+                  // ── BB/TB Harian ──
+                  if (_bbTerakhir > 0) _buildBBTBCard(),
+                  // ── Diet Swipeable Cards ──
+                  _buildDietSection(),
+                  // ── Evaluasi Ahli Gizi ──
+                  if (_evaluasiAhliGizi.isNotEmpty) _buildEvaluasiCard(),
                   _buildReminderCard(context),
-                  if (_nutrisi != null) _buildDailyReport(),
-                  if (_nutrisi != null) _buildBottomStats(),
+                  if (_currentDietNutrisi != null) _buildDailyReport(),
+                  if (_currentDietNutrisi != null) _buildBottomStats(),
                   const SizedBox(height: 16),
                 ],
               ),
             ),
-            // FAB
+            // FAB Catatan Makan
             Positioned(
               bottom: 24,
               right: 24,
-              child: FloatingActionButton(
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        'Buka tab "Catatan" di bawah untuk mencatat makan.',
-                        style: GoogleFonts.manrope(),
-                      ),
-                      backgroundColor: AppColors.primary,
-                      behavior: SnackBarBehavior.floating,
-                    ),
+              child: FloatingActionButton.extended(
+                onPressed: () async {
+                  await Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const CatatanScreen()),
                   );
+                  _loadData(); // refresh setelah kembali
                 },
                 backgroundColor: AppColors.primary,
-                shape: const CircleBorder(),
-                child: const Icon(Icons.add, color: Colors.white, size: 28),
+                icon: const Icon(Icons.edit_note_rounded, color: Colors.white),
+                label: Text('Catat Makan', style: GoogleFonts.manrope(color: Colors.white, fontWeight: FontWeight.w600)),
               ),
             ),
           ],
@@ -203,6 +220,182 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  // ── BB/TB Card ──────────────────────────────────────────────────
+  Widget _buildBBTBCard() {
+    final bmi = _tbTerakhir > 0 ? _bbTerakhir / ((_tbTerakhir / 100) * (_tbTerakhir / 100)) : 0.0;
+    final bmiLabel = bmi == 0 ? '-' : bmi < 18.5 ? 'Kurus' : bmi < 25 ? 'Normal' : bmi < 30 ? 'Gemuk' : 'Obesitas';
+    final bmiColor = bmi == 0 ? AppColors.textMuted : bmi < 18.5 ? const Color(0xFF0284C7) : bmi < 25 ? AppColors.primary : bmi < 30 ? const Color(0xFFD97706) : const Color(0xFFDC2626);
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: AppColors.divider)),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          const Icon(Icons.monitor_weight_outlined, color: AppColors.primary, size: 18),
+          const SizedBox(width: 8),
+          Text('Data Fisik Terakhir', style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
+          const Spacer(),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            decoration: BoxDecoration(color: bmiColor.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
+            child: Text(bmiLabel, style: GoogleFonts.manrope(fontSize: 11, fontWeight: FontWeight.w700, color: bmiColor)),
+          ),
+        ]),
+        const SizedBox(height: 12),
+        Row(children: [
+          Expanded(child: _buildPhysCard('BB', '${_fmt(_bbTerakhir)} kg', Icons.fitness_center)),
+          const SizedBox(width: 10),
+          Expanded(child: _buildPhysCard('TB', '${_fmt(_tbTerakhir)} cm', Icons.height)),
+          const SizedBox(width: 10),
+          Expanded(child: _buildPhysCard('IMT', bmi > 0 ? _fmt(bmi) : '-', Icons.calculate_outlined)),
+        ]),
+      ]),
+    );
+  }
+
+  Widget _buildPhysCard(String label, String value, IconData icon) {
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(color: AppColors.background, borderRadius: BorderRadius.circular(12)),
+      child: Column(children: [
+        Icon(icon, color: AppColors.primary, size: 18),
+        const SizedBox(height: 4),
+        Text(value, style: GoogleFonts.manrope(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
+        Text(label, style: GoogleFonts.manrope(fontSize: 10, color: AppColors.textSecondary), textAlign: TextAlign.center),
+      ]),
+    );
+  }
+
+  // ── Diet Swipeable Section ─────────────────────────────────────────
+  Widget _buildDietSection() {
+    if (_nutrisiPerDiet.isNotEmpty) {
+      return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+          child: Row(children: [
+            Text('PROGRAM DIET', style: GoogleFonts.manrope(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.textSecondary, letterSpacing: 1.2)),
+            const Spacer(),
+            if (_nutrisiPerDiet.length > 1)
+              Text('geser →', style: GoogleFonts.manrope(fontSize: 11, color: AppColors.textMuted)),
+          ]),
+        ),
+        SizedBox(
+          height: 290,
+          child: PageView.builder(
+            controller: _dietPageCtrl,
+            itemCount: _nutrisiPerDiet.length,
+            onPageChanged: (idx) => setState(() => _dietPageIndex = idx),
+            itemBuilder: (ctx, idx) => Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: _buildDietCard(_nutrisiPerDiet[idx], idx),
+            ),
+          ),
+        ),
+        if (_nutrisiPerDiet.length > 1)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Row(mainAxisAlignment: MainAxisAlignment.center, children: List.generate(
+              _nutrisiPerDiet.length,
+              (i) => AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                margin: const EdgeInsets.symmetric(horizontal: 3),
+                width: i == _dietPageIndex ? 20 : 8, height: 8,
+                decoration: BoxDecoration(color: i == _dietPageIndex ? AppColors.primary : AppColors.divider, borderRadius: BorderRadius.circular(4)),
+              ),
+            )),
+          ),
+      ]);
+    }
+    return _currentDietNutrisi == null ? _buildNoDataState() : _buildCalorieRing();
+  }
+
+  Widget _buildDietCard(Map<String, dynamic> n, int idx) {
+    final dietName = n['diet_type'] as String? ?? 'Diet ${idx + 1}';
+    final kT = (n['kalori_target'] as num?)?.toDouble() ?? 0;
+    final kA = (n['kalori_aktual'] as num?)?.toDouble() ?? 0;
+    final kPct = kT > 0 ? (kA / kT).clamp(0.0, 1.0) : 0.0;
+    final pA = (n['protein_aktual'] as num?)?.toDouble() ?? 0;
+    final pT = (n['protein_target'] as num?)?.toDouble() ?? 0;
+    final lA = (n['lemak_aktual'] as num?)?.toDouble() ?? 0;
+    final lT = (n['lemak_target'] as num?)?.toDouble() ?? 0;
+    final cA = (n['karbo_aktual'] as num?)?.toDouble() ?? 0;
+    final cT = (n['karbo_target'] as num?)?.toDouble() ?? 0;
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(colors: [AppColors.primary, AppColors.primaryDark], begin: Alignment.topLeft, end: Alignment.bottomRight),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(20)),
+            child: Text(dietName, style: GoogleFonts.manrope(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white)),
+          ),
+          const Spacer(),
+          Text('${(kPct * 100).toInt()}% terpenuhi', style: GoogleFonts.manrope(fontSize: 11, color: Colors.white.withValues(alpha: 0.85))),
+        ]),
+        const SizedBox(height: 14),
+        Text('${_fmt(kA)} / ${_fmt(kT)} kkal', style: GoogleFonts.manrope(fontSize: 22, fontWeight: FontWeight.w700, color: Colors.white)),
+        const SizedBox(height: 4),
+        Text('Kalori Aktual / Target', style: GoogleFonts.manrope(fontSize: 11, color: Colors.white.withValues(alpha: 0.7))),
+        const SizedBox(height: 8),
+        ClipRRect(borderRadius: BorderRadius.circular(4), child: LinearProgressIndicator(value: kPct, backgroundColor: Colors.white.withValues(alpha: 0.25), color: Colors.white, minHeight: 8)),
+        const SizedBox(height: 16),
+        Row(children: [
+          Expanded(child: _buildMiniNutri('Protein', pA, pT, 'g')),
+          Expanded(child: _buildMiniNutri('Lemak', lA, lT, 'g')),
+          Expanded(child: _buildMiniNutri('Karbo', cA, cT, 'g')),
+        ]),
+        if ((n['catatan'] as String? ?? '').isNotEmpty) ...[const SizedBox(height: 10),
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(10)),
+            child: Text(n['catatan'] as String, style: GoogleFonts.manrope(fontSize: 11, color: Colors.white, height: 1.4), maxLines: 2, overflow: TextOverflow.ellipsis),
+          ),
+        ],
+      ]),
+    );
+  }
+
+  Widget _buildMiniNutri(String label, double aktual, double target, String unit) {
+    final pct = target > 0 ? (aktual / target).clamp(0.0, 1.0) : 0.0;
+    return Column(children: [
+      Text(label, style: GoogleFonts.manrope(fontSize: 10, color: Colors.white.withValues(alpha: 0.7))),
+      const SizedBox(height: 4),
+      Text('${_fmt(aktual)}$unit', style: GoogleFonts.manrope(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.white)),
+      const SizedBox(height: 4),
+      ClipRRect(borderRadius: BorderRadius.circular(3), child: LinearProgressIndicator(value: pct, backgroundColor: Colors.white.withValues(alpha: 0.2), color: Colors.white.withValues(alpha: 0.85), minHeight: 4)),
+    ]);
+  }
+
+  // ── Evaluasi Ahli Gizi Card ────────────────────────────────────────
+  Widget _buildEvaluasiCard() {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF0FDF4),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(color: AppColors.primaryLight, borderRadius: BorderRadius.circular(8)),
+            child: const Icon(Icons.assignment_turned_in_outlined, color: AppColors.primary, size: 18),
+          ),
+          const SizedBox(width: 10),
+          Text('Evaluasi Ahli Gizi', style: GoogleFonts.manrope(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.primaryDark)),
+        ]),
+        const SizedBox(height: 12),
+        Text(_evaluasiAhliGizi, style: GoogleFonts.manrope(fontSize: 13, color: AppColors.textPrimary, height: 1.6)),
+      ]),
     );
   }
 
