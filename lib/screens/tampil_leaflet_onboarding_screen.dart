@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../theme/app_theme.dart';
-import 'pilih_ahli_gizi_screen.dart';
+import 'main_screen.dart';
 
 class TampilLeafletOnboardingScreen extends StatelessWidget {
   final String dietTitle;
@@ -167,9 +167,11 @@ class TampilLeafletOnboardingScreen extends StatelessWidget {
                     if (isFromProfil) {
                       Navigator.pop(context);
                     } else {
-                      Navigator.pushReplacement(
+                      // Setelah baca leaflet, masuk ke dashboard utama
+                      Navigator.pushAndRemoveUntil(
                         context,
-                        MaterialPageRoute(builder: (_) => const PilihAhliGiziScreen()),
+                        MaterialPageRoute(builder: (_) => const MainScreen()),
+                        (route) => false,
                       );
                     }
                   },
@@ -180,7 +182,7 @@ class TampilLeafletOnboardingScreen extends StatelessWidget {
                     elevation: 0,
                   ),
                   child: Text(
-                    isFromProfil ? 'KEMBALI KE PROFIL' : 'LANJUTKAN PILIH AHLI GIZI',
+                    isFromProfil ? 'KEMBALI KE PROFIL' : 'MASUK KE DASHBOARD',
                     style: GoogleFonts.manrope(
                       fontSize: 14,
                       fontWeight: FontWeight.w700,

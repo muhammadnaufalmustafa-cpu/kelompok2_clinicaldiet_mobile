@@ -4,6 +4,8 @@ import 'theme/app_theme.dart';
 import 'screens/login_screen.dart';
 import 'screens/main_screen.dart';
 import 'screens/inform_consent_screen.dart';
+import 'screens/pilih_jenis_diet_screen.dart';
+import 'screens/pilih_ahli_gizi_screen.dart';
 import 'screens/ahli_gizi/ahli_gizi_main_screen.dart';
 import 'services/auth_service.dart';
 import 'services/notification_service.dart';
@@ -30,15 +32,37 @@ void main() async {
 
   Widget homeWidget;
   if (role == 'pasien') {
-    final consentSigned = AuthService.isConsentSigned(user);
-    if (!consentSigned) {
-      homeWidget = const InformConsentScreen();
+    // Step 1: Cek apakah sudah pilih ahli gizi
+    final ahliGiziNip = user?['ahli_gizi_nip'] as String?;
+    final hasAhliGizi = ahliGiziNip != null && ahliGiziNip.isNotEmpty;
+
+    if (!hasAhliGizi) {
+      // Belum pilih ahli gizi → mulai dari sana
+      homeWidget = const PilihAhliGiziScreen();
     } else {
-      homeWidget = const MainScreen();
-      if (status == 'aktif' || status == null) {
-        await NotificationService().scheduleMealNotifications();
+      final consentSigned = AuthService.isConsentSigned(user);
+      if (!consentSigned) {
+        // Step 2: Belum consent
+        homeWidget = const InformConsentScreen();
       } else {
-        await NotificationService().cancelAllNotifications();
+        // Step 3: Cek sudah punya diet type?
+        final dietTypes = user?['diet_types'];
+        final dietType = user?['diet_type'] as String? ?? '';
+        final hasDiet = (dietTypes is List && dietTypes.isNotEmpty) ||
+            dietType.isNotEmpty;
+
+        if (!hasDiet) {
+          // Step 4: Belum pilih diet → arahkan ke pilih diet
+          homeWidget = const PilihJenisDietScreen(isFromProfil: false);
+        } else {
+          // Semua step selesai → masuk dashboard
+          homeWidget = const MainScreen();
+          if (status == 'aktif' || status == null) {
+            await NotificationService().scheduleMealNotifications();
+          } else {
+            await NotificationService().cancelAllNotifications();
+          }
+        }
       }
     }
   } else if (role == 'ahli_gizi') {

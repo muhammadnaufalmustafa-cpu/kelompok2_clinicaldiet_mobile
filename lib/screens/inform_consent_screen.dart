@@ -6,7 +6,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:signature/signature.dart';
 import '../theme/app_theme.dart';
 import '../services/auth_service.dart';
-import 'main_screen.dart';
+import 'pilih_jenis_diet_screen.dart';
 
 class InformConsentScreen extends StatefulWidget {
   const InformConsentScreen({super.key});
@@ -80,7 +80,9 @@ class _InformConsentScreenState extends State<InformConsentScreen> {
       if (!mounted) return;
       Navigator.pushAndRemoveUntil(
         context,
-        MaterialPageRoute(builder: (_) => const MainScreen()),
+        MaterialPageRoute(
+          builder: (_) => const PilihJenisDietScreen(isFromProfil: false),
+        ),
         (route) => false,
       );
     } catch (e) {
