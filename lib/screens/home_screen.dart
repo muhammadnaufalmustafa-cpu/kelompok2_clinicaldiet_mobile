@@ -5,6 +5,8 @@ import 'package:percent_indicator/percent_indicator.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../theme/app_theme.dart';
 import 'catatan_screen.dart';
+import 'pilih_ahli_gizi_screen.dart';
+import 'pilih_jenis_diet_screen.dart';
 import '../services/auth_service.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -19,6 +21,8 @@ class _HomeScreenState extends State<HomeScreen> {
   Map<String, dynamic>? _nutrisi; // legacy/global nutrisi
   List<Map<String, dynamic>> _nutrisiPerDiet = []; // per-diet nutrisi
   List<Map<String, dynamic>> _bbHistory = [];
+  Map<String, dynamic>? _lastMealLog; // catatan makan terakhir
+  String _ahliGiziName = ''; // nama ahli gizi aktif
   bool _isLoading = true;
   int _dietPageIndex = 0;
   final PageController _dietPageCtrl = PageController();
@@ -40,13 +44,38 @@ class _HomeScreenState extends State<HomeScreen> {
     Map<String, dynamic>? nutrisi;
     List<Map<String, dynamic>> nutrisiPerDiet = [];
     List<Map<String, dynamic>> bbHistory = [];
+    Map<String, dynamic>? lastMealLog;
+    String ahliGiziName = '';
+
     if (user != null && user['rm'] != null) {
       final rm = user['rm'] as String;
       nutrisi = await AuthService.getNutrisiPasien(rm);
       nutrisiPerDiet = await AuthService.getAllNutrisiPasien(rm);
+
       // Load fresh user data for bb_history
       final freshUser = await AuthService.getPasienByRm(rm);
       bbHistory = AuthService.getBBTBHistory(freshUser ?? user);
+
+      // Load catatan makan terakhir
+      final mealLogs = await AuthService.getMealLogsForPasien(rm);
+      if (mealLogs.isNotEmpty) {
+        mealLogs.sort((a, b) {
+          final dateA = DateTime.tryParse(a['date'] ?? '') ?? DateTime(2000);
+          final dateB = DateTime.tryParse(b['date'] ?? '') ?? DateTime(2000);
+          return dateB.compareTo(dateA);
+        });
+        lastMealLog = mealLogs.first;
+      }
+
+      // Load nama ahli gizi
+      final nip = (user['ahli_gizi_nip'] ?? user['selected_ahli_gizi_nip']) as String? ?? '';
+      if (nip.isNotEmpty) {
+        final allAG = await AuthService.getAllAhliGizi();
+        try {
+          final ag = allAG.firstWhere((a) => a['nip'] == nip);
+          ahliGiziName = ag['name'] as String? ?? '';
+        } catch (_) {}
+      }
     }
     if (mounted) {
       setState(() {
@@ -54,6 +83,8 @@ class _HomeScreenState extends State<HomeScreen> {
         _nutrisi = nutrisi;
         _nutrisiPerDiet = nutrisiPerDiet;
         _bbHistory = bbHistory;
+        _lastMealLog = lastMealLog;
+        _ahliGiziName = ahliGiziName;
         _isLoading = false;
       });
     }
@@ -85,8 +116,19 @@ class _HomeScreenState extends State<HomeScreen> {
   double get _hidrasiTarget => (_currentDietNutrisi?['hidrasi_target'] as num?)?.toDouble() ?? 2.5;
 
   // ── BB/TB dari histori terakhir ──
-  double get _bbTerakhir => _bbHistory.isNotEmpty ? ((_bbHistory.first['weight'] as num?)?.toDouble() ?? 0) : ((_user?['weight'] as num?)?.toDouble() ?? 0);
-  double get _tbTerakhir => _bbHistory.isNotEmpty ? ((_bbHistory.first['height'] as num?)?.toDouble() ?? 0) : ((_user?['height'] as num?)?.toDouble() ?? 0);
+  double get _bbTerakhir {
+    if (_bbHistory.isNotEmpty) {
+      return double.tryParse(_bbHistory.first['weight']?.toString() ?? '') ?? 0.0;
+    }
+    return double.tryParse(_user?['weight']?.toString() ?? '') ?? 0.0;
+  }
+
+  double get _tbTerakhir {
+    if (_bbHistory.isNotEmpty) {
+      return double.tryParse(_bbHistory.first['height']?.toString() ?? '') ?? 0.0;
+    }
+    return double.tryParse(_user?['height']?.toString() ?? '') ?? 0.0;
+  }
 
   // ── Evaluasi ahli gizi dari nutrisi per diet (diet pertama/aktif) ──
   String get _evaluasiAhliGizi {
@@ -131,12 +173,16 @@ class _HomeScreenState extends State<HomeScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildTopBar(context),
+                  // ── Quick Actions (Pilih/Ganti Diet & Ahli Gizi) ──
+                  _buildQuickActions(context),
                   // ── BB/TB Harian ──
-                  if (_bbTerakhir > 0) _buildBBTBCard(),
+                  _buildBBTBCard(),
                   // ── Diet Swipeable Cards ──
                   _buildDietSection(),
                   // ── Evaluasi Ahli Gizi ──
                   if (_evaluasiAhliGizi.isNotEmpty) _buildEvaluasiCard(),
+                  // ── Catatan Makan Terakhir ──
+                  if (_lastMealLog != null) _buildLastMealCard(),
                   _buildReminderCard(context),
                   if (_currentDietNutrisi != null) _buildDailyReport(),
                   if (_currentDietNutrisi != null) _buildBottomStats(),
@@ -223,7 +269,107 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // ── BB/TB Card ──────────────────────────────────────────────────
+  // ── Quick Actions: Ganti Ahli Gizi / Diet ───────────────────────────
+  Widget _buildQuickActions(BuildContext context) {
+    final ahliGiziName = _user?['ahli_gizi_name'] as String? ?? '';
+    final dietList = _dietList;
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      child: Row(
+        children: [
+          Expanded(
+            child: GestureDetector(
+              onTap: () async {
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const PilihAhliGiziScreen()),
+                );
+                _loadData();
+              },
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: AppColors.divider),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(color: const Color(0xFFE0F2FE), borderRadius: BorderRadius.circular(10)),
+                      child: const Icon(Icons.person_search_outlined, color: Color(0xFF0284C7), size: 18),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Ahli Gizi', style: GoogleFonts.manrope(fontSize: 10, color: AppColors.textMuted)),
+                          Text(
+                            ahliGiziName.isEmpty ? 'Pilih Ahli Gizi' : ahliGiziName.split(',').first,
+                            style: GoogleFonts.manrope(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+                            maxLines: 1, overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Icon(Icons.chevron_right, size: 16, color: AppColors.textMuted),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: GestureDetector(
+              onTap: () async {
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const PilihJenisDietScreen(isFromProfil: true)),
+                );
+                _loadData();
+              },
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: AppColors.divider),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(color: AppColors.primaryLight, borderRadius: BorderRadius.circular(10)),
+                      child: const Icon(Icons.restaurant_menu_outlined, color: AppColors.primary, size: 18),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Jenis Diet', style: GoogleFonts.manrope(fontSize: 10, color: AppColors.textMuted)),
+                          Text(
+                            dietList.isEmpty ? 'Pilih Diet' : '${dietList.length} Program',
+                            style: GoogleFonts.manrope(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Icon(Icons.chevron_right, size: 16, color: AppColors.textMuted),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+
+  // ── BB/TB Card ──────────────────────────────────────────────────────────────
   Widget _buildBBTBCard() {
     final bmi = _tbTerakhir > 0 ? _bbTerakhir / ((_tbTerakhir / 100) * (_tbTerakhir / 100)) : 0.0;
     final bmiLabel = bmi == 0 ? '-' : bmi < 18.5 ? 'Kurus' : bmi < 25 ? 'Normal' : bmi < 30 ? 'Gemuk' : 'Obesitas';
@@ -375,27 +521,181 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // ── Evaluasi Ahli Gizi Card ────────────────────────────────────────
   Widget _buildEvaluasiCard() {
+    final dietType = _currentDietNutrisi?['diet_type'] as String? ?? '';
+    final ahliGizi = _ahliGiziName.isNotEmpty ? _ahliGiziName : 'Ahli Gizi';
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: const Color(0xFFF0FDF4),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.35)),
       ),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(children: [
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header
           Container(
-            padding: const EdgeInsets.all(6),
-            decoration: BoxDecoration(color: AppColors.primaryLight, borderRadius: BorderRadius.circular(8)),
-            child: const Icon(Icons.assignment_turned_in_outlined, color: AppColors.primary, size: 18),
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.08),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(15)),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(7),
+                  decoration: BoxDecoration(color: AppColors.primaryLight, borderRadius: BorderRadius.circular(9)),
+                  child: const Icon(Icons.assignment_turned_in_outlined, color: AppColors.primary, size: 18),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Evaluasi Ahli Gizi', style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.primaryDark)),
+                      if (dietType.isNotEmpty)
+                        Text(dietType, style: GoogleFonts.manrope(fontSize: 11, color: AppColors.primary, fontWeight: FontWeight.w600)),
+                    ],
+                  ),
+                ),
+                // Badge nama AG
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(8)),
+                  child: Text(
+                    ahliGizi.split(',').first.split(' ').first,
+                    style: GoogleFonts.manrope(fontSize: 10, fontWeight: FontWeight.w700, color: AppColors.primaryDark),
+                  ),
+                ),
+              ],
+            ),
           ),
-          const SizedBox(width: 10),
-          Text('Evaluasi Ahli Gizi', style: GoogleFonts.manrope(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.primaryDark)),
-        ]),
-        const SizedBox(height: 12),
-        Text(_evaluasiAhliGizi, style: GoogleFonts.manrope(fontSize: 13, color: AppColors.textPrimary, height: 1.6)),
-      ]),
+          // Body teks evaluasi
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Text(
+              _evaluasiAhliGizi,
+              style: GoogleFonts.manrope(fontSize: 13, color: AppColors.textPrimary, height: 1.7),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Catatan Makan Terakhir ──────────────────────────────────────────
+  Widget _buildLastMealCard() {
+    final log = _lastMealLog!;
+    final date = DateTime.tryParse(log['date'] ?? '') ?? DateTime.now();
+    final dateStr = '${date.day}/${date.month}/${date.year}';
+    final bb = (log['berat_badan'] as num?)?.toDouble();
+    final tb = (log['tinggi_badan'] as num?)?.toDouble();
+
+    final sessions = [
+      {'label': 'Pagi', 'icon': Icons.wb_sunny_outlined, 'color': const Color(0xFFF59E0B), 'bg': const Color(0xFFFEF3C7), 'meal': log['meal_pagi'] ?? '', 'jam': log['jam_pagi'] ?? ''},
+      {'label': 'Selingan Pagi', 'icon': Icons.local_cafe_outlined, 'color': const Color(0xFF8B5CF6), 'bg': const Color(0xFFEDE9FE), 'meal': log['selingan_pagi'] ?? '', 'jam': log['jam_selingan_pagi'] ?? ''},
+      {'label': 'Siang', 'icon': Icons.wb_cloudy_outlined, 'color': const Color(0xFF0284C7), 'bg': const Color(0xFFDBEAFE), 'meal': log['meal_siang'] ?? '', 'jam': log['jam_siang'] ?? ''},
+      {'label': 'Selingan Sore', 'icon': Icons.local_pizza_outlined, 'color': const Color(0xFFEA580C), 'bg': const Color(0xFFFEF0E8), 'meal': log['selingan_sore'] ?? '', 'jam': log['jam_selingan_sore'] ?? ''},
+      {'label': 'Malam', 'icon': Icons.nightlight_outlined, 'color': const Color(0xFF1D4ED8), 'bg': const Color(0xFFDBEAFE), 'meal': log['meal_malam'] ?? '', 'jam': log['jam_malam'] ?? ''},
+    ];
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.divider),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header
+          Container(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8FAFC),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(15)),
+              border: Border(bottom: BorderSide(color: AppColors.divider)),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(7),
+                  decoration: BoxDecoration(color: const Color(0xFFDBEAFE), borderRadius: BorderRadius.circular(9)),
+                  child: const Icon(Icons.restaurant_outlined, color: Color(0xFF2563EB), size: 18),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Catatan Makan Terakhir', style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.textPrimary)),
+                      Text(dateStr, style: GoogleFonts.manrope(fontSize: 11, color: AppColors.textSecondary)),
+                    ],
+                  ),
+                ),
+                // BB/TB dari log
+                if (bb != null && tb != null)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(color: AppColors.primaryLight, borderRadius: BorderRadius.circular(8)),
+                    child: Text(
+                      '${bb.toStringAsFixed(1)} kg • ${tb.toStringAsFixed(0)} cm',
+                      style: GoogleFonts.manrope(fontSize: 10, fontWeight: FontWeight.w700, color: AppColors.primaryDark),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+
+          // Sesi makan
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+            child: Column(
+              children: sessions.map((s) {
+                final meal = s['meal'] as String;
+                final jam = s['jam'] as String;
+                if (meal.isEmpty) return const SizedBox.shrink();
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        width: 32, height: 32,
+                        decoration: BoxDecoration(
+                          color: s['bg'] as Color,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Icon(s['icon'] as IconData, color: s['color'] as Color, size: 16),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Text(s['label'] as String, style: GoogleFonts.manrope(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.textSecondary)),
+                                if (jam.isNotEmpty) ...[
+                                  const SizedBox(width: 6),
+                                  Text(jam, style: GoogleFonts.manrope(fontSize: 10, color: AppColors.textMuted)),
+                                ],
+                              ],
+                            ),
+                            const SizedBox(height: 2),
+                            Text(meal, style: GoogleFonts.manrope(fontSize: 13, color: AppColors.textPrimary, height: 1.4)),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+        ],
+      ),
     );
   }
 

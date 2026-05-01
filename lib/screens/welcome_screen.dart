@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_theme.dart';
 import '../services/auth_service.dart';
 import 'pilih_ahli_gizi_screen.dart';
 import 'inform_consent_screen.dart';
+import 'pilih_jenis_diet_screen.dart';
 import 'main_screen.dart';
 
 class WelcomeScreen extends StatefulWidget {
@@ -33,6 +35,28 @@ class _WelcomeScreenState extends State<WelcomeScreen>
       end: Offset.zero,
     ).animate(CurvedAnimation(parent: _animCtrl, curve: Curves.easeOutCubic));
     _animCtrl.forward();
+
+    // Auto-redirect jika onboarding sudah selesai
+    SchedulerBinding.instance.addPostFrameCallback((_) => _autoRedirect());
+  }
+
+  void _autoRedirect() {
+    final user = widget.user;
+    final hasAhliGizi = (user['ahli_gizi_nip'] as String? ?? '').isNotEmpty ||
+        (user['selected_ahli_gizi_nip'] as String? ?? '').isNotEmpty;
+    final consentSigned = AuthService.isConsentSigned(user);
+    final dietTypes = user['diet_types'];
+    final dietType = user['diet_type'] as String? ?? '';
+    final hasDiet = (dietTypes is List && dietTypes.isNotEmpty) || dietType.isNotEmpty;
+
+    if (hasAhliGizi && consentSigned && hasDiet) {
+      // Semua step selesai — langsung ke dashboard
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (_) => const MainScreen()),
+        (route) => false,
+      );
+    }
   }
 
   @override
@@ -126,23 +150,36 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                         width: double.infinity,
                         child: ElevatedButton(
                           onPressed: () {
-                            final consentSigned = AuthService.isConsentSigned(widget.user);
-                            final hasAhliGizi = widget.user['selected_ahli_gizi_nip'] != null;
-                            if (hasAhliGizi && !consentSigned) {
+                            final user = widget.user;
+                            final hasAhliGizi =
+                                (user['ahli_gizi_nip'] as String? ?? '').isNotEmpty ||
+                                (user['selected_ahli_gizi_nip'] as String? ?? '').isNotEmpty;
+                            final consentSigned = AuthService.isConsentSigned(user);
+                            final dietTypes = user['diet_types'];
+                            final dietType = user['diet_type'] as String? ?? '';
+                            final hasDiet = (dietTypes is List && dietTypes.isNotEmpty) ||
+                                dietType.isNotEmpty;
+
+                            if (!hasAhliGizi) {
+                              Navigator.pushReplacement(
+                                context,
+                                MaterialPageRoute(builder: (_) => const PilihAhliGiziScreen()),
+                              );
+                            } else if (!consentSigned) {
                               Navigator.pushReplacement(
                                 context,
                                 MaterialPageRoute(builder: (_) => const InformConsentScreen()),
                               );
-                            } else if (hasAhliGizi && consentSigned) {
+                            } else if (!hasDiet) {
+                              Navigator.pushReplacement(
+                                context,
+                                MaterialPageRoute(builder: (_) => const PilihJenisDietScreen(isFromProfil: false)),
+                              );
+                            } else {
                               Navigator.pushAndRemoveUntil(
                                 context,
                                 MaterialPageRoute(builder: (_) => const MainScreen()),
                                 (route) => false,
-                              );
-                            } else {
-                              Navigator.pushReplacement(
-                                context,
-                                MaterialPageRoute(builder: (_) => const PilihAhliGiziScreen()),
                               );
                             }
                           },
@@ -156,18 +193,31 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Text(
-                                'MULAI PERJALANAN DIET',
-                                style: GoogleFonts.manrope(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w700,
-                                  color: Colors.white,
-                                  letterSpacing: 0.8,
-                                ),
-                              ),
+                              Builder(builder: (ctx) {
+                                final user = widget.user;
+                                final hasAhliGizi =
+                                    (user['ahli_gizi_nip'] as String? ?? '').isNotEmpty ||
+                                    (user['selected_ahli_gizi_nip'] as String? ?? '').isNotEmpty;
+                                final consentSigned = AuthService.isConsentSigned(user);
+                                final dietTypes = user['diet_types'];
+                                final dietType = user['diet_type'] as String? ?? '';
+                                final hasDiet = (dietTypes is List && dietTypes.isNotEmpty) ||
+                                    dietType.isNotEmpty;
+                                String label;
+                                if (!hasAhliGizi) label = 'PILIH AHLI GIZI';
+                                else if (!consentSigned) label = 'TANDA TANGAN CONSENT';
+                                else if (!hasDiet) label = 'PILIH JENIS DIET';
+                                else label = 'MASUK KE DASHBOARD';
+                                return Text(label,
+                                    style: GoogleFonts.manrope(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w700,
+                                      color: Colors.white,
+                                      letterSpacing: 0.8,
+                                    ));
+                              }),
                               const SizedBox(width: 8),
-                              const Icon(Icons.arrow_forward_rounded,
-                                  color: Colors.white, size: 20),
+                              const Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 20),
                             ],
                           ),
                         ),

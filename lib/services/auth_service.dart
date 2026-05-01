@@ -1027,34 +1027,202 @@ class AuthService {
 
   static Future<void> seedDummyDataIfNeeded() async {
     final prefs = await SharedPreferences.getInstance();
-    
-    // Auto-refresh cache by checking seed version
+
+    // Bump seed_version ke 6 untuk force-refresh data dummy (inkl. meal logs)
     final seedVersion = prefs.getInt('seed_version') ?? 0;
-    if (seedVersion < 4) {
+    if (seedVersion < 6) {
       await prefs.clear();
-      await prefs.setInt('seed_version', 4);
-    }
-    
-    final usersJson = prefs.getString(_usersKey);
-    if (usersJson == null || (jsonDecode(usersJson) as List).isEmpty) {
-      await register(name: 'Budi Santoso', rm: '100001', email: 'budi@gmail.com', weight: '65', height: '170', password: 'password123', gender: 'Laki-laki', birthdate: '1990-01-01', phone: '08123456789', username: 'budi123');
-      await register(name: 'Andi Pratama', rm: '100002', email: 'andi@gmail.com', weight: '70', height: '175', password: 'password123', gender: 'Laki-laki', birthdate: '1985-05-12', phone: '08129876543', username: 'andi123');
-      await register(name: 'Siti Aminah', rm: '100003', email: 'siti@gmail.com', weight: '55', height: '160', password: 'password123', gender: 'Perempuan', birthdate: '1992-08-17', phone: '08123334445', username: 'siti123');
-      await register(name: 'Dewi Lestari', rm: '100004', email: 'dewi@gmail.com', weight: '60', height: '165', password: 'password123', gender: 'Perempuan', birthdate: '1988-11-20', phone: '08129998887', username: 'dewi123');
-      await register(name: 'Rudi Hermawan', rm: '100005', email: 'rudi@gmail.com', weight: '85', height: '172', password: 'password123', gender: 'Laki-laki', birthdate: '1975-03-30', phone: '08125556667', username: 'rudi123');
-      
-      // Update statuses to make dashboard colorful
-      await updatePasienStatus('100002', 'berhasil');
-      await updatePasienStatus('100004', 'meninggal');
+      await prefs.setInt('seed_version', 6);
     }
 
+    // ── Seed ahli gizi ──────────────────────────────────────────────────────
     final ahliGiziJson = prefs.getString(_ahliGiziKey);
     if (ahliGiziJson == null || (jsonDecode(ahliGiziJson) as List).isEmpty) {
       await registerAhliGizi(name: 'Siti Rahmadhani, S.Gz', nip: '200001', email: 'siti.rahmadhani@rsud.go.id', phone: '08129876543', password: 'password123');
       await registerAhliGizi(name: 'Hendra Wijaya, S.Gz', nip: '200002', email: 'hendra.wijaya@rsud.go.id', phone: '08121112223', password: 'password123');
-      
       await submitRatingAhliGizi('200001', 5.0, ulasan: 'Sangat ramah dan sabar menjelaskan detail diet saya.', pasienName: 'Budi Santoso');
       await submitRatingAhliGizi('200001', 4.0, ulasan: 'Menu diet yang diberikan sangat membantu!', pasienName: 'Siti Aminah');
+      await submitRatingAhliGizi('200002', 4.5, ulasan: 'Penjelasan jelas dan terukur.', pasienName: 'Dewi Lestari');
+    }
+
+    // ── Seed pasien ─────────────────────────────────────────────────────────
+    final usersJson = prefs.getString(_usersKey);
+    if (usersJson == null || (jsonDecode(usersJson) as List).isEmpty) {
+      // Daftar pasien
+      await register(name: 'Budi Santoso', rm: '100001', email: 'budi@gmail.com', weight: '72', height: '170', password: 'password123', gender: 'Laki-laki', birthdate: '1990-01-01', phone: '08123456789', username: 'budi123');
+      await register(name: 'Andi Pratama', rm: '100002', email: 'andi@gmail.com', weight: '68', height: '175', password: 'password123', gender: 'Laki-laki', birthdate: '1985-05-12', phone: '08129876543', username: 'andi123');
+      await register(name: 'Siti Aminah', rm: '100003', email: 'siti@gmail.com', weight: '58', height: '157', password: 'password123', gender: 'Perempuan', birthdate: '1992-08-17', phone: '08123334445', username: 'siti123');
+      await register(name: 'Dewi Lestari', rm: '100004', email: 'dewi@gmail.com', weight: '62', height: '163', password: 'password123', gender: 'Perempuan', birthdate: '1988-11-20', phone: '08129998887', username: 'dewi123');
+      await register(name: 'Rudi Hermawan', rm: '100005', email: 'rudi@gmail.com', weight: '88', height: '172', password: 'password123', gender: 'Laki-laki', birthdate: '1975-03-30', phone: '08125556667', username: 'rudi123');
+
+      // Pilihkan ahli gizi & consent untuk semua pasien
+      for (final rm in ['100001', '100002', '100003', '100004', '100005']) {
+        final nip = (rm == '100004' || rm == '100005') ? '200002' : '200001';
+        await selectAhliGizi(rm, nip);
+        await saveInformConsent(rm, ''); // consent sudah ditandatangani
+      }
+
+      // Pilih jenis diet untuk tiap pasien
+      await updateDietTypes('100001', ['Diet Diabetes Melitus', 'Diet Energi Rendah']);
+      await updateDietTypes('100002', ['Diet Jantung']);
+      await updateDietTypes('100003', ['Makanan Sehat Ibu Hamil']);
+      await updateDietTypes('100004', ['Diet Garam Rendah', 'Diet Penyakit Ginjal Kronik']);
+      await updateDietTypes('100005', ['Diet Energi Rendah']);
+
+      // Status
+      await updatePasienStatus('100002', 'berhasil');
+      await updatePasienStatus('100004', 'aktif');
+
+      // BB/TB history untuk pasien 100001
+      await updateBBTBWithHistory('100001', 72.0, 170.0);
+      await updateBBTBWithHistory('100001', 71.5, 170.0);
+      await updateBBTBWithHistory('100001', 71.0, 170.0);
+      await updateBBTBWithHistory('100001', 72.5, 170.0);
+
+      // BB/TB history untuk pasien 100003
+      await updateBBTBWithHistory('100003', 58.0, 157.0);
+      await updateBBTBWithHistory('100003', 57.5, 157.0);
+    }
+
+    // ── Seed nutrisi per diet ────────────────────────────────────────────────
+    final nutrisiPerDietJson = prefs.getString(_nutrisiPerDietKey);
+    if (nutrisiPerDietJson == null || (jsonDecode(nutrisiPerDietJson) as List).isEmpty) {
+      // Pasien 100001 – Diet Diabetes Melitus
+      await saveNutrisiPerDiet(
+        rmPasien: '100001', dietType: 'Diet Diabetes Melitus',
+        kaloriTarget: 1800, proteinTarget: 75, lemakTarget: 50, karboTarget: 220,
+        seratTarget: 30, hidrasiTarget: 2.5,
+        kaloriAktual: 1620, proteinAktual: 68, lemakAktual: 44, karboAktual: 198,
+        seratAktual: 22, hidrasiAktual: 2.1,
+        catatan: 'Hindari makanan tinggi GI. Perbanyak serat dan protein nabati.',
+        evaluasiAhliGizi: 'Asupan kalori sudah mendekati target. Tingkatkan konsumsi sayuran hijau dan kurangi nasi putih. Tetap pertahankan olahraga ringan 30 menit/hari.',
+      );
+      // Pasien 100001 – Diet Energi Rendah
+      await saveNutrisiPerDiet(
+        rmPasien: '100001', dietType: 'Diet Energi Rendah',
+        kaloriTarget: 1500, proteinTarget: 65, lemakTarget: 42, karboTarget: 180,
+        seratTarget: 28, hidrasiTarget: 2.0,
+        kaloriAktual: 1380, proteinAktual: 58, lemakAktual: 38, karboAktual: 165,
+        seratAktual: 18, hidrasiAktual: 1.8,
+        catatan: 'Batasi karbohidrat sederhana. Prioritaskan protein tanpa lemak.',
+        evaluasiAhliGizi: 'Progres baik. Defisit kalori sudah ideal untuk penurunan berat badan. Pantau BB minggu depan.',
+      );
+
+      // Pasien 100002 – Diet Jantung
+      await saveNutrisiPerDiet(
+        rmPasien: '100002', dietType: 'Diet Jantung',
+        kaloriTarget: 2000, proteinTarget: 80, lemakTarget: 55, karboTarget: 250,
+        seratTarget: 35, hidrasiTarget: 2.5,
+        kaloriAktual: 1920, proteinAktual: 76, lemakAktual: 50, karboAktual: 240,
+        seratAktual: 30, hidrasiAktual: 2.3,
+        catatan: 'Batasi lemak jenuh. Perbanyak omega-3 dari ikan.',
+        evaluasiAhliGizi: 'Asupan sudah sangat baik. Pertahankan pola makan ini dan rutin kontrol tekanan darah.',
+      );
+
+      // Pasien 100003 – Makanan Sehat Ibu Hamil
+      await saveNutrisiPerDiet(
+        rmPasien: '100003', dietType: 'Makanan Sehat Ibu Hamil',
+        kaloriTarget: 2200, proteinTarget: 90, lemakTarget: 70, karboTarget: 290,
+        seratTarget: 32, hidrasiTarget: 3.0,
+        kaloriAktual: 2050, proteinAktual: 82, lemakAktual: 63, karboAktual: 270,
+        seratAktual: 27, hidrasiAktual: 2.6,
+        catatan: 'Pastikan asupan asam folat, zat besi, dan kalsium tercukupi.',
+        evaluasiAhliGizi: 'Kondisi nutrisi ibu dan janin dalam kondisi baik. Tambahkan susu ibu hamil 1x/hari. Perbanyak sayuran berdaun hijau.',
+      );
+
+      // Pasien 100004 – Diet Garam Rendah
+      await saveNutrisiPerDiet(
+        rmPasien: '100004', dietType: 'Diet Garam Rendah',
+        kaloriTarget: 1900, proteinTarget: 72, lemakTarget: 55, karboTarget: 240,
+        seratTarget: 30, hidrasiTarget: 2.0,
+        kaloriAktual: 1750, proteinAktual: 65, lemakAktual: 48, karboAktual: 220,
+        seratAktual: 24, hidrasiAktual: 1.8,
+        catatan: 'Batasi garam < 2g/hari. Hindari makanan olahan dan acar.',
+        evaluasiAhliGizi: 'Tekanan darah membaik. Pertahankan diet rendah natrium. Konsumsi buah kalium tinggi seperti pisang dan alpukat.',
+      );
+      // Pasien 100004 – Diet Penyakit Ginjal Kronik
+      await saveNutrisiPerDiet(
+        rmPasien: '100004', dietType: 'Diet Penyakit Ginjal Kronik',
+        kaloriTarget: 1800, proteinTarget: 45, lemakTarget: 55, karboTarget: 265,
+        seratTarget: 25, hidrasiTarget: 1.5,
+        kaloriAktual: 1680, proteinAktual: 42, lemakAktual: 50, karboAktual: 248,
+        seratAktual: 20, hidrasiAktual: 1.4,
+        catatan: 'Batasi protein dan fosfor. Kontrol asupan kalium.',
+        evaluasiAhliGizi: 'Fungsi ginjal stabil. Tetap batasi protein hewani dan konsumsi lebih banyak karbohidrat kompleks.',
+      );
+
+      // Pasien 100005 – Diet Energi Rendah
+      await saveNutrisiPerDiet(
+        rmPasien: '100005', dietType: 'Diet Energi Rendah',
+        kaloriTarget: 1600, proteinTarget: 70, lemakTarget: 45, karboTarget: 195,
+        seratTarget: 30, hidrasiTarget: 2.5,
+        kaloriAktual: 1450, proteinAktual: 62, lemakAktual: 40, karboAktual: 178,
+        seratAktual: 22, hidrasiAktual: 2.0,
+        catatan: 'Target penurunan 0.5 kg/minggu. Hindari makanan gorengan.',
+        evaluasiAhliGizi: 'Penurunan berat badan konsisten. Lanjutkan pola makan saat ini. Tambahkan aktivitas fisik 3x seminggu.',
+      );
+
+      // ── Seed nutrisi global (legacy) untuk backward-compat ──
+      await saveNutrisiPasien(rmPasien: '100001', energiTarget: 1800, proteinTarget: 75, lemakTarget: 50, karboTarget: 220, energiAktual: 1620, proteinAktual: 68, lemakAktual: 44, karboAktual: 198, seratTarget: 30, seratAktual: 22, hidrasiTarget: 2.5, hidrasiAktual: 2.1, catatan: 'Diet Diabetes + Energi Rendah');
+      await saveNutrisiPasien(rmPasien: '100002', energiTarget: 2000, proteinTarget: 80, lemakTarget: 55, karboTarget: 250, energiAktual: 1920, proteinAktual: 76, lemakAktual: 50, karboAktual: 240, seratTarget: 35, seratAktual: 30, hidrasiTarget: 2.5, hidrasiAktual: 2.3, catatan: 'Diet Jantung');
+      await saveNutrisiPasien(rmPasien: '100003', energiTarget: 2200, proteinTarget: 90, lemakTarget: 70, karboTarget: 290, energiAktual: 2050, proteinAktual: 82, lemakAktual: 63, karboAktual: 270, seratTarget: 32, seratAktual: 27, hidrasiTarget: 3.0, hidrasiAktual: 2.6, catatan: 'Makanan Sehat Ibu Hamil');
+      await saveNutrisiPasien(rmPasien: '100004', energiTarget: 1900, proteinTarget: 72, lemakTarget: 55, karboTarget: 240, energiAktual: 1750, proteinAktual: 65, lemakAktual: 48, karboAktual: 220, seratTarget: 30, seratAktual: 24, hidrasiTarget: 2.0, hidrasiAktual: 1.8, catatan: 'Diet Ginjal + Garam Rendah');
+      await saveNutrisiPasien(rmPasien: '100005', energiTarget: 1600, proteinTarget: 70, lemakTarget: 45, karboTarget: 195, energiAktual: 1450, proteinAktual: 62, lemakAktual: 40, karboAktual: 178, seratTarget: 30, seratAktual: 22, hidrasiTarget: 2.5, hidrasiAktual: 2.0, catatan: 'Diet Energi Rendah');
+    }
+
+    // ── Seed meal logs dummy ─────────────────────────────────────────────────
+    final mealLogsJson = prefs.getString(_mealLogsKey);
+    if (mealLogsJson == null || (jsonDecode(mealLogsJson) as List).isEmpty) {
+      // Pasien 100001 – Budi Santoso
+      await saveMealLog(
+        rmPasien: '100001',
+        mealPagi: 'Nasi merah 1 centong rice cooker, Telur rebus 1 btr, Tumis bayam 1 mangkok',
+        selinganPagi: 'Apel 1 bh sdg, Air putih 1 gelas',
+        mealSiang: 'Nasi putih 1 centong rice cooker, Ikan goreng 1 ptg, Sayur lodeh 1 mangkok, Tempe 1 ptg sdg',
+        selinganSore: 'Buah pisang 1 bh sdg, Teh tawar 1 cup',
+        mealMalam: 'Nasi merah 1 centong plastik, Ayam rebus 1 ptg dada, Sup sayuran 1 mangkok',
+        beratBadan: 72.5,
+        tinggiBadan: 170.0,
+        jamPagi: '07.00 WIB',
+        jamSelinganPagi: '10.00 WIB',
+        jamSiang: '12.30 WIB',
+        jamSelinganSore: '15.30 WIB',
+        jamMalam: '19.00 WIB',
+      );
+
+      // Pasien 100003 – Siti Aminah
+      await saveMealLog(
+        rmPasien: '100003',
+        mealPagi: 'Nasi putih 1 centong rice cooker, Telur dadar 1 btr, Sayur sop 1 mangkok',
+        selinganPagi: 'Susu ibu hamil 1 cup, Biskuit 3 bh',
+        mealSiang: 'Nasi putih 1 centong rice cooker, Ikan bakar 1 ptg, Tumis kangkung 1 sd sayur, Tahu goreng 1 ptg sdg',
+        selinganSore: 'Jus jeruk 1 gelas, Roti tawar 1 lembar tanpa pinggiran',
+        mealMalam: 'Nasi putih 1 centong plastik, Soto ayam 1 mangkok, Tempe bacem 1 ptg',
+        beratBadan: 58.0,
+        tinggiBadan: 157.0,
+        jamPagi: '06.30 WIB',
+        jamSelinganPagi: '09.30 WIB',
+        jamSiang: '12.00 WIB',
+        jamSelinganSore: '15.00 WIB',
+        jamMalam: '18.30 WIB',
+      );
+
+      // Pasien 100005 – Rudi Hermawan
+      await saveMealLog(
+        rmPasien: '100005',
+        mealPagi: 'Roti gandum 2 lembar ada pinggiran, Telur rebus 1 btr, Susu rendah lemak 1 cup',
+        selinganPagi: 'Pepaya 1 ptg sdg, Air putih 1 gelas',
+        mealSiang: 'Nasi merah 1 centong rice cooker, Ikan tuna panggang 1 ptg, Salad sayur 1 piring',
+        selinganSore: 'Yogurt 1 cup, Kacang almond 1 genggam',
+        mealMalam: 'Ayam rebus tanpa kulit 1 ptg dada, Brokoli kukus 1 sd sayur, Nasi merah 1 centong plastik',
+        beratBadan: 87.0,
+        tinggiBadan: 172.0,
+        jamPagi: '06.00 WIB',
+        jamSelinganPagi: '09.00 WIB',
+        jamSiang: '12.00 WIB',
+        jamSelinganSore: '15.30 WIB',
+        jamMalam: '18.00 WIB',
+      );
     }
   }
 }
