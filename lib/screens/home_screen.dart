@@ -7,6 +7,7 @@ import '../theme/app_theme.dart';
 import 'catatan_screen.dart';
 import 'pilih_ahli_gizi_screen.dart';
 import 'pilih_jenis_diet_screen.dart';
+import 'edukasi_screen.dart';
 import '../services/auth_service.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -183,9 +184,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   if (_evaluasiAhliGizi.isNotEmpty) _buildEvaluasiCard(),
                   // ── Catatan Makan Terakhir ──
                   if (_lastMealLog != null) _buildLastMealCard(),
+                  if (_currentDietNutrisi != null) _buildNutritionSummary(),
                   _buildReminderCard(context),
-                  if (_currentDietNutrisi != null) _buildDailyReport(),
-                  if (_currentDietNutrisi != null) _buildBottomStats(),
+                  _buildEdukasiCard(context),
                   const SizedBox(height: 16),
                 ],
               ),
@@ -830,18 +831,36 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildNutritionSummary() {
     return Container(
-      color: AppColors.surface,
-      padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
+      margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.divider),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Ringkasan Vitalitas Harian',
-            style: GoogleFonts.manrope(
-              fontSize: 17,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textPrimary,
-            ),
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(7),
+                decoration: BoxDecoration(
+                  color: AppColors.primaryLight,
+                  borderRadius: BorderRadius.circular(9)
+                ),
+                child: const Icon(Icons.analytics_outlined, color: AppColors.primary, size: 18),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                'Target & Capaian Nutrisi',
+                style: GoogleFonts.manrope(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 16),
           _buildNutrientRow(
@@ -849,13 +868,13 @@ class _HomeScreenState extends State<HomeScreen> {
               _proteinPercent,
               AppColors.protein,
               '${_fmt(_proteinAktual)}g / ${_fmt(_proteinTarget)}g'),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
           _buildNutrientRow(
               'LEMAK SEHAT',
               _lemakPercent,
               AppColors.fat,
               '${_fmt(_lemakAktual)}g / ${_fmt(_lemakTarget)}g'),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
           _buildNutrientRow(
               'KARBOHIDRAT',
               _karboPercent,
@@ -863,6 +882,107 @@ class _HomeScreenState extends State<HomeScreen> {
               '${_fmt(_karboAktual)}g / ${_fmt(_karboTarget)}g'),
         ],
       ),
+    );
+  }
+
+  Widget _buildEdukasiCard(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.divider),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF0FDF4),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(15)),
+              border: Border(bottom: BorderSide(color: AppColors.primary.withValues(alpha: 0.2))),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(7),
+                  decoration: BoxDecoration(color: AppColors.primaryLight, borderRadius: BorderRadius.circular(9)),
+                  child: const Icon(Icons.menu_book_rounded, color: AppColors.primary, size: 18),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Edukasi & Leaflet', style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.primaryDark)),
+                      Text('Artikel rekomendasi ahli', style: GoogleFonts.manrope(fontSize: 11, color: AppColors.primary)),
+                    ],
+                  ),
+                ),
+                TextButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const EdukasiScreen()),
+                    );
+                  },
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                  ),
+                  child: Text('Lihat', style: GoogleFonts.manrope(fontSize: 10, fontWeight: FontWeight.w700, color: AppColors.primaryDark)),
+                )
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                _buildLeafletItem(
+                  'Panduan Gizi Seimbang',
+                  'Tips mengatur asupan makanan sehat.',
+                  Icons.local_dining_outlined,
+                ),
+                const SizedBox(height: 12),
+                _buildLeafletItem(
+                  'Mengenal Indeks Glikemik',
+                  'Pilih karbohidrat yang tepat.',
+                  Icons.monitor_heart_outlined,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLeafletItem(String title, String subtitle, IconData icon) {
+    return Row(
+      children: [
+        Container(
+          width: 40, height: 40,
+          decoration: BoxDecoration(color: AppColors.background, borderRadius: BorderRadius.circular(10)),
+          child: Icon(icon, color: AppColors.textSecondary, size: 20),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title, style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
+              const SizedBox(height: 2),
+              Text(subtitle, style: GoogleFonts.manrope(fontSize: 11, color: AppColors.textSecondary)),
+            ],
+          ),
+        ),
+        const Icon(Icons.chevron_right, color: AppColors.textMuted, size: 16),
+      ],
     );
   }
 
@@ -1050,163 +1170,5 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildDailyReport() {
-    final catatan = (_nutrisi?['catatan'] as String?) ?? '';
-    final lastUpdated = _nutrisi?['updated_at'] as String?;
-    String updatedStr = '';
-    if (lastUpdated != null) {
-      try {
-        final dt = DateTime.parse(lastUpdated);
-        updatedStr = '${dt.day}/${dt.month}/${dt.year}';
-      } catch (_) {}
-    }
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                const Icon(Icons.assignment_outlined,
-                    color: AppColors.primary),
-                const SizedBox(width: 8),
-                Text(
-                  'Catatan Ahli Gizi',
-                  style: GoogleFonts.manrope(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textPrimary,
-                  ),
-                ),
-              ],
-            ),
-            if (updatedStr.isNotEmpty) ...[
-              const SizedBox(height: 4),
-              Text(
-                'TERAKHIR DIPERBARUI: $updatedStr',
-                style: GoogleFonts.manrope(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 1.2,
-                  color: AppColors.textMuted,
-                ),
-              ),
-            ],
-            const SizedBox(height: 8),
-            catatan.isEmpty
-                ? Text(
-                    'Belum ada catatan dari ahli gizi.',
-                    style: GoogleFonts.manrope(
-                        fontSize: 13,
-                        color: AppColors.textMuted,
-                        height: 1.5),
-                  )
-                : Text(
-                    catatan,
-                    style: GoogleFonts.manrope(
-                        fontSize: 13,
-                        color: AppColors.textSecondary,
-                        height: 1.5),
-                  ),
-            const SizedBox(height: 14),
-            Row(
-              children: [
-                Expanded(
-                  child: _buildReportStat('Asupan Serat',
-                      '${_fmt(_seratAktual)}g / ${_fmt(_seratTarget)}g'),
-                ),
-                Expanded(
-                  child: _buildReportStat('Hidrasi',
-                      '${_fmt(_hidrasiAktual)}L / ${_fmt(_hidrasiTarget)}L'),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildReportStat(String label, String value) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      margin: const EdgeInsets.only(right: 8),
-      decoration: BoxDecoration(
-        color: AppColors.background,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label,
-              style: GoogleFonts.manrope(
-                  fontSize: 11, color: AppColors.textSecondary)),
-          const SizedBox(height: 2),
-          Text(value,
-              style: GoogleFonts.manrope(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.primary)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBottomStats() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-      child: Row(
-        children: [
-          Expanded(
-              child: _buildStatChip(Icons.biotech_outlined,
-                  '${_fmt(_proteinAktual)}g', 'PROTEIN AKTUAL')),
-          const SizedBox(width: 12),
-          Expanded(
-              child: _buildStatChip(Icons.water_drop_outlined,
-                  '${_fmt(_lemakAktual)}g', 'LEMAK AKTUAL')),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStatChip(IconData icon, String value, String label) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, color: AppColors.primary, size: 22),
-          const SizedBox(height: 8),
-          Text(
-            value,
-            style: GoogleFonts.manrope(
-              fontSize: 22,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textPrimary,
-            ),
-          ),
-          Text(
-            label,
-            style: GoogleFonts.manrope(
-              fontSize: 10,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textSecondary,
-              letterSpacing: 0.8,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  // Kode lama dihapus
 }

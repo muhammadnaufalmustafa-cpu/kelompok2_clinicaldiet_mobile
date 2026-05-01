@@ -32,6 +32,8 @@ class CatatanScreen extends StatefulWidget {
 
 class _CatatanScreenState extends State<CatatanScreen> {
   bool _isLoading = false;
+  List<String> _dietList = [];
+  String? _selectedDietType;
 
   final _bbCtrl = TextEditingController();
   final _tbCtrl = TextEditingController();
@@ -57,6 +59,18 @@ class _CatatanScreenState extends State<CatatanScreen> {
     final user = await AuthService.getLoggedInUser();
     if (user != null && mounted) {
       setState(() {
+        // Fetch diet list
+        final raw = user['diet_types'];
+        if (raw is List && raw.isNotEmpty) {
+          _dietList = raw.cast<String>();
+        } else {
+          final single = user['diet_type'] as String? ?? '';
+          _dietList = single.isEmpty ? [] : [single];
+        }
+        if (_dietList.isNotEmpty) {
+          _selectedDietType = _dietList.first;
+        }
+
         // BB/TB dari histori terakhir
         final history = AuthService.getBBTBHistory(user);
         if (history.isNotEmpty) {
@@ -253,6 +267,7 @@ class _CatatanScreenState extends State<CatatanScreen> {
 
       final success = await AuthService.saveMealLog(
         rmPasien: rm,
+        dietType: _selectedDietType,
         mealPagi: _pagiCtrl.text,
         selinganPagi: _selinganPagiCtrl.text,
         mealSiang: _siangCtrl.text,
@@ -302,6 +317,38 @@ class _CatatanScreenState extends State<CatatanScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  if (_dietList.isNotEmpty) ...[
+                    Text('PILIHAN PROGRAM DIET', style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w700, letterSpacing: 1.2, color: AppColors.textSecondary)),
+                    const SizedBox(height: 12),
+                    if (_dietList.length == 1)
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                        decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(12), border: Border.all(color: AppColors.divider)),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.restaurant_menu_outlined, color: AppColors.primary, size: 20),
+                            const SizedBox(width: 12),
+                            Text(_dietList.first, style: GoogleFonts.manrope(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+                          ],
+                        ),
+                      )
+                    else
+                      DropdownButtonFormField<String>(
+                        value: _selectedDietType,
+                        decoration: InputDecoration(
+                          filled: true,
+                          fillColor: AppColors.surface,
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.divider)),
+                          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.divider)),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                        ),
+                        items: _dietList.map((d) => DropdownMenuItem(value: d, child: Text(d, style: GoogleFonts.manrope(fontSize: 14, color: AppColors.textPrimary)))).toList(),
+                        onChanged: (v) => setState(() => _selectedDietType = v),
+                      ),
+                    const SizedBox(height: 24),
+                  ],
+
                   Text('KONDISI FISIK HARI INI', style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w700, letterSpacing: 1.2, color: AppColors.textSecondary)),
                   const SizedBox(height: 12),
                   Row(
