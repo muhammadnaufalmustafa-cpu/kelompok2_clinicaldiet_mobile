@@ -319,6 +319,40 @@ class AuthService {
     }
     return true;
   }
+
+  static Future<bool> updatePasienEmailPassword({
+    required String rm,
+    required String email,
+    String? password,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final usersJson = prefs.getString(_usersKey);
+    if (usersJson == null) return false;
+
+    final decoded = jsonDecode(usersJson) as List;
+    final users = decoded.cast<Map<String, dynamic>>();
+
+    final idx = users.indexWhere((u) => u['rm'] == rm && u['role'] == 'pasien');
+    if (idx == -1) return false;
+
+    // Check email unique if changed
+    if (email.isNotEmpty && email != users[idx]['email']) {
+      final emailExists = users.any((u) => u['email'] == email);
+      if (emailExists) return false;
+    }
+
+    if (email.isNotEmpty) users[idx]['email'] = email;
+    if (password != null && password.isNotEmpty) users[idx]['password'] = password;
+
+    await prefs.setString(_usersKey, jsonEncode(users));
+
+    // Update session if it's the logged in user
+    final loggedIn = await getLoggedInUser();
+    if (loggedIn != null && loggedIn['rm'] == rm) {
+      await prefs.setString(_loggedInUserKey, jsonEncode(users[idx]));
+    }
+    return true;
+  }
   
   static Future<bool> updateProfilePhoto(String id, String photoPath, bool isPasien) async {
     final prefs = await SharedPreferences.getInstance();

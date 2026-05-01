@@ -412,6 +412,30 @@ class _ProfilScreenState extends State<ProfilScreen> {
                     onPressed: isLoading
                         ? null
                         : () async {
+                            final bool? confirm = await showDialog<bool>(
+                              context: context,
+                              builder: (BuildContext context) {
+                                return AlertDialog(
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                  title: Text('Simpan Perubahan?', style: GoogleFonts.manrope(fontWeight: FontWeight.w700)),
+                                  content: Text('Apakah Anda yakin ingin menyimpan perubahan identitas ini?', style: GoogleFonts.manrope(color: AppColors.textSecondary)),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.of(context).pop(false),
+                                      child: Text('Tidak', style: GoogleFonts.manrope(color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
+                                    ),
+                                    ElevatedButton(
+                                      style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
+                                      onPressed: () => Navigator.of(context).pop(true),
+                                      child: Text('Ya, Simpan', style: GoogleFonts.manrope(color: Colors.white, fontWeight: FontWeight.w600)),
+                                    ),
+                                  ],
+                                );
+                              },
+                            );
+
+                            if (confirm != true) return;
+
                             setStateDialog(() => isLoading = true);
                             try {
                               final rm = _user?['rm'];
@@ -482,6 +506,84 @@ class _ProfilScreenState extends State<ProfilScreen> {
             borderSide: const BorderSide(color: AppColors.divider),
           ),
           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        ),
+      ),
+    );
+  }
+
+  void _showChangeAuthDialog() {
+    final emailCtrl = TextEditingController(text: _user?['email'] ?? '');
+    final passwordCtrl = TextEditingController();
+    bool isLoading = false;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setStateDialog) => Padding(
+          padding: EdgeInsets.fromLTRB(
+              24, 24, 24, MediaQuery.of(ctx).viewInsets.bottom + 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Ganti Email & Password',
+                  style: GoogleFonts.manrope(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textPrimary)),
+              const SizedBox(height: 16),
+              _buildDialogTextField(emailCtrl, 'Email Baru'),
+              _buildDialogTextField(passwordCtrl, 'Password Baru (Kosongkan jika tidak ganti)'),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: isLoading
+                      ? null
+                      : () async {
+                          setStateDialog(() => isLoading = true);
+                          try {
+                            final rm = _user?['rm'];
+                            if (rm != null) {
+                              final success = await AuthService.updatePasienEmailPassword(
+                                rm: rm,
+                                email: emailCtrl.text.trim(),
+                                password: passwordCtrl.text.trim(),
+                              );
+
+                              if (success) {
+                                if (!context.mounted) return;
+                                Navigator.pop(context);
+                                await _loadUser();
+                                if (!context.mounted) return;
+                                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Email/Password berhasil diperbarui.', style: GoogleFonts.manrope()), backgroundColor: AppColors.primary));
+                              } else {
+                                if (!context.mounted) return;
+                                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal memperbarui pengaturan keamanan.', style: GoogleFonts.manrope()), backgroundColor: Colors.red));
+                              }
+                            }
+                          } finally {
+                            setStateDialog(() => isLoading = false);
+                          }
+                        },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: isLoading
+                      ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                      : Text('SIMPAN', style: GoogleFonts.manrope(fontWeight: FontWeight.w600, color: Colors.white)),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -873,6 +975,35 @@ class _ProfilScreenState extends State<ProfilScreen> {
                           icon: Icons.track_changes_outlined,
                           title: 'Target Diet (Segera)',
                           onTap: () {},
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: Text(
+                      'KEAMANAN',
+                      style: GoogleFonts.manrope(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 1.2,
+                        color: AppColors.textMuted,
+                      ),
+                    ),
+                  ),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Column(
+                      children: [
+                        _buildActionItem(
+                          icon: Icons.lock_outline,
+                          title: 'Ganti Email & Password',
+                          onTap: _showChangeAuthDialog,
                         ),
                       ],
                     ),
