@@ -395,8 +395,8 @@ class _ProfilScreenState extends State<ProfilScreen> {
                         _buildDialogTextField(nameCtrl, 'Nama Lengkap'),
                         _buildDialogTextField(usernameCtrl, 'Username'),
                         _buildDialogTextField(phoneCtrl, 'No. Telepon'),
-                        _buildDialogTextField(emailCtrl, 'Email'),
-                        _buildDialogTextField(nikCtrl, 'NIK'),
+                        _buildDialogTextField(emailCtrl, 'Email', keyboardType: TextInputType.emailAddress),
+                        _buildDialogTextField(nikCtrl, 'NIK', maxLength: 16, keyboardType: TextInputType.number),
                         _buildDialogTextField(agamaCtrl, 'Agama'),
                         _buildDialogTextField(pendidikanCtrl, 'Pendidikan Terakhir'),
                         _buildDialogTextField(pekerjaanCtrl, 'Pekerjaan'),
@@ -487,12 +487,14 @@ class _ProfilScreenState extends State<ProfilScreen> {
     );
   }
 
-  Widget _buildDialogTextField(TextEditingController controller, String label, {int maxLines = 1}) {
+  Widget _buildDialogTextField(TextEditingController controller, String label, {int maxLines = 1, int? maxLength, TextInputType? keyboardType}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: TextField(
         controller: controller,
         maxLines: maxLines,
+        maxLength: maxLength,
+        keyboardType: keyboardType,
         style: GoogleFonts.manrope(fontSize: 14),
         decoration: InputDecoration(
           labelText: label,

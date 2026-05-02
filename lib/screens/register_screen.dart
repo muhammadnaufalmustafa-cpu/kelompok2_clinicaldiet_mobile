@@ -375,6 +375,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               hint: 'Masukkan NIK KTP',
               prefixIcon: Icons.credit_card_outlined,
               keyboardType: TextInputType.number,
+              maxLength: 16,
             ),
             const SizedBox(height: 14),
             _buildTextField(
@@ -557,6 +558,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     bool obscure = false,
     TextInputType keyboardType = TextInputType.text,
     int maxLines = 1,
+    int? maxLength,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -577,6 +579,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             obscureText: obscure,
             keyboardType: keyboardType,
             maxLines: maxLines,
+            maxLength: maxLength,
             style: GoogleFonts.manrope(
                 fontSize: 15, color: AppColors.textPrimary),
             decoration: InputDecoration(
