@@ -184,7 +184,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   if (_evaluasiAhliGizi.isNotEmpty) _buildEvaluasiCard(),
                   // ── Catatan Makan Terakhir ──
                   if (_lastMealLog != null) _buildLastMealCard(),
-                  if (_currentDietNutrisi != null) _buildNutritionSummary(),
+                  if (_currentDietNutrisi != null && _kaloriTarget > 0)
+                    _buildNutritionSummary()
+                  else if (_currentDietNutrisi != null && _kaloriTarget == 0)
+                    _buildNoDataState(),
                   _buildReminderCard(context),
                   _buildEdukasiCard(context),
                   const SizedBox(height: 16),
@@ -197,6 +200,14 @@ class _HomeScreenState extends State<HomeScreen> {
               right: 24,
               child: FloatingActionButton.extended(
                 onPressed: () async {
+                  if (_kaloriTarget == 0) {
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                      content: Text('Anda belum bisa mencatat makan karena Ahli Gizi belum menetapkan target diet Anda.', style: GoogleFonts.manrope()),
+                      backgroundColor: Colors.orange,
+                      behavior: SnackBarBehavior.floating,
+                    ));
+                    return;
+                  }
                   await Navigator.push(
                     context,
                     MaterialPageRoute(builder: (_) => const CatatanScreen()),
