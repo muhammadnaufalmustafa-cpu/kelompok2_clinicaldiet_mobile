@@ -32,6 +32,7 @@ class CatatanScreen extends StatefulWidget {
 
 class _CatatanScreenState extends State<CatatanScreen> {
   bool _isLoading = false;
+  bool _isLocked = false;
   List<String> _dietList = [];
   String? _selectedDietType;
 
@@ -70,6 +71,20 @@ class _CatatanScreenState extends State<CatatanScreen> {
         if (_dietList.isNotEmpty) {
           _selectedDietType = _dietList.first;
         }
+
+        // Fetch nutrisi to check if target is set
+        final rm = user['rm'] as String;
+        AuthService.getNutrisiPasienPerDiet(rm, _selectedDietType ?? '').then((nutrisi) {
+          if (nutrisi == null) {
+            AuthService.getNutrisiPasien(rm).then((fallbackNutrisi) {
+              final kaloriTarget = (fallbackNutrisi?['kalori_target'] as num?)?.toDouble() ?? 0;
+              if (mounted) setState(() => _isLocked = kaloriTarget == 0);
+            });
+          } else {
+            final kaloriTarget = (nutrisi['kalori_target'] as num?)?.toDouble() ?? 0;
+            if (mounted) setState(() => _isLocked = kaloriTarget == 0);
+          }
+        });
 
         // BB/TB dari histori terakhir
         final history = AuthService.getBBTBHistory(user);
@@ -388,13 +403,14 @@ class _CatatanScreenState extends State<CatatanScreen> {
                   const SizedBox(height: 20),
                   _buildMealSection(icon: Icons.storefront_outlined, iconBg: const Color(0xFFD1FAE5), label: 'SELINGAN SORE', controller: _selinganSoreCtrl, hint: 'Ketik di sini...', session: 'Selingan Sore', jam: _jamSelinganSore),
                   const SizedBox(height: 20),
-                  _buildMealSection(icon: Icons.nightlight_outlined, iconBg: const Color(0xFFEDE9FE), label: 'MAKAN MALAM', controller: _malamCtrl, hint: 'Ketik di sini...', session: 'Malam', jam: _jamMalam),
-                ],
+                    _buildMealSection(icon: Icons.nightlight_outlined, iconBg: const Color(0xFFEDE9FE), label: 'MAKAN MALAM', controller: _malamCtrl, hint: 'Ketik di sini...', session: 'Malam', jam: _jamMalam),
+                  ],
+                ),
               ),
             ),
-          ),
-          _buildBottomButton(context),
-        ],
+            if (!_isLocked) _buildBottomButton(context),
+          ],
+        ),
       ),
     );
   }

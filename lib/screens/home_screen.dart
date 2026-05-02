@@ -47,6 +47,7 @@ class _HomeScreenState extends State<HomeScreen> {
     List<Map<String, dynamic>> bbHistory = [];
     Map<String, dynamic>? lastMealLog;
     String ahliGiziName = '';
+    Map<String, dynamic>? selectedAhliGizi;
 
     if (user != null && user['rm'] != null) {
       final rm = user['rm'] as String;
@@ -74,6 +75,7 @@ class _HomeScreenState extends State<HomeScreen> {
         final allAG = await AuthService.getAllAhliGizi();
         try {
           final ag = allAG.firstWhere((a) => a['nip'] == nip);
+          selectedAhliGizi = ag;
           ahliGiziName = ag['name'] as String? ?? '';
         } catch (_) {}
       }
@@ -86,6 +88,7 @@ class _HomeScreenState extends State<HomeScreen> {
         _bbHistory = bbHistory;
         _lastMealLog = lastMealLog;
         _ahliGiziName = ahliGiziName;
+        _selectedAhliGizi = selectedAhliGizi;
         _isLoading = false;
       });
     }
@@ -111,11 +114,6 @@ class _HomeScreenState extends State<HomeScreen> {
   double get _karboAktual => (_currentDietNutrisi?['karbo_aktual'] as num?)?.toDouble() ?? 0;
   double get _karboPercent => _karboTarget > 0 ? (_karboAktual / _karboTarget).clamp(0.0, 1.0) : 0.0;
 
-  double get _seratAktual => (_currentDietNutrisi?['serat_aktual'] as num?)?.toDouble() ?? 0;
-  double get _seratTarget => (_currentDietNutrisi?['serat_target'] as num?)?.toDouble() ?? 30;
-  double get _hidrasiAktual => (_currentDietNutrisi?['hidrasi_aktual'] as num?)?.toDouble() ?? 0;
-  double get _hidrasiTarget => (_currentDietNutrisi?['hidrasi_target'] as num?)?.toDouble() ?? 2.5;
-
   // ── BB/TB dari histori terakhir ──
   double get _bbTerakhir {
     if (_bbHistory.isNotEmpty) {
@@ -137,14 +135,6 @@ class _HomeScreenState extends State<HomeScreen> {
       return _currentDietNutrisi?['evaluasi_ahli_gizi'] ?? '';
     }
     return _user?['catatan_evaluasi'] ?? '';
-  }
-
-  // ── Daftar diet aktif pasien ──
-  List<String> get _dietList {
-    final raw = _user?['diet_types'];
-    if (raw is List && raw.isNotEmpty) return raw.cast<String>();
-    final single = _user?['diet_type'] as String? ?? '';
-    return single.isEmpty ? [] : [single];
   }
 
   String _fmt(double val) =>
@@ -176,6 +166,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   _buildTopBar(context),
                   // ── BB/TB Harian ──
                   _buildBBTBCard(),
+                  // ── Kartu Ahli Gizi Utama ──
+                  if (_selectedAhliGizi != null) _buildAhliGiziCard(context),
                   // ── Diet Swipeable Cards ──
                   _buildDietSection(),
                   // ── Evaluasi Ahli Gizi ──
@@ -379,6 +371,68 @@ class _HomeScreenState extends State<HomeScreen> {
         Text(value, style: GoogleFonts.manrope(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
         Text(label, style: GoogleFonts.manrope(fontSize: 10, color: AppColors.textSecondary), textAlign: TextAlign.center),
       ]),
+    );
+  }
+
+  Widget _buildAhliGiziCard(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.divider),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 50,
+              height: 50,
+              decoration: const BoxDecoration(
+                color: Color(0xFFE0F2FE),
+                shape: BoxShape.circle,
+              ),
+              child: Center(
+                child: Text(
+                  (_selectedAhliGizi?['name'] as String? ?? 'A').substring(0, 1).toUpperCase(),
+                  style: GoogleFonts.manrope(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF0284C7),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _selectedAhliGizi?['name'] ?? '-',
+                    style: GoogleFonts.manrope(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textPrimary,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Ahli Gizi Anda',
+                    style: GoogleFonts.manrope(
+                      fontSize: 12,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
