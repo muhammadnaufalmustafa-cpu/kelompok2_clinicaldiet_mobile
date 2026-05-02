@@ -33,7 +33,7 @@ void main() async {
   Widget homeWidget;
   if (role == 'pasien') {
     // Step 1: Cek apakah sudah pilih ahli gizi
-    final ahliGiziNip = user?['ahli_gizi_nip'] as String?;
+    final ahliGiziNip = (user?['ahli_gizi_nip'] ?? user?['selected_ahli_gizi_nip']) as String?;
     final hasAhliGizi = ahliGiziNip != null && ahliGiziNip.isNotEmpty;
 
     if (!hasAhliGizi) {

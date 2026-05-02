@@ -424,18 +424,21 @@ class _CatatanScreenState extends State<CatatanScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              GestureDetector(
-                onTap: () => Navigator.pop(context),
-                child: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: AppColors.background,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: AppColors.divider),
+              if (Navigator.canPop(context))
+                GestureDetector(
+                  onTap: () => Navigator.pop(context),
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppColors.background,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: AppColors.divider),
+                    ),
+                    child: const Icon(Icons.arrow_back_ios_new, size: 16, color: AppColors.textPrimary),
                   ),
-                  child: const Icon(Icons.arrow_back_ios_new, size: 16, color: AppColors.textPrimary),
-                ),
-              ),
+                )
+              else
+                const SizedBox(width: 34),
               Text('Clinical Diet', style: GoogleFonts.manrope(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.primary)),
               const Icon(Icons.notifications_outlined, color: AppColors.textSecondary),
             ],
