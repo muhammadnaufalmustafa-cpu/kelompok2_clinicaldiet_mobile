@@ -24,6 +24,7 @@ class _HomeScreenState extends State<HomeScreen> {
   List<Map<String, dynamic>> _bbHistory = [];
   Map<String, dynamic>? _lastMealLog; // catatan makan terakhir
   String _ahliGiziName = ''; // nama ahli gizi aktif
+  Map<String, dynamic>? _selectedAhliGizi;
   bool _isLoading = true;
   int _dietPageIndex = 0;
   final PageController _dietPageCtrl = PageController();

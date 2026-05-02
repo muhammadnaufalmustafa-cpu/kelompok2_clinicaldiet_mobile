@@ -411,7 +411,6 @@ class _CatatanScreenState extends State<CatatanScreen> {
             if (!_isLocked) _buildBottomButton(context),
           ],
         ),
-      ),
     );
   }
 
