@@ -32,10 +32,18 @@ class _AhliGiziPasienScreenState extends State<AhliGiziPasienScreen> {
   }
 
   Future<void> _loadData() async {
-    final pasien = await AuthService.getAllPasien();
+    final user = await AuthService.getLoggedInUser();
+    final allPasien = await AuthService.getAllPasien();
+    
+    // FILTER: Hanya ambil pasien yang memilih Ahli Gizi ini
+    final myPasien = allPasien.where((p) => 
+      p['role'] == 'pasien' && 
+      p['selected_ahli_gizi_nip'] == user?['nip']
+    ).toList();
+
     if (mounted) {
       setState(() {
-        _allPasien = pasien;
+        _allPasien = myPasien;
         _applyFilter();
         _isLoading = false;
       });

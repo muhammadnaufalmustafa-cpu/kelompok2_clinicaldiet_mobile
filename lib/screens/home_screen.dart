@@ -174,8 +174,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildTopBar(context),
-                  // ── Quick Actions (Pilih/Ganti Diet & Ahli Gizi) ──
-                  _buildQuickActions(context),
                   // ── BB/TB Harian ──
                   _buildBBTBCard(),
                   // ── Diet Swipeable Cards ──
@@ -190,6 +188,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     _buildNoDataState(),
                   _buildReminderCard(context),
                   _buildEdukasiCard(context),
+                  const SizedBox(height: 16),
+                  // ── Quick Actions (Pilih/Ganti Diet & Ahli Gizi) ──
+                  _buildQuickActions(context),
                   const SizedBox(height: 16),
                 ],
               ),

@@ -26,11 +26,18 @@ class _AhliGiziDashboardScreenState extends State<AhliGiziDashboardScreen> {
 
   Future<void> _loadData() async {
     final user = await AuthService.getLoggedInUser();
-    final pasien = await AuthService.getAllPasien();
+    final allPasien = await AuthService.getAllPasien();
+    
+    // FILTER: Hanya ambil pasien yang memilih Ahli Gizi ini
+    final myPasien = allPasien.where((p) => 
+      p['role'] == 'pasien' && 
+      p['selected_ahli_gizi_nip'] == user?['nip']
+    ).toList();
+
     if (mounted) {
       setState(() {
         _user = user;
-        _allPasien = pasien;
+        _allPasien = myPasien;
         _isLoading = false;
       });
     }
