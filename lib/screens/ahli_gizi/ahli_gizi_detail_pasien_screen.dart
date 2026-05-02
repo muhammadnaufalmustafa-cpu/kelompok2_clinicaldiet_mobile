@@ -244,6 +244,8 @@ class _AhliGiziDetailPasienScreenState
         return const Color(0xFF0284C7);
       case 'meninggal':
         return const Color(0xFF6B7280);
+      case 'dropout':
+        return const Color(0xFFDC2626);
       default:
         return AppColors.primary;
     }
@@ -452,28 +454,30 @@ class _AhliGiziDetailPasienScreenState
         ),
         const SizedBox(height: 20),
 
-        // ── Pilih Diet ──
-        _buildSubSectionLabel('PILIH JENIS DIET', 'Data nutrisi akan disimpan per jenis diet'),
-        const SizedBox(height: 10),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14), border: Border.all(color: AppColors.divider)),
-          child: DropdownButtonFormField<String>(
-            value: _selectedDietType,
-            decoration: const InputDecoration(border: InputBorder.none),
-            hint: Text('Pilih jenis diet...', style: GoogleFonts.manrope(color: AppColors.textMuted, fontSize: 14)),
-            style: GoogleFonts.manrope(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
-            items: _getDietList().map((d) => DropdownMenuItem(
-              value: d,
-              child: Text(d, style: GoogleFonts.manrope(fontSize: 14)),
-            )).toList(),
-            onChanged: (val) {
-              setState(() => _selectedDietType = val);
-              _loadNutrisi();
-            },
+        // ── Pilih Diet (Hanya jika > 1) ──
+        if (_getDietList().length > 1) ...[
+          _buildSubSectionLabel('PILIH JENIS DIET', 'Data nutrisi akan disimpan per jenis diet'),
+          const SizedBox(height: 10),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14), border: Border.all(color: AppColors.divider)),
+            child: DropdownButtonFormField<String>(
+              value: _selectedDietType,
+              decoration: const InputDecoration(border: InputBorder.none),
+              hint: Text('Pilih jenis diet...', style: GoogleFonts.manrope(color: AppColors.textMuted, fontSize: 14)),
+              style: GoogleFonts.manrope(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
+              items: _getDietList().map((d) => DropdownMenuItem(
+                value: d,
+                child: Text(d, style: GoogleFonts.manrope(fontSize: 14)),
+              )).toList(),
+              onChanged: (val) {
+                setState(() => _selectedDietType = val);
+                _loadNutrisi();
+              },
+            ),
           ),
-        ),
-        const SizedBox(height: 20),
+          const SizedBox(height: 20),
+        ],
 
         // ── Sub-section: Target Harian ──
         _buildSubSectionLabel(
@@ -747,19 +751,31 @@ class _AhliGiziDetailPasienScreenState
   }
 
   Widget _buildStatusButtons() {
-    return Row(
+    return Column(
       children: [
-        Expanded(
-            child:
-                _buildStatusButton('Aktif', 'aktif', AppColors.primary)),
-        const SizedBox(width: 8),
-        Expanded(
-            child: _buildStatusButton(
-                'Berhasil', 'berhasil', const Color(0xFF0284C7))),
-        const SizedBox(width: 8),
-        Expanded(
-            child: _buildStatusButton(
-                'Meninggal', 'meninggal', const Color(0xFF6B7280))),
+        Row(
+          children: [
+            Expanded(
+                child:
+                    _buildStatusButton('Aktif', 'aktif', AppColors.primary)),
+            const SizedBox(width: 8),
+            Expanded(
+                child: _buildStatusButton(
+                    'Berhasil', 'berhasil', const Color(0xFF0284C7))),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(
+                child: _buildStatusButton(
+                    'Meninggal', 'meninggal', const Color(0xFF6B7280))),
+            const SizedBox(width: 8),
+            Expanded(
+                child: _buildStatusButton(
+                    'Dropout', 'dropout', const Color(0xFFDC2626))),
+          ],
+        ),
       ],
     );
   }

@@ -42,6 +42,8 @@ class _AhliGiziDashboardScreenState extends State<AhliGiziDashboardScreen> {
       _allPasien.where((p) => p['status'] == 'berhasil').length;
   int get _meninggalCount =>
       _allPasien.where((p) => p['status'] == 'meninggal').length;
+  int get _dropoutCount =>
+      _allPasien.where((p) => p['status'] == 'dropout').length;
 
   @override
   Widget build(BuildContext context) {
@@ -132,18 +134,28 @@ class _AhliGiziDashboardScreenState extends State<AhliGiziDashboardScreen> {
                             child: _buildStatCard(
                                 'Aktif', _aktifCount,
                                 AppColors.primary, Icons.person_outlined)),
-                        const SizedBox(width: 10),
+                        const SizedBox(width: 8),
                         Expanded(
                             child: _buildStatCard(
                                 'Berhasil', _berhasilCount,
                                 const Color(0xFF0284C7),
                                 Icons.check_circle_outline)),
-                        const SizedBox(width: 10),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
                         Expanded(
                             child: _buildStatCard(
                                 'Meninggal', _meninggalCount,
                                 const Color(0xFF6B7280),
                                 Icons.info_outline)),
+                        const SizedBox(width: 8),
+                        Expanded(
+                            child: _buildStatCard(
+                                'Gagal/Drop', _dropoutCount,
+                                const Color(0xFFDC2626),
+                                Icons.cancel_outlined)),
                       ],
                     ),
                     const SizedBox(height: 24),
@@ -189,6 +201,9 @@ class _AhliGiziDashboardScreenState extends State<AhliGiziDashboardScreen> {
                                     case 2:
                                       text = 'Meninggal';
                                       break;
+                                    case 3:
+                                      text = 'Gagal';
+                                      break;
                                     default:
                                       text = '';
                                       break;
@@ -221,6 +236,9 @@ class _AhliGiziDashboardScreenState extends State<AhliGiziDashboardScreen> {
                             ]),
                             BarChartGroupData(x: 2, barRods: [
                               BarChartRodData(toY: _meninggalCount.toDouble(), color: const Color(0xFF6B7280), width: 22, borderRadius: BorderRadius.circular(4)),
+                            ]),
+                            BarChartGroupData(x: 3, barRods: [
+                              BarChartRodData(toY: _dropoutCount.toDouble(), color: const Color(0xFFDC2626), width: 22, borderRadius: BorderRadius.circular(4)),
                             ]),
                           ],
                         ),

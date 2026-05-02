@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_theme.dart';
 import '../services/auth_service.dart';
 import 'tampil_leaflet_onboarding_screen.dart';
+import 'pilih_ahli_gizi_screen.dart';
 
 class PilihJenisDietScreen extends StatefulWidget {
   final bool isFromProfil;
@@ -82,17 +83,31 @@ class _PilihJenisDietScreenState extends State<PilihJenisDietScreen> {
     final firstDiet = _selectedDiets.first;
     final pdfUrl = _dietPdfUrls[firstDiet] ?? '';
 
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(
-        builder: (_) => TampilLeafletOnboardingScreen(
-          dietTitle: firstDiet,
-          pdfUrl: pdfUrl,
-          isFromProfil: widget.isFromProfil,
-          allSelectedDiets: _selectedDiets.toList(),
+    if (widget.isFromProfil) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => PilihAhliGiziScreen(
+            isFromProfil: true,
+            pendingDietTitle: firstDiet,
+            pendingPdfUrl: pdfUrl,
+            allSelectedDiets: _selectedDiets.toList(),
+          ),
         ),
-      ),
-    );
+      );
+    } else {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => TampilLeafletOnboardingScreen(
+            dietTitle: firstDiet,
+            pdfUrl: pdfUrl,
+            isFromProfil: widget.isFromProfil,
+            allSelectedDiets: _selectedDiets.toList(),
+          ),
+        ),
+      );
+    }
   }
 
   @override

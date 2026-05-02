@@ -3,9 +3,21 @@ import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_theme.dart';
 import '../services/auth_service.dart';
 import 'inform_consent_screen.dart';
+import 'tampil_leaflet_onboarding_screen.dart';
 
 class PilihAhliGiziScreen extends StatefulWidget {
-  const PilihAhliGiziScreen({super.key});
+  final bool isFromProfil;
+  final String? pendingDietTitle;
+  final String? pendingPdfUrl;
+  final List<String>? allSelectedDiets;
+
+  const PilihAhliGiziScreen({
+    super.key, 
+    this.isFromProfil = false,
+    this.pendingDietTitle,
+    this.pendingPdfUrl,
+    this.allSelectedDiets,
+  });
 
   @override
   State<PilihAhliGiziScreen> createState() => _PilihAhliGiziScreenState();
@@ -108,10 +120,27 @@ class _PilihAhliGiziScreenState extends State<PilihAhliGiziScreen> {
                   behavior: SnackBarBehavior.floating,
                 ),
               );
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (_) => const InformConsentScreen()),
-              );
+
+              if (widget.isFromProfil) {
+                if (widget.pendingDietTitle != null && widget.pendingPdfUrl != null) {
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(builder: (_) => TampilLeafletOnboardingScreen(
+                      dietTitle: widget.pendingDietTitle!,
+                      pdfUrl: widget.pendingPdfUrl!,
+                      isFromProfil: true,
+                      allSelectedDiets: widget.allSelectedDiets ?? [],
+                    )),
+                  );
+                } else {
+                  Navigator.pop(context);
+                }
+              } else {
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (_) => const InformConsentScreen()),
+                );
+              }
             }
           },
           child: Container(

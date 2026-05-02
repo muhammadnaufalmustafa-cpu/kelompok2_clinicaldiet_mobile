@@ -272,99 +272,53 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // ── Quick Actions: Ganti Ahli Gizi / Diet ───────────────────────────
   Widget _buildQuickActions(BuildContext context) {
-    final ahliGiziName = _user?['ahli_gizi_name'] as String? ?? '';
-    final dietList = _dietList;
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-      child: Row(
-        children: [
-          Expanded(
-            child: GestureDetector(
-              onTap: () async {
-                await Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const PilihAhliGiziScreen()),
-                );
-                _loadData();
-              },
-              child: Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: AppColors.divider),
-                ),
-                child: Row(
+      child: GestureDetector(
+        onTap: () async {
+          await Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const PilihJenisDietScreen(isFromProfil: true)),
+          );
+          _loadData();
+        },
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppColors.divider),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.02),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              )
+            ]
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(color: AppColors.primaryLight, borderRadius: BorderRadius.circular(12)),
+                child: const Icon(Icons.add_circle_outline, color: AppColors.primary, size: 22),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(color: const Color(0xFFE0F2FE), borderRadius: BorderRadius.circular(10)),
-                      child: const Icon(Icons.person_search_outlined, color: Color(0xFF0284C7), size: 18),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Ahli Gizi', style: GoogleFonts.manrope(fontSize: 10, color: AppColors.textMuted)),
-                          Text(
-                            ahliGiziName.isEmpty ? 'Pilih Ahli Gizi' : ahliGiziName.split(',').first,
-                            style: GoogleFonts.manrope(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
-                            maxLines: 1, overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                      ),
-                    ),
-                    const Icon(Icons.chevron_right, size: 16, color: AppColors.textMuted),
+                    Text('Program Diet Baru', style: GoogleFonts.manrope(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
+                    const SizedBox(height: 2),
+                    Text('Pilih diet & Ahli Gizi Anda', style: GoogleFonts.manrope(fontSize: 11, color: AppColors.textSecondary)),
                   ],
                 ),
               ),
-            ),
+              const Icon(Icons.arrow_forward_ios_rounded, size: 16, color: AppColors.primary),
+            ],
           ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: GestureDetector(
-              onTap: () async {
-                await Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const PilihJenisDietScreen(isFromProfil: true)),
-                );
-                _loadData();
-              },
-              child: Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: AppColors.divider),
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(color: AppColors.primaryLight, borderRadius: BorderRadius.circular(10)),
-                      child: const Icon(Icons.restaurant_menu_outlined, color: AppColors.primary, size: 18),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Jenis Diet', style: GoogleFonts.manrope(fontSize: 10, color: AppColors.textMuted)),
-                          Text(
-                            dietList.isEmpty ? 'Pilih Diet' : '${dietList.length} Program',
-                            style: GoogleFonts.manrope(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const Icon(Icons.chevron_right, size: 16, color: AppColors.textMuted),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }

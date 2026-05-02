@@ -951,16 +951,8 @@ class _ProfilScreenState extends State<ProfilScreen> {
                         ),
                         _divider(),
                         _buildActionItem(
-                          icon: Icons.swap_horiz,
-                          title: 'Ganti Ahli Gizi',
-                          onTap: () {
-                            Navigator.push(context, MaterialPageRoute(builder: (_) => const PilihAhliGiziScreen())).then((_) => _loadUser());
-                          },
-                        ),
-                        _divider(),
-                        _buildActionItem(
-                          icon: Icons.restaurant_menu_outlined,
-                          title: 'Ganti Jenis Diet',
+                          icon: Icons.sync_alt,
+                          title: 'Ubah Program Diet & Ahli Gizi',
                           onTap: () {
                             Navigator.push(
                               context,
