@@ -657,7 +657,12 @@ class AuthService {
 
   // ─────────────────────────── INFORM CONSENT ──────────────────────────────
 
-  static Future<bool> saveInformConsent(String rm, String signaturePath) async {
+  static Future<bool> saveInformConsent(
+    String rm,
+    String signaturePath, {
+    String? signatureBase64,
+    String? consentDocBase64,
+  }) async {
     final prefs = await SharedPreferences.getInstance();
     final usersJson = prefs.getString(_usersKey);
     if (usersJson == null) return false;
@@ -668,6 +673,12 @@ class AuthService {
     users[idx]['inform_consent_signed'] = true;
     users[idx]['consent_signature_path'] = signaturePath;
     users[idx]['consent_signed_at'] = DateTime.now().toIso8601String();
+    if (signatureBase64 != null && signatureBase64.isNotEmpty) {
+      users[idx]['consent_signature_base64'] = signatureBase64;
+    }
+    if (consentDocBase64 != null && consentDocBase64.isNotEmpty) {
+      users[idx]['consent_doc_base64'] = consentDocBase64;
+    }
     await prefs.setString(_usersKey, jsonEncode(users));
     final loggedIn = await getLoggedInUser();
     if (loggedIn != null && loggedIn['rm'].toString().toLowerCase() == rm.toLowerCase()) {
@@ -736,6 +747,12 @@ class AuthService {
     double karboAktual = 0,
     double seratAktual = 0,
     double hidrasiAktual = 0,
+    bool energiChecked = false,
+    bool proteinChecked = false,
+    bool karboChecked = false,
+    bool lemakChecked = false,
+    bool natriumChecked = false,
+    bool kaliumChecked = false,
     String catatan = '',
     String evaluasiAhliGizi = '',
   }) async {
@@ -765,6 +782,12 @@ class AuthService {
       'karbo_aktual': karboAktual,
       'serat_aktual': seratAktual,
       'hidrasi_aktual': hidrasiAktual,
+      'energi_checked': energiChecked,
+      'protein_checked': proteinChecked,
+      'karbo_checked': karboChecked,
+      'lemak_checked': lemakChecked,
+      'natrium_checked': natriumChecked,
+      'kalium_checked': kaliumChecked,
       'catatan': catatan,
       'evaluasi_ahli_gizi': evaluasiAhliGizi,
       'updated_at': DateTime.now().toIso8601String(),

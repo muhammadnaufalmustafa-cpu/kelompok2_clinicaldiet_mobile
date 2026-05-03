@@ -1,7 +1,12 @@
+import 'dart:convert';
+import 'dart:io';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../theme/app_theme.dart';
 import '../../services/auth_service.dart';
+import '../../services/web_download.dart';
 import '../grafik_harian_screen.dart';
 
 class AhliGiziDetailPasienScreen extends StatefulWidget {
@@ -21,7 +26,6 @@ class _AhliGiziDetailPasienScreenState
   String? _selectedDietType; // Jenis diet yang sedang diedit
 
   // ── Existing controllers ──
-  final _evaluasiCtrl = TextEditingController();
   final _targetCtrl = TextEditingController();
 
   // ── Nutrition Target controllers ──
@@ -30,25 +34,24 @@ class _AhliGiziDetailPasienScreenState
   final _lemakTargetCtrl = TextEditingController();
   final _karboTargetCtrl = TextEditingController();
 
-  // ── Nutrition Actual controllers ──
-  final _kaloriAktualCtrl = TextEditingController();
-  final _proteinAktualCtrl = TextEditingController();
-  final _lemakAktualCtrl = TextEditingController();
-  final _karboAktualCtrl = TextEditingController();
-
   // ── Other monitoring controllers ──
-  final _seratAktualCtrl = TextEditingController();
   final _seratTargetCtrl = TextEditingController();
-  final _hidrasiAktualCtrl = TextEditingController();
   final _hidrasiTargetCtrl = TextEditingController();
   final _catatanNutrisiCtrl = TextEditingController();
+
+  // ── Target Checkboxes ──
+  bool _cbEnergi = false;
+  bool _cbProtein = false;
+  bool _cbKarbo = false;
+  bool _cbLemak = false;
+  bool _cbNatrium = false;
+  bool _cbKalium = false;
 
   @override
   void initState() {
     super.initState();
     _status = widget.pasien['status'] ?? 'aktif';
     _targetCtrl.text = widget.pasien['target_diet'] ?? '';
-    _evaluasiCtrl.text = widget.pasien['catatan_evaluasi'] ?? '';
     // Set default diet ke diet pertama pasien
     final diets = _getDietList();
     if (diets.isNotEmpty) _selectedDietType = diets.first;
@@ -57,19 +60,12 @@ class _AhliGiziDetailPasienScreenState
 
   @override
   void dispose() {
-    _evaluasiCtrl.dispose();
     _targetCtrl.dispose();
     _kaloriTargetCtrl.dispose();
     _proteinTargetCtrl.dispose();
     _lemakTargetCtrl.dispose();
     _karboTargetCtrl.dispose();
-    _kaloriAktualCtrl.dispose();
-    _proteinAktualCtrl.dispose();
-    _lemakAktualCtrl.dispose();
-    _karboAktualCtrl.dispose();
-    _seratAktualCtrl.dispose();
     _seratTargetCtrl.dispose();
-    _hidrasiAktualCtrl.dispose();
     _hidrasiTargetCtrl.dispose();
     _catatanNutrisiCtrl.dispose();
     super.dispose();
@@ -93,16 +89,15 @@ class _AhliGiziDetailPasienScreenState
           _proteinTargetCtrl.text = _fmtNum(nutrisiDiet['protein_target']);
           _lemakTargetCtrl.text = _fmtNum(nutrisiDiet['lemak_target']);
           _karboTargetCtrl.text = _fmtNum(nutrisiDiet['karbo_target']);
-          _kaloriAktualCtrl.text = _fmtNum(nutrisiDiet['kalori_aktual']);
-          _proteinAktualCtrl.text = _fmtNum(nutrisiDiet['protein_aktual']);
-          _lemakAktualCtrl.text = _fmtNum(nutrisiDiet['lemak_aktual']);
-          _karboAktualCtrl.text = _fmtNum(nutrisiDiet['karbo_aktual']);
-          _seratAktualCtrl.text = _fmtNum(nutrisiDiet['serat_aktual']);
           _seratTargetCtrl.text = _fmtNum(nutrisiDiet['serat_target']);
-          _hidrasiAktualCtrl.text = _fmtNum(nutrisiDiet['hidrasi_aktual']);
           _hidrasiTargetCtrl.text = _fmtNum(nutrisiDiet['hidrasi_target']);
           _catatanNutrisiCtrl.text = nutrisiDiet['catatan'] ?? '';
-          _evaluasiCtrl.text = nutrisiDiet['evaluasi_ahli_gizi'] ?? widget.pasien['catatan_evaluasi'] ?? '';
+          _cbEnergi = nutrisiDiet['energi_checked'] ?? false;
+          _cbProtein = nutrisiDiet['protein_checked'] ?? false;
+          _cbKarbo = nutrisiDiet['karbo_checked'] ?? false;
+          _cbLemak = nutrisiDiet['lemak_checked'] ?? false;
+          _cbNatrium = nutrisiDiet['natrium_checked'] ?? false;
+          _cbKalium = nutrisiDiet['kalium_checked'] ?? false;
         });
       }
     } else {
@@ -114,13 +109,7 @@ class _AhliGiziDetailPasienScreenState
           _proteinTargetCtrl.text = _fmtNum(nutrisi['protein_target']);
           _lemakTargetCtrl.text = _fmtNum(nutrisi['lemak_target']);
           _karboTargetCtrl.text = _fmtNum(nutrisi['karbo_target']);
-          _kaloriAktualCtrl.text = _fmtNum(nutrisi['kalori_aktual']);
-          _proteinAktualCtrl.text = _fmtNum(nutrisi['protein_aktual']);
-          _lemakAktualCtrl.text = _fmtNum(nutrisi['lemak_aktual']);
-          _karboAktualCtrl.text = _fmtNum(nutrisi['karbo_aktual']);
-          _seratAktualCtrl.text = _fmtNum(nutrisi['serat_aktual']);
           _seratTargetCtrl.text = _fmtNum(nutrisi['serat_target']);
-          _hidrasiAktualCtrl.text = _fmtNum(nutrisi['hidrasi_aktual']);
           _hidrasiTargetCtrl.text = _fmtNum(nutrisi['hidrasi_target']);
           _catatanNutrisiCtrl.text = nutrisi['catatan'] ?? '';
         });
@@ -160,13 +149,7 @@ class _AhliGiziDetailPasienScreenState
       final proteinTarget = double.tryParse(_proteinTargetCtrl.text) ?? 0;
       final lemakTarget = double.tryParse(_lemakTargetCtrl.text) ?? 0;
       final karboTarget = double.tryParse(_karboTargetCtrl.text) ?? 0;
-      final kaloriAktual = double.tryParse(_kaloriAktualCtrl.text) ?? 0;
-      final proteinAktual = double.tryParse(_proteinAktualCtrl.text) ?? 0;
-      final lemakAktual = double.tryParse(_lemakAktualCtrl.text) ?? 0;
-      final karboAktual = double.tryParse(_karboAktualCtrl.text) ?? 0;
-      final seratAktual = double.tryParse(_seratAktualCtrl.text) ?? 0;
       final seratTarget = double.tryParse(_seratTargetCtrl.text) ?? 30;
-      final hidrasiAktual = double.tryParse(_hidrasiAktualCtrl.text) ?? 0;
       final hidrasiTarget = double.tryParse(_hidrasiTargetCtrl.text) ?? 2.5;
 
       // 1. Simpan nutrisi PER DIET (baru)
@@ -178,16 +161,21 @@ class _AhliGiziDetailPasienScreenState
           proteinTarget: proteinTarget,
           lemakTarget: lemakTarget,
           karboTarget: karboTarget,
-          kaloriAktual: kaloriAktual,
-          proteinAktual: proteinAktual,
-          lemakAktual: lemakAktual,
-          karboAktual: karboAktual,
-          seratAktual: seratAktual,
+          kaloriAktual: 0,
+          proteinAktual: 0,
+          lemakAktual: 0,
+          karboAktual: 0,
+          seratAktual: 0,
           seratTarget: seratTarget,
-          hidrasiAktual: hidrasiAktual,
+          hidrasiAktual: 0,
           hidrasiTarget: hidrasiTarget,
+          energiChecked: _cbEnergi,
+          proteinChecked: _cbProtein,
+          karboChecked: _cbKarbo,
+          lemakChecked: _cbLemak,
+          natriumChecked: _cbNatrium,
+          kaliumChecked: _cbKalium,
           catatan: _catatanNutrisiCtrl.text,
-          evaluasiAhliGizi: _evaluasiCtrl.text,
         );
       }
 
@@ -198,13 +186,13 @@ class _AhliGiziDetailPasienScreenState
         proteinTarget: proteinTarget,
         lemakTarget: lemakTarget,
         karboTarget: karboTarget,
-        energiAktual: kaloriAktual,
-        proteinAktual: proteinAktual,
-        lemakAktual: lemakAktual,
-        karboAktual: karboAktual,
-        seratAktual: seratAktual,
+        energiAktual: 0,
+        proteinAktual: 0,
+        lemakAktual: 0,
+        karboAktual: 0,
+        seratAktual: 0,
         seratTarget: seratTarget,
-        hidrasiAktual: hidrasiAktual,
+        hidrasiAktual: 0,
         hidrasiTarget: hidrasiTarget,
         catatan: _catatanNutrisiCtrl.text,
       );
@@ -213,7 +201,7 @@ class _AhliGiziDetailPasienScreenState
       await AuthService.saveTargetDietPasien(
         rm: rm,
         targetDiet: _targetCtrl.text,
-        catatanEvaluasi: _evaluasiCtrl.text,
+        catatanEvaluasi: '',
       );
 
       if (!mounted) return;
@@ -284,13 +272,6 @@ class _AhliGiziDetailPasienScreenState
             _buildTextArea(_targetCtrl,
                 'Tuliskan target diet yang ingin dicapai pasien...', 3),
             const SizedBox(height: 16),
-
-            // ── Catatan Evaluasi CPPT ──
-            _buildSectionLabel('Catatan Evaluasi (CPPT)'),
-            const SizedBox(height: 8),
-            _buildTextArea(
-                _evaluasiCtrl, 'Ketik evaluasi perkembangan diet pasien...', 5),
-            const SizedBox(height: 24),
 
             // ── NUTRISI SECTION ──
             _buildNutrisiSection(),
@@ -390,23 +371,523 @@ class _AhliGiziDetailPasienScreenState
   }
 
   Widget _buildInfoGrid() {
+    // Cek consent: bisa dari base64 (web) atau dari file path (mobile)
+    final bool hasConsent = widget.pasien['inform_consent_signed'] == true &&
+        (((widget.pasien['consent_signature_base64'] as String?) ?? '').isNotEmpty ||
+         ((widget.pasien['consent_signature_path'] as String?) ?? '').isNotEmpty);
+
+    final String? base64Sig = widget.pasien['consent_signature_base64'] as String?;
+    final String? filePath = widget.pasien['consent_signature_path'] as String?;
+    final String? signedAt = widget.pasien['consent_signed_at'] as String?;
+
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+              color: Colors.white, borderRadius: BorderRadius.circular(16)),
+          child: Column(
+            children: [
+              _buildInfoRow('Jenis Kelamin', widget.pasien['gender'] ?? '-'),
+              _buildInfoRow('Tanggal Lahir', widget.pasien['birthdate'] ?? '-'),
+              _buildInfoRow('No. Telepon / WA', widget.pasien['phone'] ?? '-', trailing: widget.pasien['phone'] != null && widget.pasien['phone'].isNotEmpty ? GestureDetector(
+                onTap: () async {
+                  String phone = widget.pasien['phone'].replaceAll(RegExp(r'\D'), '');
+                  if (phone.startsWith('0')) {
+                    phone = '62${phone.substring(1)}';
+                  }
+                  final url = Uri.parse('https://wa.me/$phone');
+                  if (await canLaunchUrl(url)) {
+                    await launchUrl(url, mode: LaunchMode.externalApplication);
+                  }
+                },
+                child: Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(color: const Color(0xFF25D366), borderRadius: BorderRadius.circular(8)),
+                  child: const Icon(Icons.chat, size: 16, color: Colors.white),
+                ),
+              ) : null),
+              _buildInfoRow(
+                  'Berat Badan', '${widget.pasien['weight'] ?? '-'} kg'),
+              _buildInfoRow(
+                  'Tinggi Badan', '${widget.pasien['height'] ?? '-'} cm'),
+              _buildInfoRow('Email', widget.pasien['email'] ?? '-'),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        // ── Informed Consent Card ──
+        _buildConsentCard(hasConsent, base64Sig, filePath, signedAt),
+      ],
+    );
+  }
+
+  Widget _buildConsentCard(bool hasConsent, String? base64Sig, String? filePath, String? signedAt) {
+    if (!hasConsent) {
+      // Belum ada consent
+      return Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFEF3C7),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: const Color(0xFFFCD34D)),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.warning_amber_rounded, color: Color(0xFFD97706), size: 20),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Pasien belum menandatangani informed consent.',
+                style: GoogleFonts.manrope(fontSize: 13, color: const Color(0xFF92400E), fontWeight: FontWeight.w500),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Format tanggal signed
+    String signedDateStr = '';
+    if (signedAt != null && signedAt.isNotEmpty) {
+      try {
+        final dt = DateTime.parse(signedAt).toLocal();
+        signedDateStr = '${dt.day}/${dt.month}/${dt.year}';
+      } catch (_) {}
+    }
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-          color: Colors.white, borderRadius: BorderRadius.circular(16)),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
+      ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildInfoRow('Jenis Kelamin', widget.pasien['gender'] ?? '-'),
-          _buildInfoRow('Tanggal Lahir', widget.pasien['birthdate'] ?? '-'),
-          _buildInfoRow('No. Telepon / WA', widget.pasien['phone'] ?? '-'),
-          _buildInfoRow(
-              'Berat Badan', '${widget.pasien['weight'] ?? '-'} kg'),
-          _buildInfoRow(
-              'Tinggi Badan', '${widget.pasien['height'] ?? '-'} cm'),
-          _buildInfoRow('Email', widget.pasien['email'] ?? '-'),
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.assignment_turned_in_outlined, color: AppColors.primary, size: 20),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Informed Consent',
+                        style: GoogleFonts.manrope(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
+                    if (signedDateStr.isNotEmpty)
+                      Text('Ditandatangani: $signedDateStr',
+                          style: GoogleFonts.manrope(fontSize: 12, color: AppColors.textSecondary)),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFDCFCE7),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.verified, color: Color(0xFF16A34A), size: 14),
+                    const SizedBox(width: 4),
+                    Text('Ditandatangani', style: GoogleFonts.manrope(fontSize: 11, fontWeight: FontWeight.w700, color: const Color(0xFF16A34A))),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          const Divider(),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () => _showConsentDialog(base64Sig, filePath, signedDateStr),
+                  icon: const Icon(Icons.visibility_outlined, size: 16, color: AppColors.primary),
+                  label: Text('Lihat', style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.primary)),
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: AppColors.primary),
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () => _downloadConsent(widget.pasien['consent_doc_base64'] as String?, base64Sig, filePath, widget.pasien['rm'] ?? 'pasien'),
+                  icon: const Icon(Icons.download_outlined, size: 16, color: Colors.white),
+                  label: Text('Download', style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.white)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    elevation: 0,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );
+  }
+
+  void _showConsentDialog(String? base64Sig, String? filePath, String signedDate) {
+    final String? consentDocB64 = widget.pasien['consent_doc_base64'] as String?;
+    final bool hasFullDoc = consentDocB64 != null && consentDocB64.isNotEmpty;
+
+    Widget imageWidget;
+    if (base64Sig != null && base64Sig.isNotEmpty) {
+      final bytes = base64Decode(base64Sig);
+      imageWidget = Image.memory(bytes, fit: BoxFit.contain);
+    } else if (filePath != null && filePath.isNotEmpty && !kIsWeb) {
+      imageWidget = Image.file(File(filePath), fit: BoxFit.contain);
+    } else {
+      imageWidget = Center(
+        child: Text('Tanda tangan tidak tersedia.', style: GoogleFonts.manrope(color: AppColors.textSecondary)),
+      );
+    }
+
+    // Isi dokumen consent lengkap (teks)
+    final consentPoints = [
+      'Saya bersedia untuk mengisi catatan makan harian secara jujur dan tepat waktu.',
+      'Saya memahami bahwa apabila tidak mengisi catatan makan selama 3 (tiga) hari berturut-turut, saya akan dinyatakan GUGUR dari program dan tidak dapat menggunakan aplikasi hingga dikonfirmasi ulang oleh ahli gizi.',
+      'Saya bersedia memberikan data kesehatan yang akurat, termasuk berat badan dan tinggi badan secara berkala.',
+      'Saya memahami bahwa data saya akan digunakan untuk keperluan pemantauan gizi dan tidak akan disebarluaskan kepada pihak ketiga tanpa izin.',
+      'Saya berhak untuk mengundurkan diri dari program dengan memberitahukan ahli gizi terlebih dahulu.',
+      'Saya memahami bahwa rekomendasi dalam aplikasi ini bersifat edukatif dan tidak menggantikan konsultasi medis langsung.',
+    ];
+
+    showDialog(
+      context: context,
+      builder: (_) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: 640,
+            maxHeight: MediaQuery.of(context).size.height * 0.88,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Header
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                decoration: const BoxDecoration(
+                  color: AppColors.primary,
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.assignment_turned_in, color: Colors.white, size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Surat Persetujuan Program Diet',
+                              style: GoogleFonts.manrope(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.white)),
+                          Text('Informed Consent — ${widget.pasien['name'] ?? ''}',
+                              style: GoogleFonts.manrope(fontSize: 11, color: Colors.white.withValues(alpha: 0.85))),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Icons.close, color: Colors.white, size: 20),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Body — dokumen lengkap
+              Flexible(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Status badge
+                      if (signedDate.isNotEmpty)
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFDCFCE7),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: const Color(0xFF86EFAC)),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.verified, color: Color(0xFF16A34A), size: 18),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  'Disetujui & ditandatangani pada: $signedDate',
+                                  style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w700, color: const Color(0xFF16A34A)),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      const SizedBox(height: 16),
+
+                      // Info pasien
+                      Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF1FAF5),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: const Color(0xFFBBF0D4)),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('DATA PASIEN', style: GoogleFonts.manrope(fontSize: 10, fontWeight: FontWeight.w700, color: AppColors.primary, letterSpacing: 1.2)),
+                            const SizedBox(height: 8),
+                            _consentInfoRow('Nama Lengkap', widget.pasien['name'] ?? '-'),
+                            _consentInfoRow('No. Rekam Medis', widget.pasien['rm'] ?? '-'),
+                            _consentInfoRow('Tanggal Tanda Tangan', signedDate.isEmpty ? '-' : signedDate),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Judul dokumen
+                      Center(
+                        child: Text('SURAT PERSETUJUAN PROGRAM DIET',
+                            textAlign: TextAlign.center,
+                            style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.textPrimary, letterSpacing: 0.5)),
+                      ),
+                      const SizedBox(height: 14),
+
+                      // Isi consent
+                      Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFAFAFA),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: AppColors.divider),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Saya dengan ini menyatakan bahwa saya telah memahami dan menyetujui untuk mengikuti Program Diet Klinik yang diselenggarakan oleh Clinical Diet.',
+                              style: GoogleFonts.manrope(fontSize: 13, color: AppColors.textSecondary, height: 1.6),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Saya memahami bahwa program ini melibatkan pemantauan asupan makanan, berat badan, tinggi badan, dan parameter gizi lainnya oleh ahli gizi yang telah ditunjuk.',
+                              style: GoogleFonts.manrope(fontSize: 13, color: AppColors.textSecondary, height: 1.6),
+                            ),
+                            const SizedBox(height: 10),
+                            ...consentPoints.asMap().entries.map((e) => Padding(
+                              padding: const EdgeInsets.only(bottom: 8),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  SizedBox(
+                                    width: 24,
+                                    child: Text('${e.key + 1}.', style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.primary)),
+                                  ),
+                                  Expanded(
+                                    child: Text(e.value, style: GoogleFonts.manrope(fontSize: 13, color: AppColors.textSecondary, height: 1.5)),
+                                  ),
+                                ],
+                              ),
+                            )),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Dengan menandatangani dokumen ini, saya menyatakan bahwa saya telah membaca, memahami, dan menyetujui seluruh ketentuan di atas.',
+                              style: GoogleFonts.manrope(fontSize: 13, color: AppColors.textSecondary, height: 1.6),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+
+                      // Status persetujuan (checkbox)
+                      Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF0FDF4),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: AppColors.primary.withValues(alpha: 0.5), width: 1.5),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 22, height: 22,
+                              decoration: BoxDecoration(color: AppColors.primary, borderRadius: BorderRadius.circular(6)),
+                              child: const Icon(Icons.check, color: Colors.white, size: 14),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                'Saya telah membaca dan menyetujui seluruh ketentuan di atas',
+                                style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.primaryDark),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Tanda tangan
+                      Text('TANDA TANGAN PASIEN',
+                          style: GoogleFonts.manrope(fontSize: 10, fontWeight: FontWeight.w700, color: AppColors.textSecondary, letterSpacing: 1.2)),
+                      const SizedBox(height: 8),
+                      Container(
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          border: Border.all(color: AppColors.primary.withValues(alpha: 0.5), width: 1.5),
+                          borderRadius: BorderRadius.circular(12),
+                          color: Colors.white,
+                        ),
+                        padding: const EdgeInsets.all(10),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: imageWidget,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.info_outline, size: 13, color: AppColors.textMuted),
+                          const SizedBox(width: 4),
+                          Text('Tanda tangan digital pasien — ${widget.pasien['name'] ?? ''}',
+                              style: GoogleFonts.manrope(fontSize: 11, color: AppColors.textMuted)),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              // Footer — tombol download
+              Container(
+                padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
+                decoration: const BoxDecoration(
+                  border: Border(top: BorderSide(color: Color(0xFFE2E8F0))),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.pop(context),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          side: BorderSide(color: AppColors.divider),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                        child: Text('Tutup', style: GoogleFonts.manrope(fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      flex: 2,
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          Navigator.pop(context);
+                          _downloadConsent(consentDocB64, base64Sig, filePath, widget.pasien['rm'] ?? 'pasien');
+                        },
+                        icon: const Icon(Icons.download_outlined, size: 16, color: Colors.white),
+                        label: Text('Download Dokumen', style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.white)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          elevation: 0,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _consentInfoRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 5),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 140,
+            child: Text(label, style: GoogleFonts.manrope(fontSize: 12, color: AppColors.textSecondary)),
+          ),
+          Expanded(
+            child: Text(value, style: GoogleFonts.manrope(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _downloadConsent(String? consentDocB64, String? base64Sig, String? filePath, String rm) {
+    if (kIsWeb) {
+      if (consentDocB64 != null && consentDocB64.isNotEmpty) {
+        // Download dokumen HTML lengkap (isi + centang + tanda tangan)
+        final htmlContent = String.fromCharCodes(base64Decode(consentDocB64));
+        downloadHtmlFileOnWeb(htmlContent, 'informed_consent_$rm.html');
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Dokumen informed_consent_$rm.html berhasil diunduh.', style: GoogleFonts.manrope()),
+          backgroundColor: AppColors.primary,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ));
+      } else if (base64Sig != null && base64Sig.isNotEmpty) {
+        // Fallback: download hanya gambar tanda tangan
+        downloadFileOnWeb(base64Sig, 'ttd_consent_$rm.png');
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Tanda tangan berhasil diunduh sebagai ttd_consent_$rm.png', style: GoogleFonts.manrope()),
+          backgroundColor: Colors.orange,
+          behavior: SnackBarBehavior.floating,
+        ));
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Data informed consent tidak tersedia.', style: GoogleFonts.manrope()),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ));
+      }
+    } else {
+      if (filePath == null || filePath.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('File tanda tangan tidak tersedia.', style: GoogleFonts.manrope()),
+          backgroundColor: Colors.orange,
+          behavior: SnackBarBehavior.floating,
+        ));
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('File tersimpan di: $filePath', style: GoogleFonts.manrope()),
+        backgroundColor: AppColors.primary,
+        behavior: SnackBarBehavior.floating,
+      ));
+    }
   }
 
   Widget _buildNutrisiSection() {
@@ -479,6 +960,10 @@ class _AhliGiziDetailPasienScreenState
           const SizedBox(height: 20),
         ],
 
+        // ── Checklist Target Harian ──
+        _buildCheckboxes(),
+        const SizedBox(height: 20),
+
         // ── Sub-section: Target Harian ──
         _buildSubSectionLabel(
             'TARGET HARIAN', 'Kebutuhan nutrisi sesuai kondisi pasien'),
@@ -517,44 +1002,6 @@ class _AhliGiziDetailPasienScreenState
         ),
         const SizedBox(height: 20),
 
-        // ── Sub-section: Realisasi Aktual ──
-        _buildSubSectionLabel('REALISASI AKTUAL',
-            'Penilaian asupan berdasarkan catatan makan pasien'),
-        const SizedBox(height: 10),
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-              color: Colors.white, borderRadius: BorderRadius.circular(14)),
-          child: Column(
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                      child: _buildNutrisiField(
-                          'Kalori Aktual', _kaloriAktualCtrl, '0', 'kkal')),
-                  const SizedBox(width: 12),
-                  Expanded(
-                      child: _buildNutrisiField(
-                          'Protein Aktual', _proteinAktualCtrl, '0', 'g')),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                      child: _buildNutrisiField(
-                          'Lemak Aktual', _lemakAktualCtrl, '0', 'g')),
-                  const SizedBox(width: 12),
-                  Expanded(
-                      child: _buildNutrisiField(
-                          'Karbo Aktual', _karboAktualCtrl, '0', 'g')),
-                ],
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 20),
-
         // ── Sub-section: Monitoring Lainnya ──
         _buildSubSectionLabel(
             'MONITORING LAINNYA', 'Serat dan hidrasi pasien'),
@@ -569,19 +1016,7 @@ class _AhliGiziDetailPasienScreenState
                 children: [
                   Expanded(
                       child: _buildNutrisiField(
-                          'Serat Aktual', _seratAktualCtrl, '0', 'g')),
-                  const SizedBox(width: 12),
-                  Expanded(
-                      child: _buildNutrisiField(
                           'Target Serat', _seratTargetCtrl, '30', 'g')),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                      child: _buildNutrisiField(
-                          'Hidrasi Aktual', _hidrasiAktualCtrl, '0', 'L')),
                   const SizedBox(width: 12),
                   Expanded(
                       child: _buildNutrisiField(
@@ -593,8 +1028,8 @@ class _AhliGiziDetailPasienScreenState
         ),
         const SizedBox(height: 20),
 
-        // ── Catatan untuk pasien (tampil di beranda) ──
-        _buildSubSectionLabel('CATATAN UNTUK PASIEN',
+        // ── Evaluasi untuk pasien (tampil di beranda) ──
+        _buildSubSectionLabel('EVALUASI UNTUK PASIEN',
             'Pesan ini akan tampil di Beranda pasien'),
         const SizedBox(height: 8),
         Container(
@@ -890,7 +1325,7 @@ class _AhliGiziDetailPasienScreenState
     );
   }
 
-  Widget _buildInfoRow(String label, String value) {
+  Widget _buildInfoRow(String label, String value, {Widget? trailing}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
@@ -908,8 +1343,49 @@ class _AhliGiziDetailPasienScreenState
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
                       color: AppColors.textPrimary))),
+          if (trailing != null) trailing,
         ],
       ),
+    );
+  }
+
+  Widget _buildCheckboxes() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Checklist Target Harian:', style: GoogleFonts.manrope(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.primary)),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 12,
+            runSpacing: 0,
+            children: [
+              _buildCheckbox('Energi', _cbEnergi, (v) => setState(() => _cbEnergi = v!)),
+              _buildCheckbox('Protein', _cbProtein, (v) => setState(() => _cbProtein = v!)),
+              _buildCheckbox('Karbo', _cbKarbo, (v) => setState(() => _cbKarbo = v!)),
+              _buildCheckbox('Lemak', _cbLemak, (v) => setState(() => _cbLemak = v!)),
+              _buildCheckbox('Natrium', _cbNatrium, (v) => setState(() => _cbNatrium = v!)),
+              _buildCheckbox('Kalium', _cbKalium, (v) => setState(() => _cbKalium = v!)),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCheckbox(String title, bool value, ValueChanged<bool?> onChanged) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SizedBox(
+          width: 24, height: 24,
+          child: Checkbox(value: value, onChanged: onChanged, activeColor: AppColors.primary),
+        ),
+        const SizedBox(width: 6),
+        Text(title, style: GoogleFonts.manrope(fontSize: 13, color: AppColors.textPrimary)),
+      ],
     );
   }
 
