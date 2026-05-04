@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../../theme/app_theme.dart';
 import '../../services/auth_service.dart';
+import '../../utils/age_calculator.dart';
 import 'ahli_gizi_detail_pasien_screen.dart';
 
 class AhliGiziDashboardScreen extends StatefulWidget {
@@ -336,6 +337,10 @@ class _AhliGiziDashboardScreenState extends State<AhliGiziDashboardScreen> {
   }
 
   Widget _buildPasienCard(Map<String, dynamic> pasien) {
+    final ageMap = AgeCalculator.calculateAge(pasien['birthdate']);
+    final umurStr = AgeCalculator.formatAge(ageMap);
+    final imt = AgeCalculator.calculateIMT(pasien['weight'], pasien['height']);
+    
     return GestureDetector(
       onTap: () {
         Navigator.push(
@@ -353,6 +358,7 @@ class _AhliGiziDashboardScreenState extends State<AhliGiziDashboardScreen> {
           borderRadius: BorderRadius.circular(14),
         ),
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Container(
               width: 44,
@@ -386,11 +392,37 @@ class _AhliGiziDashboardScreenState extends State<AhliGiziDashboardScreen> {
                   Text('RM: ${pasien['rm'] ?? '-'} • Diet: ${pasien['diet_type'] != null && pasien['diet_type'] != '' ? pasien['diet_type'] : 'Belum Dipilih'}',
                       style: GoogleFonts.manrope(
                           fontSize: 12, color: AppColors.textSecondary)),
+                  const SizedBox(height: 6),
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppColors.background,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Umur: $umurStr', style: GoogleFonts.manrope(fontSize: 11, color: AppColors.textPrimary, fontWeight: FontWeight.w600)),
+                        const SizedBox(height: 2),
+                        Text('BB: ${pasien['weight'] ?? '-'} kg | TB: ${pasien['height'] ?? '-'} cm', style: GoogleFonts.manrope(fontSize: 11, color: AppColors.textSecondary)),
+                        const SizedBox(height: 2),
+                        Text('Jenis Kelamin: ${pasien['gender'] ?? '-'}', style: GoogleFonts.manrope(fontSize: 11, color: AppColors.textSecondary)),
+                        if (imt != null) ...[
+                          const SizedBox(height: 2),
+                          Text('IMT: $imt', style: GoogleFonts.manrope(fontSize: 11, color: AppColors.textSecondary)),
+                        ],
+                      ],
+                    ),
+                  )
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right,
-                color: AppColors.textMuted, size: 20),
+            const SizedBox(width: 8),
+            const Padding(
+              padding: EdgeInsets.only(top: 12),
+              child: Icon(Icons.chevron_right,
+                  color: AppColors.textMuted, size: 20),
+            ),
           ],
         ),
       ),

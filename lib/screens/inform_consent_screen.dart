@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
@@ -92,6 +93,10 @@ class _InformConsentScreenState extends State<InformConsentScreen> {
         await file.writeAsBytes(bytes);
         signatureBase64 = sigBase64; // juga simpan base64 untuk dokumen HTML
       }
+
+      // Load logo for HTML
+      final ByteData logoData = await rootBundle.load('assets/images/icon.png');
+      final String logoBase64 = base64Encode(logoData.buffer.asUint8List());
 
       // Generate dokumen HTML lengkap (isi + centang + tanda tangan)
       final signedAt = DateTime.now();

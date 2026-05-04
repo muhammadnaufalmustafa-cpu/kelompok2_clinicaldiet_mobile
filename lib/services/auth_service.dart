@@ -1,10 +1,12 @@
 import 'dart:convert';
+import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AuthService {
   static const String _usersKey = 'registered_users';
   static const String _loggedInUserKey = 'logged_in_user';
   static const String _ahliGiziKey = 'registered_ahli_gizi';
+  static const String _dietTypesKey = 'diet_types';
 
   // ─────────────────────────── REGISTRASI PASIEN ───────────────────────────
 
@@ -266,6 +268,81 @@ class AuthService {
     }
     
     return {'success': false, 'message': 'Email tidak terdaftar'};
+  }
+
+  // ─────────────────────────── PROFIL AHLI GIZI ────────────────────────────
+
+  static Future<bool> updateAhliGiziProfile({
+    required String nip,
+    required String name,
+    required String phone,
+    required String email,
+    required String pendidikan,
+    required String instansi,
+    required String tahunLulus,
+    required String pengalamanKerja,
+    required String noStr,
+    required String spesialisasi,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final agJson = prefs.getString(_ahliGiziKey);
+    if (agJson == null) return false;
+
+    final decoded = jsonDecode(agJson) as List;
+    final ag = decoded.cast<Map<String, dynamic>>();
+
+    final idx = ag.indexWhere((u) => u['nip'].toString() == nip);
+    if (idx == -1) return false;
+
+    ag[idx]['name'] = name;
+    ag[idx]['phone'] = phone;
+    ag[idx]['email'] = email;
+    ag[idx]['pendidikan'] = pendidikan;
+    ag[idx]['instansi'] = instansi;
+    ag[idx]['tahunLulus'] = tahunLulus;
+    ag[idx]['pengalamanKerja'] = pengalamanKerja;
+    ag[idx]['noStr'] = noStr;
+    ag[idx]['spesialisasi'] = spesialisasi;
+
+    await prefs.setString(_ahliGiziKey, jsonEncode(ag));
+    
+    final loggedIn = await getLoggedInUser();
+    if (loggedIn != null && loggedIn['nip'] == nip) {
+      await prefs.setString(_loggedInUserKey, jsonEncode(ag[idx]));
+    }
+    return true;
+  }
+
+  static Future<bool> updateAhliGiziEmailPassword({
+    required String nip,
+    required String email,
+    String? password,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final agJson = prefs.getString(_ahliGiziKey);
+    if (agJson == null) return false;
+
+    final decoded = jsonDecode(agJson) as List;
+    final ag = decoded.cast<Map<String, dynamic>>();
+
+    final idx = ag.indexWhere((u) => u['nip'].toString() == nip);
+    if (idx == -1) return false;
+
+    if (email.isNotEmpty && email != ag[idx]['email']) {
+      final emailExists = ag.any((u) => u['email'] == email);
+      if (emailExists) return false;
+    }
+
+    if (email.isNotEmpty) ag[idx]['email'] = email;
+    if (password != null && password.isNotEmpty) ag[idx]['password'] = password;
+
+    await prefs.setString(_ahliGiziKey, jsonEncode(ag));
+
+    final loggedIn = await getLoggedInUser();
+    if (loggedIn != null && loggedIn['nip'] == nip) {
+      await prefs.setString(_loggedInUserKey, jsonEncode(ag[idx]));
+    }
+    return true;
   }
 
   // ─────────────────────────── PROFIL PASIEN ───────────────────────────────
@@ -983,44 +1060,6 @@ class AuthService {
     }
   }
 
-  // ─────────────────────────── PROFIL AHLI GIZI (EXTENDED) ─────────────────
-
-  static Future<bool> updateAhliGiziProfile({
-    required String nip,
-    required String name,
-    required String email,
-    required String phone,
-    String pendidikan = '',
-    String instansi = '',
-    String tahunLulus = '',
-    String pengalamanKerja = '',
-    String strNumber = '',
-    String spesialisasi = '',
-  }) async {
-    final prefs = await SharedPreferences.getInstance();
-    final json = prefs.getString(_ahliGiziKey);
-    if (json == null) return false;
-    final decoded = jsonDecode(json) as List;
-    final list = decoded.cast<Map<String, dynamic>>();
-    final idx = list.indexWhere((u) => u['nip'].toString() == nip);
-    if (idx == -1) return false;
-    list[idx]['name'] = name;
-    list[idx]['email'] = email;
-    list[idx]['phone'] = phone;
-    list[idx]['pendidikan'] = pendidikan;
-    list[idx]['instansi'] = instansi;
-    list[idx]['tahun_lulus'] = tahunLulus;
-    list[idx]['pengalaman_kerja'] = pengalamanKerja;
-    list[idx]['str_number'] = strNumber;
-    list[idx]['specialization'] = spesialisasi;
-    await prefs.setString(_ahliGiziKey, jsonEncode(list));
-    final loggedIn = await getLoggedInUser();
-    if (loggedIn != null && loggedIn['nip']?.toString() == nip) {
-      await prefs.setString(_loggedInUserKey, jsonEncode(list[idx]));
-    }
-    return true;
-  }
-
   // ─────────────────────────── MEAL LOG (dengan JAM) ───────────────────────
 
   static Future<bool> saveMealLog({
@@ -1083,16 +1122,52 @@ class AuthService {
     return true;
   }
 
+  // ─────────────────────────── KELOLA JENIS DIET ─────────────────────────────
+
+  static Future<List<Map<String, dynamic>>> getDietTypes() async {
+    final prefs = await SharedPreferences.getInstance();
+    final String? dietJson = prefs.getString(_dietTypesKey);
+    if (dietJson != null) {
+      final List decoded = jsonDecode(dietJson);
+      return decoded.cast<Map<String, dynamic>>();
+    }
+    return [];
+  }
+
+  static Future<bool> addDietType({
+    required String title,
+    required String pdfUrl,
+    int? iconCodePoint,
+    int? colorValue,
+  }) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      List<Map<String, dynamic>> diets = await getDietTypes();
+      
+      diets.add({
+        'title': title,
+        'pdfUrl': pdfUrl,
+        'iconCodePoint': iconCodePoint ?? Icons.article_outlined.codePoint,
+        'colorValue': colorValue ?? const Color(0xFFDBEAFE).value,
+      });
+
+      await prefs.setString(_dietTypesKey, jsonEncode(diets));
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
   // ─────────────────────────── SEED DUMMY DATA ─────────────────────────────
 
   static Future<void> seedDummyDataIfNeeded() async {
     final prefs = await SharedPreferences.getInstance();
 
-    // Bump seed_version ke 6 untuk force-refresh data dummy (inkl. meal logs)
+    // Bump seed_version ke 9 untuk force-refresh data dummy diet dinamis dan persetujuan
     final seedVersion = prefs.getInt('seed_version') ?? 0;
-    if (seedVersion < 6) {
+    if (seedVersion < 9) {
       await prefs.clear();
-      await prefs.setInt('seed_version', 6);
+      await prefs.setInt('seed_version', 9);
     }
 
     // ── Seed ahli gizi ──────────────────────────────────────────────────────
@@ -1103,6 +1178,32 @@ class AuthService {
       await submitRatingAhliGizi('200001', 5.0, ulasan: 'Sangat ramah dan sabar menjelaskan detail diet saya.', pasienName: 'Budi Santoso');
       await submitRatingAhliGizi('200001', 4.0, ulasan: 'Menu diet yang diberikan sangat membantu!', pasienName: 'Siti Aminah');
       await submitRatingAhliGizi('200002', 4.5, ulasan: 'Penjelasan jelas dan terukur.', pasienName: 'Dewi Lestari');
+    }
+
+    // ── Seed jenis diet ─────────────────────────────────────────────────────
+    final dietJson = prefs.getString(_dietTypesKey);
+    if (dietJson == null || (jsonDecode(dietJson) as List).isEmpty) {
+      final List<Map<String, dynamic>> initialDiets = [
+        {'title': 'Makanan Sehat Ibu Hamil', 'pdfUrl': 'https://drive.google.com/file/d/1DtEIRBLioGTeehUTETRn2dlWY8QjWNoO/view?usp=sharing', 'iconCodePoint': Icons.pregnant_woman_outlined.codePoint, 'colorValue': 0xFFFCE7F3},
+        {'title': 'Makanan Sehat Ibu Menyusui', 'pdfUrl': 'https://drive.google.com/file/d/16Uesv76NVgnZ5DPtjAJOkAFpFPxtgb8V/view?usp=sharing', 'iconCodePoint': Icons.favorite_border.codePoint, 'colorValue': 0xFFFCE7F3},
+        {'title': 'Makanan Sehat Bayi', 'pdfUrl': 'https://drive.google.com/file/d/1u1EYyFS-gOVI-aiHTcz8VWbgs-qzdheX/view?usp=sharing', 'iconCodePoint': Icons.child_care_outlined.codePoint, 'colorValue': 0xFFD1FAE5},
+        {'title': 'Makanan Sehat Anak Balita', 'pdfUrl': 'https://drive.google.com/file/d/1Fl9rdfVJFzf3G-kChGXHHVcx0XQ3Z67y/view?usp=sharing', 'iconCodePoint': Icons.child_friendly_outlined.codePoint, 'colorValue': 0xFFD1FAE5},
+        {'title': 'Makanan Sehat Lansia', 'pdfUrl': 'https://drive.google.com/file/d/13yRFdbNbAT6X-e6cvG1xdmGzFqej1BQo/view?usp=sharing', 'iconCodePoint': Icons.elderly_outlined.codePoint, 'colorValue': 0xFFFEF3C7},
+        {'title': 'Makanan Sehat Jemaah Haji', 'pdfUrl': 'https://drive.google.com/file/d/1SdpV1JQwBQw58c2WyUIPzcbqCtgKRX5X/view?usp=sharing', 'iconCodePoint': Icons.mosque_outlined.codePoint, 'colorValue': 0xFFFEF3C7},
+        {'title': 'Diet Hati', 'pdfUrl': 'https://drive.google.com/file/d/1AWJyvHUsXiTSaXB4vJWRV8DuVueeg-11/view?usp=sharing', 'iconCodePoint': Icons.monitor_heart_outlined.codePoint, 'colorValue': 0xFFDBEAFE},
+        {'title': 'Diet Lambung', 'pdfUrl': 'https://drive.google.com/file/d/1gTHCfYnHRpMWlzDg2Fpn174_amfBPB78/view?usp=sharing', 'iconCodePoint': Icons.medical_services_outlined.codePoint, 'colorValue': 0xFFDBEAFE},
+        {'title': 'Diet Jantung', 'pdfUrl': 'https://drive.google.com/file/d/1AMmx0UVPXAi-rWn5MdANHgVCz3AjnfE9/view?usp=sharing', 'iconCodePoint': Icons.favorite_outlined.codePoint, 'colorValue': 0xFFFCE7F3},
+        {'title': 'Diet Penyakit Ginjal Kronik', 'pdfUrl': 'https://drive.google.com/file/d/1ULJ2xjXQVqhIL-uwzgyYMbPxGXSJdVbg/view?usp=sharing', 'iconCodePoint': Icons.water_drop_outlined.codePoint, 'colorValue': 0xFFDBEAFE},
+        {'title': 'Diet Garam Rendah', 'pdfUrl': 'https://drive.google.com/file/d/1ILDn0y04uS0pbgugZyKKGiQ5pXUQY6ET/view?usp=sharing', 'iconCodePoint': Icons.no_meals_outlined.codePoint, 'colorValue': 0xFFDBEAFE},
+        {'title': 'Diet Diabetes Melitus', 'pdfUrl': 'https://drive.google.com/file/d/1rPTX_FR46-CaYOZN-lT-2GwE-ExiKpxY/view?usp=sharing', 'iconCodePoint': Icons.bloodtype_outlined.codePoint, 'colorValue': 0xFFFEF3C7},
+        {'title': 'Diet Diabetes Melitus Saat Puasa', 'pdfUrl': 'https://drive.google.com/file/d/1WU8gTXow_V4wuPQEjSFZhZ95BA5A4m0h/view?usp=sharing', 'iconCodePoint': Icons.no_food_outlined.codePoint, 'colorValue': 0xFFFEF3C7},
+        {'title': 'Diet Energi Rendah', 'pdfUrl': 'https://drive.google.com/file/d/16aiV08zXHsS_275djT5MXlo6n8aopqVy/view?usp=sharing', 'iconCodePoint': Icons.local_fire_department_outlined.codePoint, 'colorValue': 0xFFFEF3C7},
+        {'title': 'Diet Purin Rendah', 'pdfUrl': 'https://drive.google.com/file/d/1D_dhoFxw8ZoK8sYBcCaKrMZsr_k0R2ZL/view?usp=sharing', 'iconCodePoint': Icons.science_outlined.codePoint, 'colorValue': 0xFFFEF3C7},
+        {'title': 'Diet Protein Rendah', 'pdfUrl': 'https://drive.google.com/file/d/1pUfHw-KGuJGi64ujMwzAHwtZyBi-WXUK/view?usp=sharing', 'iconCodePoint': Icons.egg_outlined.codePoint, 'colorValue': 0xFFEDE9FE},
+        {'title': 'Diet Lemak Rendah', 'pdfUrl': 'https://drive.google.com/file/d/1QREic6oki2pyC2xFQ5Qvulx0-UvTXCm-/view?usp=sharing', 'iconCodePoint': Icons.oil_barrel_outlined.codePoint, 'colorValue': 0xFFEDE9FE},
+        {'title': 'Diet Kekebalan Tubuh Menurun', 'pdfUrl': 'https://drive.google.com/file/d/1oDCEedQNVE-FRyhAXIvky7cHmIWuTnhZ/view?usp=sharing', 'iconCodePoint': Icons.shield_outlined.codePoint, 'colorValue': 0xFFEDE9FE},
+      ];
+      await prefs.setString(_dietTypesKey, jsonEncode(initialDiets));
     }
 
     // ── Seed pasien ─────────────────────────────────────────────────────────
@@ -1233,22 +1334,36 @@ class AuthService {
     // ── Seed meal logs dummy ─────────────────────────────────────────────────
     final mealLogsJson = prefs.getString(_mealLogsKey);
     if (mealLogsJson == null || (jsonDecode(mealLogsJson) as List).isEmpty) {
-      // Pasien 100001 – Budi Santoso
-      await saveMealLog(
-        rmPasien: '100001',
-        mealPagi: 'Nasi merah 1 centong rice cooker, Telur rebus 1 btr, Tumis bayam 1 mangkok',
-        selinganPagi: 'Apel 1 bh sdg, Air putih 1 gelas',
-        mealSiang: 'Nasi putih 1 centong rice cooker, Ikan goreng 1 ptg, Sayur lodeh 1 mangkok, Tempe 1 ptg sdg',
-        selinganSore: 'Buah pisang 1 bh sdg, Teh tawar 1 cup',
-        mealMalam: 'Nasi merah 1 centong plastik, Ayam rebus 1 ptg dada, Sup sayuran 1 mangkok',
-        beratBadan: 72.5,
-        tinggiBadan: 170.0,
-        jamPagi: '07.00 WIB',
-        jamSelinganPagi: '10.00 WIB',
-        jamSiang: '12.30 WIB',
-        jamSelinganSore: '15.30 WIB',
-        jamMalam: '19.00 WIB',
-      );
+      List<Map<String, dynamic>> allLogs = [];
+      
+      // Pasien 100001 – Budi Santoso (7 Hari)
+      final now = DateTime.now();
+      for (int i = 0; i <= 6; i++) {
+        final date = now.subtract(Duration(days: i));
+        allLogs.add({
+          'id': '100001_${date.millisecondsSinceEpoch}',
+          'rm_pasien': '100001',
+          'date': date.toIso8601String(),
+          'meal_pagi': i == 0 ? 'Nasi merah 1 centong rice cooker, Telur rebus 1 btr' : 'Oatmeal pisang (Hari -$i)',
+          'selingan_pagi': 'Apel 1 bh sdg, Air putih 1 gelas',
+          'meal_siang': 'Nasi putih 1 centong, Ikan goreng 1 ptg',
+          'selingan_sore': 'Buah pisang 1 bh sdg, Teh tawar 1 cup',
+          'meal_malam': 'Nasi merah 1 centong, Ayam rebus 1 ptg',
+          'jam_pagi': '07.00 WIB',
+          'jam_selingan_pagi': '10.00 WIB',
+          'jam_siang': '12.30 WIB',
+          'jam_selingan_sore': '15.30 WIB',
+          'jam_malam': '19.00 WIB',
+          'diet_type': 'Diet Diabetes Melitus',
+          'berat_badan': 72.5 - (i * 0.1),
+          'tinggi_badan': 170.0,
+          'created_at': date.toIso8601String(),
+          'updated_at': date.toIso8601String(),
+        });
+      }
+      
+      // Simpan logs ke prefs
+      await prefs.setString(_mealLogsKey, jsonEncode(allLogs));
 
       // Pasien 100003 – Siti Aminah
       await saveMealLog(

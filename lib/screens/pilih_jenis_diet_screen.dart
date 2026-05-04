@@ -17,48 +17,24 @@ class _PilihJenisDietScreenState extends State<PilihJenisDietScreen> {
   bool _isLoading = false;
   final Set<String> _selectedDiets = {};
 
-  // Mapping jenis diet ke URL PDF leaflet
-  static const Map<String, String> _dietPdfUrls = {
-    'Makanan Sehat Ibu Hamil': 'https://drive.google.com/file/d/1DtEIRBLioGTeehUTETRn2dlWY8QjWNoO/view?usp=sharing',
-    'Makanan Sehat Ibu Menyusui': 'https://drive.google.com/file/d/16Uesv76NVgnZ5DPtjAJOkAFpFPxtgb8V/view?usp=sharing',
-    'Makanan Sehat Bayi': 'https://drive.google.com/file/d/1u1EYyFS-gOVI-aiHTcz8VWbgs-qzdheX/view?usp=sharing',
-    'Makanan Sehat Anak Balita': 'https://drive.google.com/file/d/1Fl9rdfVJFzf3G-kChGXHHVcx0XQ3Z67y/view?usp=sharing',
-    'Makanan Sehat Lansia': 'https://drive.google.com/file/d/13yRFdbNbAT6X-e6cvG1xdmGzFqej1BQo/view?usp=sharing',
-    'Makanan Sehat Jemaah Haji': 'https://drive.google.com/file/d/1SdpV1JQwBQw58c2WyUIPzcbqCtgKRX5X/view?usp=sharing',
-    'Diet Hati': 'https://drive.google.com/file/d/1AWJyvHUsXiTSaXB4vJWRV8DuVueeg-11/view?usp=sharing',
-    'Diet Lambung': 'https://drive.google.com/file/d/1gTHCfYnHRpMWlzDg2Fpn174_amfBPB78/view?usp=sharing',
-    'Diet Jantung': 'https://drive.google.com/file/d/1AMmx0UVPXAi-rWn5MdANHgVCz3AjnfE9/view?usp=sharing',
-    'Diet Penyakit Ginjal Kronik': 'https://drive.google.com/file/d/1ULJ2xjXQVqhIL-uwzgyYMbPxGXSJdVbg/view?usp=sharing',
-    'Diet Garam Rendah': 'https://drive.google.com/file/d/1ILDn0y04uS0pbgugZyKKGiQ5pXUQY6ET/view?usp=sharing',
-    'Diet Diabetes Melitus': 'https://drive.google.com/file/d/1rPTX_FR46-CaYOZN-lT-2GwE-ExiKpxY/view?usp=sharing',
-    'Diet Diabetes Melitus Saat Puasa': 'https://drive.google.com/file/d/1WU8gTXow_V4wuPQEjSFZhZ95BA5A4m0h/view?usp=sharing',
-    'Diet Energi Rendah': 'https://drive.google.com/file/d/16aiV08zXHsS_275djT5MXlo6n8aopqVy/view?usp=sharing',
-    'Diet Purin Rendah': 'https://drive.google.com/file/d/1D_dhoFxw8ZoK8sYBcCaKrMZsr_k0R2ZL/view?usp=sharing',
-    'Diet Protein Rendah': 'https://drive.google.com/file/d/1pUfHw-KGuJGi64ujMwzAHwtZyBi-WXUK/view?usp=sharing',
-    'Diet Lemak Rendah': 'https://drive.google.com/file/d/1QREic6oki2pyC2xFQ5Qvulx0-UvTXCm-/view?usp=sharing',
-    'Diet Kekebalan Tubuh Menurun': 'https://drive.google.com/file/d/1oDCEedQNVE-FRyhAXIvky7cHmIWuTnhZ/view?usp=sharing',
-  };
+  List<Map<String, dynamic>> _dietTypes = [];
+  bool _isInitLoading = true;
 
-  final List<Map<String, dynamic>> _dietTypes = [
-    {'title': 'Makanan Sehat Ibu Hamil', 'icon': Icons.pregnant_woman_outlined, 'color': const Color(0xFFFCE7F3)},
-    {'title': 'Makanan Sehat Ibu Menyusui', 'icon': Icons.favorite_border, 'color': const Color(0xFFFCE7F3)},
-    {'title': 'Makanan Sehat Bayi', 'icon': Icons.child_care_outlined, 'color': const Color(0xFFD1FAE5)},
-    {'title': 'Makanan Sehat Anak Balita', 'icon': Icons.child_friendly_outlined, 'color': const Color(0xFFD1FAE5)},
-    {'title': 'Makanan Sehat Lansia', 'icon': Icons.elderly_outlined, 'color': const Color(0xFFFEF3C7)},
-    {'title': 'Makanan Sehat Jemaah Haji', 'icon': Icons.mosque_outlined, 'color': const Color(0xFFFEF3C7)},
-    {'title': 'Diet Hati', 'icon': Icons.monitor_heart_outlined, 'color': const Color(0xFFDBEAFE)},
-    {'title': 'Diet Lambung', 'icon': Icons.medical_services_outlined, 'color': const Color(0xFFDBEAFE)},
-    {'title': 'Diet Jantung', 'icon': Icons.favorite_outlined, 'color': const Color(0xFFFCE7F3)},
-    {'title': 'Diet Penyakit Ginjal Kronik', 'icon': Icons.water_drop_outlined, 'color': const Color(0xFFDBEAFE)},
-    {'title': 'Diet Garam Rendah', 'icon': Icons.no_meals_outlined, 'color': const Color(0xFFDBEAFE)},
-    {'title': 'Diet Diabetes Melitus', 'icon': Icons.bloodtype_outlined, 'color': const Color(0xFFFEF3C7)},
-    {'title': 'Diet Diabetes Melitus Saat Puasa', 'icon': Icons.no_food_outlined, 'color': const Color(0xFFFEF3C7)},
-    {'title': 'Diet Energi Rendah', 'icon': Icons.local_fire_department_outlined, 'color': const Color(0xFFFEF3C7)},
-    {'title': 'Diet Purin Rendah', 'icon': Icons.science_outlined, 'color': const Color(0xFFFEF3C7)},
-    {'title': 'Diet Protein Rendah', 'icon': Icons.egg_outlined, 'color': const Color(0xFFEDE9FE)},
-    {'title': 'Diet Lemak Rendah', 'icon': Icons.oil_barrel_outlined, 'color': const Color(0xFFEDE9FE)},
-    {'title': 'Diet Kekebalan Tubuh Menurun', 'icon': Icons.shield_outlined, 'color': const Color(0xFFEDE9FE)},
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _loadDietTypes();
+  }
+
+  Future<void> _loadDietTypes() async {
+    final diets = await AuthService.getDietTypes();
+    if (mounted) {
+      setState(() {
+        _dietTypes = diets;
+        _isInitLoading = false;
+      });
+    }
+  }
 
   Future<void> _saveDiets() async {
     if (_selectedDiets.isEmpty) {
@@ -81,7 +57,8 @@ class _PilihJenisDietScreenState extends State<PilihJenisDietScreen> {
 
     // Ambil diet pertama yang dipilih untuk ditampilkan leaflet-nya
     final firstDiet = _selectedDiets.first;
-    final pdfUrl = _dietPdfUrls[firstDiet] ?? '';
+    final firstDietMap = _dietTypes.firstWhere((d) => d['title'] == firstDiet, orElse: () => {});
+    final pdfUrl = firstDietMap['pdfUrl'] ?? '';
 
     if (widget.isFromProfil) {
       Navigator.pushReplacement(
@@ -144,10 +121,12 @@ class _PilihJenisDietScreenState extends State<PilihJenisDietScreen> {
             ),
           ),
           Expanded(
-            child: _isLoading
+            child: _isInitLoading
                 ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
-                : ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                : _dietTypes.isEmpty
+                    ? const Center(child: Text('Belum ada data jenis diet.'))
+                    : ListView.builder(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     itemCount: _dietTypes.length,
                     itemBuilder: (ctx, i) {
                       final diet = _dietTypes[i];
@@ -182,10 +161,10 @@ class _PilihJenisDietScreenState extends State<PilihJenisDietScreen> {
                                 width: 48,
                                 height: 48,
                                 decoration: BoxDecoration(
-                                  color: isSelected ? AppColors.primary.withValues(alpha: 0.15) : diet['color'] as Color,
+                                  color: isSelected ? AppColors.primary.withValues(alpha: 0.15) : Color(diet['colorValue'] as int? ?? 0xFFDBEAFE),
                                   borderRadius: BorderRadius.circular(12),
                                 ),
-                                child: Icon(diet['icon'] as IconData,
+                                child: Icon(IconData(diet['iconCodePoint'] as int? ?? Icons.article_outlined.codePoint, fontFamily: 'MaterialIcons'),
                                     color: isSelected ? AppColors.primary : AppColors.textSecondary,
                                     size: 24),
                               ),

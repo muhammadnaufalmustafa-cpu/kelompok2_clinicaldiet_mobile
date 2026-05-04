@@ -625,6 +625,103 @@ class _ProfilScreenState extends State<ProfilScreen> {
     );
   }
 
+  void _showAhliGiziCV() {
+    if (_selectedAhliGizi == null) return;
+    final ag = _selectedAhliGizi!;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          padding: EdgeInsets.fromLTRB(24, 24, 24, MediaQuery.of(ctx).viewInsets.bottom + 24),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 60,
+                      height: 60,
+                      decoration: const BoxDecoration(color: Color(0xFFE0F2FE), shape: BoxShape.circle),
+                      child: Center(
+                        child: Text(
+                          (ag['name'] as String? ?? 'A').substring(0, 1).toUpperCase(),
+                          style: GoogleFonts.manrope(fontSize: 24, fontWeight: FontWeight.w700, color: const Color(0xFF0284C7)),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(ag['name'] ?? 'Ahli Gizi', style: GoogleFonts.manrope(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
+                          Text(ag['spesialisasi'] ?? 'Ahli Gizi Klinis', style: GoogleFonts.manrope(fontSize: 14, fontWeight: FontWeight.w600, color: const Color(0xFF0284C7))),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                Text('Curriculum Vitae', style: GoogleFonts.manrope(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
+                const Divider(),
+                _buildCvItem(Icons.school_outlined, 'Pendidikan', ag['pendidikan']),
+                _buildCvItem(Icons.business_outlined, 'Instansi / Tempat Praktik', ag['instansi']),
+                _buildCvItem(Icons.calendar_today_outlined, 'Tahun Lulus', ag['tahunLulus']),
+                _buildCvItem(Icons.work_outline, 'Pengalaman Kerja', ag['pengalamanKerja']),
+                _buildCvItem(Icons.badge_outlined, 'No. STR', ag['noStr']),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: AppColors.divider),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    child: Text('Tutup', style: GoogleFonts.manrope(fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildCvItem(IconData icon, String label, String? value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 20, color: AppColors.textSecondary),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label, style: GoogleFonts.manrope(fontSize: 12, color: AppColors.textMuted)),
+                const SizedBox(height: 2),
+                Text((value == null || value.isEmpty) ? 'Belum dilengkapi' : value, style: GoogleFonts.manrope(fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.textPrimary)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final weight = (_user?['weight'] as num?)?.toDouble() ?? 0;
@@ -899,6 +996,22 @@ class _ProfilScreenState extends State<ProfilScreen> {
                     ),
                   ),
                   const SizedBox(height: 12),
+
+                  if (_selectedAhliGizi != null)
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: _showAhliGiziCV,
+                        icon: const Icon(Icons.badge_outlined, size: 18, color: AppColors.primary),
+                        label: Text('Lihat Profil & CV Ahli Gizi', style: GoogleFonts.manrope(fontWeight: FontWeight.w600, color: AppColors.primary)),
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: AppColors.primary),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        ),
+                      ),
+                    ),
+                  if (_selectedAhliGizi != null) const SizedBox(height: 12),
 
                   SizedBox(
                     width: double.infinity,

@@ -8,6 +8,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../theme/app_theme.dart';
 import '../../services/auth_service.dart';
 import '../../services/web_download.dart';
+import '../../utils/age_calculator.dart';
 import '../grafik_harian_screen.dart';
 
 class AhliGiziDetailPasienScreen extends StatefulWidget {
@@ -381,6 +382,67 @@ class _AhliGiziDetailPasienScreenState
     final String? filePath = widget.pasien['consent_signature_path'] as String?;
     final String? signedAt = widget.pasien['consent_signed_at'] as String?;
 
+    final ageMap = AgeCalculator.calculateAge(widget.pasien['birthdate']);
+    final kondisi = AgeCalculator.getKondisi(ageMap);
+    final imt = AgeCalculator.calculateIMT(widget.pasien['weight'], widget.pasien['height']);
+    
+    final bbStr = widget.pasien['weight'] != null && widget.pasien['weight'].toString().isNotEmpty ? '${widget.pasien['weight']} kg' : '-';
+    final tbStr = widget.pasien['height'] != null && widget.pasien['height'].toString().isNotEmpty ? '${widget.pasien['height']} cm' : '-';
+    final genderStr = widget.pasien['gender'] ?? '-';
+    final umurStr = AgeCalculator.formatAge(ageMap);
+
+    Widget contactRow = _buildInfoRow('No. Telepon / WA', widget.pasien['phone'] ?? '-', trailing: widget.pasien['phone'] != null && widget.pasien['phone'].isNotEmpty ? GestureDetector(
+      onTap: () async {
+        String phone = widget.pasien['phone'].replaceAll(RegExp(r'\D'), '');
+        if (phone.startsWith('0')) {
+          phone = '62${phone.substring(1)}';
+        }
+        final url = Uri.parse('https://wa.me/$phone');
+        if (await canLaunchUrl(url)) {
+          await launchUrl(url, mode: LaunchMode.externalApplication);
+        }
+      },
+      child: Container(
+        padding: const EdgeInsets.all(6),
+        decoration: BoxDecoration(color: const Color(0xFF25D366), borderRadius: BorderRadius.circular(8)),
+        child: const Icon(Icons.chat, size: 16, color: Colors.white),
+      ),
+    ) : null);
+    
+    Widget emailRow = _buildInfoRow('Email', widget.pasien['email'] ?? '-');
+
+    List<Widget> infoRows = [];
+
+    if (kondisi == 'A') {
+      infoRows = [
+        _buildInfoRow('Berat Badan', bbStr),
+        _buildInfoRow('Tinggi Badan', tbStr),
+        _buildInfoRow('Jenis Kelamin', genderStr),
+        _buildInfoRow('Umur', umurStr),
+        contactRow,
+        emailRow,
+      ];
+    } else if (kondisi == 'B') {
+      infoRows = [
+        _buildInfoRow('Berat Badan', bbStr),
+        _buildInfoRow('Tinggi Badan', tbStr),
+        _buildInfoRow('Umur', umurStr),
+        _buildInfoRow('Jenis Kelamin', genderStr),
+        contactRow,
+        emailRow,
+      ];
+    } else {
+      infoRows = [
+        _buildInfoRow('Berat Badan', bbStr),
+        _buildInfoRow('Tinggi Badan', tbStr),
+        _buildInfoRow('IMT', imt ?? 'Belum tersedia'),
+        _buildInfoRow('Umur', umurStr),
+        _buildInfoRow('Jenis Kelamin', genderStr),
+        contactRow,
+        emailRow,
+      ];
+    }
+
     return Column(
       children: [
         Container(
@@ -388,32 +450,7 @@ class _AhliGiziDetailPasienScreenState
           decoration: BoxDecoration(
               color: Colors.white, borderRadius: BorderRadius.circular(16)),
           child: Column(
-            children: [
-              _buildInfoRow('Jenis Kelamin', widget.pasien['gender'] ?? '-'),
-              _buildInfoRow('Tanggal Lahir', widget.pasien['birthdate'] ?? '-'),
-              _buildInfoRow('No. Telepon / WA', widget.pasien['phone'] ?? '-', trailing: widget.pasien['phone'] != null && widget.pasien['phone'].isNotEmpty ? GestureDetector(
-                onTap: () async {
-                  String phone = widget.pasien['phone'].replaceAll(RegExp(r'\D'), '');
-                  if (phone.startsWith('0')) {
-                    phone = '62${phone.substring(1)}';
-                  }
-                  final url = Uri.parse('https://wa.me/$phone');
-                  if (await canLaunchUrl(url)) {
-                    await launchUrl(url, mode: LaunchMode.externalApplication);
-                  }
-                },
-                child: Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(color: const Color(0xFF25D366), borderRadius: BorderRadius.circular(8)),
-                  child: const Icon(Icons.chat, size: 16, color: Colors.white),
-                ),
-              ) : null),
-              _buildInfoRow(
-                  'Berat Badan', '${widget.pasien['weight'] ?? '-'} kg'),
-              _buildInfoRow(
-                  'Tinggi Badan', '${widget.pasien['height'] ?? '-'} cm'),
-              _buildInfoRow('Email', widget.pasien['email'] ?? '-'),
-            ],
+            children: infoRows,
           ),
         ),
         const SizedBox(height: 12),

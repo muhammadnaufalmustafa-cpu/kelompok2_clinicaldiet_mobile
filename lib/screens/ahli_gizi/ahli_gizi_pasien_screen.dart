@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../theme/app_theme.dart';
 import '../../services/auth_service.dart';
+import '../../utils/age_calculator.dart';
 import 'ahli_gizi_detail_pasien_screen.dart';
 
 class AhliGiziPasienScreen extends StatefulWidget {
@@ -240,11 +241,33 @@ class _AhliGiziPasienScreenState extends State<AhliGiziPasienScreen> {
                                                     color: AppColors
                                                         .textPrimary)),
                                             Text(
-                                                'RM: ${pasien['rm'] ?? '-'} • ${pasien['diet_type'] ?? 'Normal'}',
+                                                'RM: ${pasien['rm'] ?? '-'} • Diet: ${pasien['diet_type'] != null && pasien['diet_type'] != '' ? pasien['diet_type'] : 'Belum Dipilih'}',
                                                 style: GoogleFonts.manrope(
                                                     fontSize: 12,
                                                     color: AppColors
                                                         .textSecondary)),
+                                            const SizedBox(height: 6),
+                                            Container(
+                                              padding: const EdgeInsets.all(8),
+                                              decoration: BoxDecoration(
+                                                color: AppColors.background,
+                                                borderRadius: BorderRadius.circular(8),
+                                              ),
+                                              child: Column(
+                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                children: [
+                                                  Text('Umur: ${AgeCalculator.formatAge(AgeCalculator.calculateAge(pasien['birthdate']))}', style: GoogleFonts.manrope(fontSize: 11, color: AppColors.textPrimary, fontWeight: FontWeight.w600)),
+                                                  const SizedBox(height: 2),
+                                                  Text('BB: ${pasien['weight'] ?? '-'} kg | TB: ${pasien['height'] ?? '-'} cm', style: GoogleFonts.manrope(fontSize: 11, color: AppColors.textSecondary)),
+                                                  const SizedBox(height: 2),
+                                                  Text('Jenis Kelamin: ${pasien['gender'] ?? '-'}', style: GoogleFonts.manrope(fontSize: 11, color: AppColors.textSecondary)),
+                                                  if (AgeCalculator.calculateIMT(pasien['weight'], pasien['height']) != null) ...[
+                                                    const SizedBox(height: 2),
+                                                    Text('IMT: ${AgeCalculator.calculateIMT(pasien['weight'], pasien['height'])}', style: GoogleFonts.manrope(fontSize: 11, color: AppColors.textSecondary)),
+                                                  ],
+                                                ],
+                                              ),
+                                            )
                                           ],
                                         ),
                                       ),
