@@ -823,14 +823,26 @@ class AuthService {
       final decoded = jsonDecode(json) as List;
       list = decoded.cast<Map<String, dynamic>>();
     }
+    
     // Key unik: rm_pasien + diet_type
     final idx = list.indexWhere(
       (n) => n['rm_pasien'] == rmPasien && n['diet_type'] == dietType,
     );
+
+    // Pastikan kita hanya menyimpan target, 'aktual' akan dihitung dari meal logs
+    Map<String, dynamic> cleanTargets = {};
+    targetNutrients.forEach((key, value) {
+      cleanTargets[key] = {
+        'target': (value['target'] as num?)?.toDouble() ?? 0.0,
+        // Kita biarkan field aktual ada tapi default 0, di-update lewat kalkulasi
+        'aktual': 0.0, 
+      };
+    });
+
     final data = {
       'rm_pasien': rmPasien,
       'diet_type': dietType,
-      'target_nutrients': targetNutrients,
+      'target_nutrients': cleanTargets,
       'catatan': catatan,
       'evaluasi_ahli_gizi': evaluasiAhliGizi,
       'updated_at': DateTime.now().toIso8601String(),
@@ -842,6 +854,20 @@ class AuthService {
     }
     await prefs.setString(_nutrisiPerDietKey, jsonEncode(list));
     return true;
+  }
+
+  static Future<Map<String, dynamic>?> getLatestNutritionPlan(String rm) async {
+    final all = await getAllNutrisiPasien(rm);
+    if (all.isEmpty) return null;
+    
+    // Sort by updated_at descending
+    all.sort((a, b) {
+      final dateA = DateTime.tryParse(a['updated_at'] ?? '') ?? DateTime(2000);
+      final dateB = DateTime.tryParse(b['updated_at'] ?? '') ?? DateTime(2000);
+      return dateB.compareTo(dateA);
+    });
+    
+    return all.first;
   }
 
   static Future<List<Map<String, dynamic>>> getAllNutrisiPasien(String rmPasien) async {
@@ -871,6 +897,7 @@ class AuthService {
     required String diagnosis,
     required String statusGizi,
     required String catatanKlinis,
+    String? terapiDiet,
   }) async {
     final prefs = await SharedPreferences.getInstance();
     final json = prefs.getString(_usersKey);
@@ -884,17 +911,19 @@ class AuthService {
       list[idx]['diagnosis'] = diagnosis;
       list[idx]['status_gizi'] = statusGizi;
       list[idx]['catatan_klinis'] = catatanKlinis;
+      if (terapiDiet != null) {
+        list[idx]['diet_type'] = terapiDiet;
+      }
+      
       await prefs.setString(_usersKey, jsonEncode(list));
       
-      final current = prefs.getString(_loggedInUserKey);
-      if (current != null) {
-        final curMap = jsonDecode(current) as Map<String, dynamic>;
-        if (curMap['rm'] == rm) {
-          curMap['diagnosis'] = diagnosis;
-          curMap['status_gizi'] = statusGizi;
-          curMap['catatan_klinis'] = catatanKlinis;
-          await prefs.setString(_loggedInUserKey, jsonEncode(curMap));
-        }
+      final current = await getLoggedInUser();
+      if (current != null && current['rm'] == rm) {
+        current['diagnosis'] = diagnosis;
+        current['status_gizi'] = statusGizi;
+        current['catatan_klinis'] = catatanKlinis;
+        if (terapiDiet != null) current['diet_type'] = terapiDiet;
+        await prefs.setString(_loggedInUserKey, jsonEncode(current));
       }
       return true;
     }
@@ -1074,11 +1103,17 @@ class AuthService {
     String? dietType,
     double? beratBadan,
     double? tinggiBadan,
+    double? kalori,
+    double? protein,
+    double? lemak,
+    double? karbohidrat,
+    Map<String, dynamic>? targetNutrients,
     String? jamPagi,
     String? jamSelinganPagi,
     String? jamSiang,
     String? jamSelinganSore,
     String? jamMalam,
+    String? date,
   }) async {
     final prefs = await SharedPreferences.getInstance();
     final logsJson = prefs.getString(_mealLogsKey);
@@ -1087,7 +1122,7 @@ class AuthService {
       final decoded = jsonDecode(logsJson) as List;
       logs = decoded.cast<Map<String, dynamic>>();
     }
-    final today = DateTime.now();
+    final today = date != null ? DateTime.parse(date) : DateTime.now();
     final todayString = '${today.year}-${today.month}-${today.day}';
     final existingLogIndex = logs.indexWhere(
       (log) => log['rm_pasien'] == rmPasien && log['date'].toString().startsWith(todayString),
@@ -1109,6 +1144,11 @@ class AuthService {
       'diet_type': dietType ?? '',
       'berat_badan': beratBadan,
       'tinggi_badan': tinggiBadan,
+      'kalori': kalori ?? 0.0,
+      'protein': protein ?? 0.0,
+      'lemak': lemak ?? 0.0,
+      'karbohidrat': karbohidrat ?? 0.0,
+      'target_nutrients': targetNutrients ?? {},
       'created_at': today.toIso8601String(),
       'updated_at': today.toIso8601String(),
     };

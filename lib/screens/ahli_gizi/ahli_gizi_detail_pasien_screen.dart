@@ -35,6 +35,23 @@ class _AhliGiziDetailPasienScreenState
   final _diagnosisCtrl = TextEditingController();
   final _statusGiziCtrl = TextEditingController();
   final _catatanNutrisiCtrl = TextEditingController();
+  final _customDietCtrl = TextEditingController();
+
+  static const List<String> _terapiDietList = [
+    'Diet Normal',
+    'Diet Rendah Garam',
+    'Diet Rendah Gula',
+    'Diet Rendah Lemak',
+    'Diet Tinggi Protein',
+    'Diet Diabetes Mellitus',
+    'Diet Hipertensi',
+    'Diet Jantung',
+    'Diet Ginjal',
+    'Diet Hati',
+    'Diet Rendah Purin',
+    'Diet Tinggi Kalori Tinggi Protein',
+    'Diet Khusus/Lainnya'
+  ];
 
   // ── Dynamic Nutrition Target controllers & state ──
   final Map<String, TextEditingController> _targetCtrls = {};
@@ -95,15 +112,25 @@ class _AhliGiziDetailPasienScreenState
         _diagnosisCtrl.text = widget.pasien['diagnosis'] ?? '';
         _statusGiziCtrl.text = widget.pasien['status_gizi'] ?? '';
         _catatanNutrisiCtrl.text = widget.pasien['catatan_klinis'] ?? '';
+        
+        final dt = widget.pasien['diet_type'] as String? ?? 'Diet Normal';
+        if (_terapiDietList.contains(dt)) {
+          _selectedDietType = dt;
+        } else {
+          _selectedDietType = 'Diet Khusus/Lainnya';
+          _customDietCtrl.text = dt;
+        }
       });
     }
 
-    if (_selectedDietType != null && _selectedDietType != '(Belum ada diet)') {
-      final nutrisiDiet = await AuthService.getNutrisiPasienPerDiet(rm, _selectedDietType!);
+    if (_selectedDietType != null) {
+      final String effectiveDiet = _selectedDietType == 'Diet Khusus/Lainnya' 
+          ? _customDietCtrl.text 
+          : _selectedDietType!;
+          
+      final nutrisiDiet = await AuthService.getNutrisiPasienPerDiet(rm, effectiveDiet);
       if (mounted && nutrisiDiet != null) {
         setState(() {
-          _catatanNutrisiCtrl.text = nutrisiDiet['catatan'] ?? _catatanNutrisiCtrl.text;
-          
           final Map<String, dynamic>? targetNutrients = nutrisiDiet['target_nutrients'];
           _checkedNutrients.clear();
           
@@ -111,9 +138,7 @@ class _AhliGiziDetailPasienScreenState
             targetNutrients.forEach((key, val) {
               _checkedNutrients[key] = true;
               if (!_targetCtrls.containsKey(key)) _targetCtrls[key] = TextEditingController();
-              if (!_aktualCtrls.containsKey(key)) _aktualCtrls[key] = TextEditingController();
               _targetCtrls[key]!.text = _fmtNum(val['target']);
-              _aktualCtrls[key]!.text = _fmtNum(val['aktual']);
             });
           }
         });
@@ -122,6 +147,50 @@ class _AhliGiziDetailPasienScreenState
 
     final logs = await AuthService.getMealLogsForPasien(rm, days: 7);
     if (mounted) setState(() => _riwayatMakan = logs);
+  }
+
+  Future<void> _loadPreviousPlan() async {
+    final rm = widget.pasien['rm'] as String;
+    final plan = await AuthService.getLatestNutritionPlan(rm);
+    
+    if (plan == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Belum ada input target gizi sebelumnya untuk pasien ini.'),
+          backgroundColor: Colors.orange,
+        ));
+      }
+      return;
+    }
+
+    if (mounted) {
+      setState(() {
+        final dt = plan['diet_type'] as String? ?? 'Diet Normal';
+        if (_terapiDietList.contains(dt)) {
+          _selectedDietType = dt;
+        } else {
+          _selectedDietType = 'Diet Khusus/Lainnya';
+          _customDietCtrl.text = dt;
+        }
+        
+        _catatanNutrisiCtrl.text = plan['catatan'] ?? '';
+        
+        final Map<String, dynamic>? targets = plan['target_nutrients'];
+        _checkedNutrients.clear();
+        if (targets != null) {
+          targets.forEach((key, val) {
+            _checkedNutrients[key] = true;
+            if (!_targetCtrls.containsKey(key)) _targetCtrls[key] = TextEditingController();
+            _targetCtrls[key]!.text = _fmtNum(val['target']);
+          });
+        }
+        
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Data sebelumnya berhasil dimuat.'),
+          backgroundColor: AppColors.primary,
+        ));
+      });
+    }
   }
 
   String _fmtNum(dynamic val) {
@@ -148,39 +217,44 @@ class _AhliGiziDetailPasienScreenState
     setState(() => _isSaving = true);
     try {
       final rm = widget.pasien['rm'] as String;
+      final String effectiveDiet = _selectedDietType == 'Diet Khusus/Lainnya' 
+          ? _customDietCtrl.text 
+          : (_selectedDietType ?? 'Diet Normal');
 
+      // Prepare target nutrients map
       Map<String, dynamic> targetNutrientsToSave = {};
-      _checkedNutrients.forEach((key, isChecked) {
-        if (isChecked) {
+      _checkedNutrients.forEach((key, checked) {
+        if (checked) {
+          final val = double.tryParse(_targetCtrls[key]?.text ?? '0') ?? 0.0;
           targetNutrientsToSave[key] = {
-            'target': double.tryParse(_targetCtrls[key]?.text ?? '0') ?? 0.0,
-            'aktual': double.tryParse(_aktualCtrls[key]?.text ?? '0') ?? 0.0,
+            'target': val,
+            'aktual': 0.0,
           };
         }
       });
 
-      if (_selectedDietType != null && _selectedDietType != '(Belum ada diet)') {
-        await AuthService.saveNutrisiPerDiet(
-          rmPasien: rm,
-          dietType: _selectedDietType!,
-          targetNutrients: targetNutrientsToSave,
-          catatan: _catatanNutrisiCtrl.text,
-        );
-      }
-
-      // 3. Simpan target diet & evaluasi CPPT
-      await AuthService.saveTargetDietPasien(
-        rm: rm,
-        targetDiet: _targetCtrl.text,
-        catatanEvaluasi: _catatanNutrisiCtrl.text, // sync
+      // 1. Save Nutrisi Per Diet (Targets)
+      await AuthService.saveNutrisiPerDiet(
+        rmPasien: rm,
+        dietType: effectiveDiet,
+        targetNutrients: targetNutrientsToSave,
+        catatan: _catatanNutrisiCtrl.text,
       );
-      
-      // Simpan data klinis ke model pasien
+
+      // 2. Simpan data klinis ke model pasien
       await AuthService.updateClinicalData(
         rm: rm,
         diagnosis: _diagnosisCtrl.text,
         statusGizi: _statusGiziCtrl.text,
         catatanKlinis: _catatanNutrisiCtrl.text,
+        terapiDiet: effectiveDiet,
+      );
+
+      // 3. Simpan target diet (text summary)
+      await AuthService.saveTargetDietPasien(
+        rm: rm,
+        targetDiet: _targetCtrl.text,
+        catatanEvaluasi: _catatanNutrisiCtrl.text,
       );
 
       if (!mounted) return;
@@ -245,13 +319,6 @@ class _AhliGiziDetailPasienScreenState
             _buildInfoGrid(),
             const SizedBox(height: 16),
 
-            // ── Target Diet ──
-            _buildSectionLabel('Target Diet Pasien'),
-            const SizedBox(height: 8),
-            _buildTextArea(_targetCtrl,
-                'Tuliskan target diet yang ingin dicapai pasien (akan tampil di Catatan Makan)...', 3),
-            const SizedBox(height: 16),
-
             // ── Clinical Info ──
             _buildSectionLabel('Kondisi Klinis Pasien'),
             const SizedBox(height: 8),
@@ -270,8 +337,29 @@ class _AhliGiziDetailPasienScreenState
             ),
             const SizedBox(height: 24),
 
+            // ── Terapi Diet Selection ──
+            _buildSectionLabel('Pilih Terapi Diet'),
+            const SizedBox(height: 8),
+            _buildTerapiDietDropdown(),
+            if (_selectedDietType == 'Diet Khusus/Lainnya') ...[
+              const SizedBox(height: 12),
+              _buildTextArea(_customDietCtrl, 'Ketik nama diet khusus...', 1),
+            ],
+            const SizedBox(height: 24),
+
+            // ── Target Diet Text ──
+            _buildSectionLabel('Ringkasan Target Diet'),
+            const SizedBox(height: 8),
+            _buildTextArea(_targetCtrl,
+                'Ringkasan target gizi (misal: "Energi 1800 kkal, Protein 60g"). Akan tampil di Catatan Makan...', 3),
+            const SizedBox(height: 24),
+
             // ── NUTRISI SECTION ──
             _buildNutrisiSection(),
+            const SizedBox(height: 24),
+
+            // ── CAPAIAN GIZI SECTION ──
+            _buildCapaianGiziSection(),
             const SizedBox(height: 24),
             
             // ── RIWAYAT CATATAN MAKANAN ──
@@ -966,148 +1054,153 @@ class _AhliGiziDetailPasienScreenState
     }
   }
 
+  Widget _buildTerapiDietDropdown() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14), border: Border.all(color: AppColors.divider)),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: _selectedDietType,
+          isExpanded: true,
+          hint: Text('Pilih Terapi Diet...', style: GoogleFonts.manrope(fontSize: 14)),
+          items: _terapiDietList.map((d) => DropdownMenuItem(value: d, child: Text(d, style: GoogleFonts.manrope(fontSize: 14)))).toList(),
+          onChanged: (v) {
+            if (v != null) {
+              setState(() {
+                _selectedDietType = v;
+                _loadNutrisi();
+              });
+            }
+          },
+        ),
+      ),
+    );
+  }
+
   Widget _buildNutrisiSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // ── Header nutrisi ──
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [Color(0xFFD1FAE5), Color(0xFFECFDF5)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            _buildSectionLabel('Target Gizi Harian'),
+            TextButton.icon(
+              onPressed: _loadPreviousPlan,
+              icon: const Icon(Icons.history, size: 16),
+              label: Text('Gunakan Data Sebelumnya', style: GoogleFonts.manrope(fontSize: 12, fontWeight: FontWeight.w600)),
             ),
-            borderRadius: BorderRadius.circular(14),
-          ),
-          child: Row(
+          ],
+        ),
+        const SizedBox(height: 8),
+        ..._nutrientCategories.entries.map((entry) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.6),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Icon(Icons.local_dining, color: AppColors.primary, size: 22),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
+                child: Text(entry.key.toUpperCase(), style: GoogleFonts.manrope(fontSize: 11, fontWeight: FontWeight.w800, color: AppColors.textSecondary, letterSpacing: 1.2)),
               ),
-              const SizedBox(width: 12),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Target & Capaian Gizi',
-                      style: GoogleFonts.manrope(
-                          fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.primaryDark)),
-                  Text('Checklist gizi yang akan dimonitor',
-                      style: GoogleFonts.manrope(fontSize: 12, color: AppColors.primary)),
-                ],
+              Container(
+                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: AppColors.divider)),
+                child: Column(
+                  children: entry.value.map((nutrient) {
+                    final bool isChecked = _checkedNutrients[nutrient] ?? false;
+                    if (!_targetCtrls.containsKey(nutrient)) _targetCtrls[nutrient] = TextEditingController();
+                    
+                    return Column(
+                      children: [
+                        CheckboxListTile(
+                          value: isChecked,
+                          title: Text(nutrient, style: GoogleFonts.manrope(fontSize: 14, fontWeight: isChecked ? FontWeight.w700 : FontWeight.w500)),
+                          activeColor: AppColors.primary,
+                          dense: true,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+                          onChanged: (val) => setState(() => _checkedNutrients[nutrient] = val ?? false),
+                        ),
+                        if (isChecked)
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                            child: _buildNutrisiField('Nilai Target $nutrient', _targetCtrls[nutrient]!, 'Ketik nilai target...', ''),
+                          ),
+                        if (nutrient != entry.value.last) const Divider(height: 1, indent: 16, endIndent: 16),
+                      ],
+                    );
+                  }).toList(),
+                ),
               ),
             ],
-          ),
-        ),
-        const SizedBox(height: 20),
-
-        // ── Pilih Diet ──
-        if (_getDietList().length > 1) ...[
-          _buildSubSectionLabel('PILIH TERAPI DIET', 'Sinkron dengan program diet pasien'),
-          const SizedBox(height: 10),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14), border: Border.all(color: AppColors.divider)),
-            child: DropdownButtonFormField<String>(
-              value: _selectedDietType,
-              decoration: const InputDecoration(border: InputBorder.none),
-              hint: Text('Pilih terapi diet...', style: GoogleFonts.manrope(color: AppColors.textMuted, fontSize: 14)),
-              style: GoogleFonts.manrope(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
-              items: _getDietList().map((d) => DropdownMenuItem(
-                value: d,
-                child: Text(d, style: GoogleFonts.manrope(fontSize: 14)),
-              )).toList(),
-              onChanged: (val) {
-                setState(() => _selectedDietType = val);
-                _loadNutrisi();
-              },
-            ),
-          ),
-          const SizedBox(height: 20),
-        ],
-
-        // ── Salin Data Tombol ──
-        Align(
-          alignment: Alignment.centerRight,
-          child: TextButton.icon(
-            onPressed: () {
-               // Implement copy logic
-               // For now, we assume user just wants to fill it with dummy or copy from previous record
-            },
-            icon: const Icon(Icons.content_copy, size: 16),
-            label: Text('Gunakan Data Sebelumnya', style: GoogleFonts.manrope(fontSize: 12, fontWeight: FontWeight.w600)),
-          ),
-        ),
-
-        // ── Target Dinamis ──
-        _buildDynamicChecklists(),
+          );
+        }),
       ],
     );
   }
 
-  Widget _buildDynamicChecklists() {
-    List<Widget> categoryWidgets = [];
-    
-    _nutrientCategories.forEach((category, nutrients) {
-      categoryWidgets.add(_buildSubSectionLabel('KATEGORI: ${category.toUpperCase()}', ''));
-      categoryWidgets.add(const SizedBox(height: 10));
-      
-      List<Widget> nutrientRows = [];
-      for (var nutrient in nutrients) {
-        final isChecked = _checkedNutrients[nutrient] ?? false;
-        nutrientRows.add(
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Checkbox(
-                    value: isChecked,
-                    activeColor: AppColors.primary,
-                    onChanged: (val) {
-                      setState(() {
-                        _checkedNutrients[nutrient] = val ?? false;
-                        if (val == true) {
-                          if (!_targetCtrls.containsKey(nutrient)) _targetCtrls[nutrient] = TextEditingController();
-                          if (!_aktualCtrls.containsKey(nutrient)) _aktualCtrls[nutrient] = TextEditingController();
-                        }
-                      });
-                    },
-                  ),
-                  Text(nutrient, style: GoogleFonts.manrope(fontSize: 13, fontWeight: isChecked ? FontWeight.bold : FontWeight.normal)),
-                ],
-              ),
-              if (isChecked)
-                Padding(
-                  padding: const EdgeInsets.only(left: 48, right: 16, bottom: 12),
-                  child: Row(
+  Widget _buildCapaianGiziSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionLabel('Capaian Gizi Harian'),
+        const SizedBox(height: 12),
+        if (_checkedNutrients.values.every((v) => !v))
+          Center(child: Text('Pilih target gizi terlebih dahulu', style: GoogleFonts.manrope(fontSize: 12, color: AppColors.textMuted)))
+        else
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(color: const Color(0xFFF8FAFC), borderRadius: BorderRadius.circular(16), border: Border.all(color: AppColors.divider)),
+            child: Column(
+              children: _checkedNutrients.entries.where((e) => e.value).map((e) {
+                final nutrient = e.key;
+                final target = double.tryParse(_targetCtrls[nutrient]?.text ?? '0') ?? 0.0;
+                
+                // Hitung aktual dari riwayat makan hari ini
+                double aktual = 0;
+                final today = DateTime.now().toIso8601String().split('T')[0];
+                for (var log in _riwayatMakan) {
+                  final logDate = (log['date'] as String? ?? '').split('T')[0];
+                  if (logDate == today) {
+                    final logNutrients = log['target_nutrients'] as Map<String, dynamic>? ?? {};
+                    if (logNutrients.containsKey(nutrient)) {
+                      aktual += (logNutrients[nutrient]['aktual'] as num? ?? 0).toDouble();
+                    } else {
+                      // Fallback ke field legacy
+                      if (nutrient == 'Energi (kkal)') aktual += (log['kalori'] as num? ?? 0).toDouble();
+                      if (nutrient == 'Protein (g)') aktual += (log['protein'] as num? ?? 0).toDouble();
+                      if (nutrient == 'Lemak (g)') aktual += (log['lemak'] as num? ?? 0).toDouble();
+                      if (nutrient == 'Karbohidrat (g)') aktual += (log['karbohidrat'] as num? ?? 0).toDouble();
+                    }
+                  }
+                }
+
+                final percent = target > 0 ? (aktual / target).clamp(0.0, 1.0) : 0.0;
+                
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(child: _buildNutrisiField('Target', _targetCtrls[nutrient]!, '0', '')),
-                      const SizedBox(width: 12),
-                      Expanded(child: _buildNutrisiField('Capaian (Aktual)', _aktualCtrls[nutrient]!, '0', '')),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(nutrient, style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w600)),
+                          Text('${(percent * 100).toInt()}%', style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.primary)),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: LinearProgressIndicator(value: percent, minHeight: 8, backgroundColor: Colors.grey[200], color: AppColors.primary),
+                      ),
+                      const SizedBox(height: 4),
+                      Text('Target: ${_fmtNum(target)} | Aktual: ${_fmtNum(aktual)}', style: GoogleFonts.manrope(fontSize: 11, color: AppColors.textSecondary)),
                     ],
                   ),
-                ),
-            ],
-          )
-        );
-      }
-      
-      categoryWidgets.add(Container(
-        padding: const EdgeInsets.all(8),
-        margin: const EdgeInsets.only(bottom: 20),
-        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14)),
-        child: Column(children: nutrientRows),
-      ));
-    });
-
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: categoryWidgets);
+                );
+              }).toList(),
+            ),
+          ),
+      ],
+    );
   }
 
 

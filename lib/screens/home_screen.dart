@@ -254,6 +254,22 @@ class _HomeScreenState extends State<HomeScreen> {
               right: 24,
               child: FloatingActionButton.extended(
                 onPressed: () async {
+                  // Cek apakah target sudah diatur
+                  bool isLocked = true;
+                  if (_targetNutrients.isNotEmpty) {
+                    // Cek apakah ada minimal satu target yang > 0
+                    isLocked = _targetNutrients.values.every((v) => (v['target'] as num? ?? 0) == 0);
+                  }
+
+                  if (isLocked) {
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                      content: Text('Anda belum bisa mencatat makanan karena ahli gizi belum menetapkan target diet Anda.', style: GoogleFonts.manrope()),
+                      backgroundColor: Colors.orange,
+                      behavior: SnackBarBehavior.floating,
+                    ));
+                    return;
+                  }
+
                   await Navigator.push(
                     context,
                     MaterialPageRoute(builder: (_) => const CatatanScreen()),
@@ -974,12 +990,6 @@ class _HomeScreenState extends State<HomeScreen> {
     final Map<String, dynamic> nutrients = _targetNutrients;
     if (nutrients.isEmpty) return const SizedBox.shrink();
 
-    // Filter out basic macros already shown in _buildDietCard
-    final basicMacros = ['Energi (kkal)', 'Protein (g)', 'Lemak (g)', 'Karbohidrat (g)'];
-    final additionalNutrients = nutrients.entries.where((e) => !basicMacros.contains(e.key)).toList();
-
-    if (additionalNutrients.isEmpty) return const SizedBox.shrink();
-
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
       padding: const EdgeInsets.all(16),
@@ -1003,7 +1013,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const SizedBox(width: 10),
               Text(
-                'Target Tambahan (Mineral, Vitamin, dll)',
+                'Capaian Gizi Harian',
                 style: GoogleFonts.manrope(
                   fontSize: 14,
                   fontWeight: FontWeight.w800,
@@ -1013,58 +1023,40 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           ),
           const SizedBox(height: 16),
-          GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 12,
-              childAspectRatio: 2.2,
-            ),
-            itemCount: additionalNutrients.length,
-            itemBuilder: (context, index) {
-              final nutrient = additionalNutrients[index];
-              final target = (nutrient.value['target'] as num?)?.toDouble() ?? 0;
-              final aktual = (nutrient.value['aktual'] as num?)?.toDouble() ?? 0;
-              final pct = target > 0 ? (aktual / target).clamp(0.0, 1.0) : 0.0;
-              
-              return Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: AppColors.background,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.divider),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      nutrient.key,
-                      style: GoogleFonts.manrope(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.textSecondary),
-                      maxLines: 1, overflow: TextOverflow.ellipsis,
+          // Hanya tampilkan variabel yang targetnya > 0 (artinya dipilih AG)
+          ...nutrients.entries.where((e) => (e.value['target'] as num? ?? 0) > 0).map((e) {
+            final target = (e.value['target'] as num?)?.toDouble() ?? 0;
+            final aktual = (e.value['aktual'] as num?)?.toDouble() ?? 0;
+            final pct = target > 0 ? (aktual / target).clamp(0.0, 1.0) : 0.0;
+            
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(e.key, style: GoogleFonts.manrope(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                      Text('${(pct * 100).toInt()}%', style: GoogleFonts.manrope(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.primary)),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: LinearProgressIndicator(
+                      value: pct,
+                      minHeight: 6,
+                      backgroundColor: AppColors.divider,
+                      color: AppColors.primary,
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '${_fmt(aktual)} / ${_fmt(target)}',
-                      style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.textPrimary),
-                    ),
-                    const SizedBox(height: 4),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(2),
-                      child: LinearProgressIndicator(
-                        value: pct,
-                        minHeight: 4,
-                        backgroundColor: AppColors.divider,
-                        color: AppColors.primary,
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text('${_fmt(aktual)} / ${_fmt(target)}', style: GoogleFonts.manrope(fontSize: 11, color: AppColors.textMuted)),
+                ],
+              ),
+            );
+          }).toList(),
         ],
       ),
     );
