@@ -812,24 +812,7 @@ class AuthService {
   static Future<bool> saveNutrisiPerDiet({
     required String rmPasien,
     required String dietType,
-    double kaloriTarget = 0,
-    double proteinTarget = 0,
-    double lemakTarget = 0,
-    double karboTarget = 0,
-    double seratTarget = 30,
-    double hidrasiTarget = 2.5,
-    double kaloriAktual = 0,
-    double proteinAktual = 0,
-    double lemakAktual = 0,
-    double karboAktual = 0,
-    double seratAktual = 0,
-    double hidrasiAktual = 0,
-    bool energiChecked = false,
-    bool proteinChecked = false,
-    bool karboChecked = false,
-    bool lemakChecked = false,
-    bool natriumChecked = false,
-    bool kaliumChecked = false,
+    required Map<String, dynamic> targetNutrients,
     String catatan = '',
     String evaluasiAhliGizi = '',
   }) async {
@@ -847,24 +830,7 @@ class AuthService {
     final data = {
       'rm_pasien': rmPasien,
       'diet_type': dietType,
-      'kalori_target': kaloriTarget,
-      'protein_target': proteinTarget,
-      'lemak_target': lemakTarget,
-      'karbo_target': karboTarget,
-      'serat_target': seratTarget,
-      'hidrasi_target': hidrasiTarget,
-      'kalori_aktual': kaloriAktual,
-      'protein_aktual': proteinAktual,
-      'lemak_aktual': lemakAktual,
-      'karbo_aktual': karboAktual,
-      'serat_aktual': seratAktual,
-      'hidrasi_aktual': hidrasiAktual,
-      'energi_checked': energiChecked,
-      'protein_checked': proteinChecked,
-      'karbo_checked': karboChecked,
-      'lemak_checked': lemakChecked,
-      'natrium_checked': natriumChecked,
-      'kalium_checked': kaliumChecked,
+      'target_nutrients': targetNutrients,
       'catatan': catatan,
       'evaluasi_ahli_gizi': evaluasiAhliGizi,
       'updated_at': DateTime.now().toIso8601String(),
@@ -898,6 +864,42 @@ class AuthService {
   }
 
   // ─── Nutrisi global (legacy, backward compat) ─────────────────────────────
+
+
+  static Future<bool> updateClinicalData({
+    required String rm,
+    required String diagnosis,
+    required String statusGizi,
+    required String catatanKlinis,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final json = prefs.getString(_usersKey);
+    if (json == null) return false;
+    
+    final decoded = jsonDecode(json) as List;
+    final list = decoded.cast<Map<String, dynamic>>();
+    final idx = list.indexWhere((u) => u['role'] == 'pasien' && u['rm'] == rm);
+    
+    if (idx != -1) {
+      list[idx]['diagnosis'] = diagnosis;
+      list[idx]['status_gizi'] = statusGizi;
+      list[idx]['catatan_klinis'] = catatanKlinis;
+      await prefs.setString(_usersKey, jsonEncode(list));
+      
+      final current = prefs.getString(_loggedInUserKey);
+      if (current != null) {
+        final curMap = jsonDecode(current) as Map<String, dynamic>;
+        if (curMap['rm'] == rm) {
+          curMap['diagnosis'] = diagnosis;
+          curMap['status_gizi'] = statusGizi;
+          curMap['catatan_klinis'] = catatanKlinis;
+          await prefs.setString(_loggedInUserKey, jsonEncode(curMap));
+        }
+      }
+      return true;
+    }
+    return false;
+  }
 
   static Future<bool> saveNutrisiPasien({
     required String rmPasien,
@@ -1105,7 +1107,6 @@ class AuthService {
       'jam_selingan_sore': jamSelinganSore ?? '',
       'jam_malam': jamMalam ?? '',
       'diet_type': dietType ?? '',
-      'date': DateTime.now().toIso8601String(),
       'berat_badan': beratBadan,
       'tinggi_badan': tinggiBadan,
       'created_at': today.toIso8601String(),
@@ -1148,7 +1149,7 @@ class AuthService {
         'title': title,
         'pdfUrl': pdfUrl,
         'iconCodePoint': iconCodePoint ?? Icons.article_outlined.codePoint,
-        'colorValue': colorValue ?? const Color(0xFFDBEAFE).value,
+        'colorValue': colorValue ?? 0xFFDBEAFE,
       });
 
       await prefs.setString(_dietTypesKey, jsonEncode(diets));
@@ -1248,87 +1249,66 @@ class AuthService {
     // ── Seed nutrisi per diet ────────────────────────────────────────────────
     final nutrisiPerDietJson = prefs.getString(_nutrisiPerDietKey);
     if (nutrisiPerDietJson == null || (jsonDecode(nutrisiPerDietJson) as List).isEmpty) {
-      // Pasien 100001 – Diet Diabetes Melitus
+      // Pasien 100001
       await saveNutrisiPerDiet(
         rmPasien: '100001', dietType: 'Diet Diabetes Melitus',
-        kaloriTarget: 1800, proteinTarget: 75, lemakTarget: 50, karboTarget: 220,
-        seratTarget: 30, hidrasiTarget: 2.5,
-        kaloriAktual: 1620, proteinAktual: 68, lemakAktual: 44, karboAktual: 198,
-        seratAktual: 22, hidrasiAktual: 2.1,
+        targetNutrients: {'Energi (kkal)': {'target': 1800.0, 'aktual': 1620.0}},
         catatan: 'Hindari makanan tinggi GI. Perbanyak serat dan protein nabati.',
         evaluasiAhliGizi: 'Asupan kalori sudah mendekati target. Tingkatkan konsumsi sayuran hijau dan kurangi nasi putih. Tetap pertahankan olahraga ringan 30 menit/hari.',
       );
-      // Pasien 100001 – Diet Energi Rendah
+      // Pasien 100001
       await saveNutrisiPerDiet(
         rmPasien: '100001', dietType: 'Diet Energi Rendah',
-        kaloriTarget: 1500, proteinTarget: 65, lemakTarget: 42, karboTarget: 180,
-        seratTarget: 28, hidrasiTarget: 2.0,
-        kaloriAktual: 1380, proteinAktual: 58, lemakAktual: 38, karboAktual: 165,
-        seratAktual: 18, hidrasiAktual: 1.8,
+        targetNutrients: {'Energi (kkal)': {'target': 1500.0, 'aktual': 1380.0}},
         catatan: 'Batasi karbohidrat sederhana. Prioritaskan protein tanpa lemak.',
         evaluasiAhliGizi: 'Progres baik. Defisit kalori sudah ideal untuk penurunan berat badan. Pantau BB minggu depan.',
       );
 
-      // Pasien 100002 – Diet Jantung
+      // Pasien 100002
       await saveNutrisiPerDiet(
         rmPasien: '100002', dietType: 'Diet Jantung',
-        kaloriTarget: 2000, proteinTarget: 80, lemakTarget: 55, karboTarget: 250,
-        seratTarget: 35, hidrasiTarget: 2.5,
-        kaloriAktual: 1920, proteinAktual: 76, lemakAktual: 50, karboAktual: 240,
-        seratAktual: 30, hidrasiAktual: 2.3,
+        targetNutrients: {'Energi (kkal)': {'target': 2000.0, 'aktual': 1920.0}},
         catatan: 'Batasi lemak jenuh. Perbanyak omega-3 dari ikan.',
         evaluasiAhliGizi: 'Asupan sudah sangat baik. Pertahankan pola makan ini dan rutin kontrol tekanan darah.',
       );
 
-      // Pasien 100003 – Makanan Sehat Ibu Hamil
+      // Pasien 100003
       await saveNutrisiPerDiet(
         rmPasien: '100003', dietType: 'Makanan Sehat Ibu Hamil',
-        kaloriTarget: 2200, proteinTarget: 90, lemakTarget: 70, karboTarget: 290,
-        seratTarget: 32, hidrasiTarget: 3.0,
-        kaloriAktual: 2050, proteinAktual: 82, lemakAktual: 63, karboAktual: 270,
-        seratAktual: 27, hidrasiAktual: 2.6,
+        targetNutrients: {'Energi (kkal)': {'target': 2200.0, 'aktual': 2050.0}},
         catatan: 'Pastikan asupan asam folat, zat besi, dan kalsium tercukupi.',
         evaluasiAhliGizi: 'Kondisi nutrisi ibu dan janin dalam kondisi baik. Tambahkan susu ibu hamil 1x/hari. Perbanyak sayuran berdaun hijau.',
       );
 
-      // Pasien 100004 – Diet Garam Rendah
+      // Pasien 100004
       await saveNutrisiPerDiet(
         rmPasien: '100004', dietType: 'Diet Garam Rendah',
-        kaloriTarget: 1900, proteinTarget: 72, lemakTarget: 55, karboTarget: 240,
-        seratTarget: 30, hidrasiTarget: 2.0,
-        kaloriAktual: 1750, proteinAktual: 65, lemakAktual: 48, karboAktual: 220,
-        seratAktual: 24, hidrasiAktual: 1.8,
+        targetNutrients: {'Energi (kkal)': {'target': 1900.0, 'aktual': 1750.0}},
         catatan: 'Batasi garam < 2g/hari. Hindari makanan olahan dan acar.',
         evaluasiAhliGizi: 'Tekanan darah membaik. Pertahankan diet rendah natrium. Konsumsi buah kalium tinggi seperti pisang dan alpukat.',
       );
-      // Pasien 100004 – Diet Penyakit Ginjal Kronik
+      // Pasien 100004
       await saveNutrisiPerDiet(
         rmPasien: '100004', dietType: 'Diet Penyakit Ginjal Kronik',
-        kaloriTarget: 1800, proteinTarget: 45, lemakTarget: 55, karboTarget: 265,
-        seratTarget: 25, hidrasiTarget: 1.5,
-        kaloriAktual: 1680, proteinAktual: 42, lemakAktual: 50, karboAktual: 248,
-        seratAktual: 20, hidrasiAktual: 1.4,
+        targetNutrients: {'Energi (kkal)': {'target': 1800.0, 'aktual': 1680.0}},
         catatan: 'Batasi protein dan fosfor. Kontrol asupan kalium.',
         evaluasiAhliGizi: 'Fungsi ginjal stabil. Tetap batasi protein hewani dan konsumsi lebih banyak karbohidrat kompleks.',
       );
 
-      // Pasien 100005 – Diet Energi Rendah
+      // Pasien 100005
       await saveNutrisiPerDiet(
         rmPasien: '100005', dietType: 'Diet Energi Rendah',
-        kaloriTarget: 1600, proteinTarget: 70, lemakTarget: 45, karboTarget: 195,
-        seratTarget: 30, hidrasiTarget: 2.5,
-        kaloriAktual: 1450, proteinAktual: 62, lemakAktual: 40, karboAktual: 178,
-        seratAktual: 22, hidrasiAktual: 2.0,
+        targetNutrients: {'Energi (kkal)': {'target': 1600.0, 'aktual': 1450.0}},
         catatan: 'Target penurunan 0.5 kg/minggu. Hindari makanan gorengan.',
         evaluasiAhliGizi: 'Penurunan berat badan konsisten. Lanjutkan pola makan saat ini. Tambahkan aktivitas fisik 3x seminggu.',
       );
 
       // ── Seed nutrisi global (legacy) untuk backward-compat ──
-      await saveNutrisiPasien(rmPasien: '100001', energiTarget: 1800, proteinTarget: 75, lemakTarget: 50, karboTarget: 220, energiAktual: 1620, proteinAktual: 68, lemakAktual: 44, karboAktual: 198, seratTarget: 30, seratAktual: 22, hidrasiTarget: 2.5, hidrasiAktual: 2.1, catatan: 'Diet Diabetes + Energi Rendah');
-      await saveNutrisiPasien(rmPasien: '100002', energiTarget: 2000, proteinTarget: 80, lemakTarget: 55, karboTarget: 250, energiAktual: 1920, proteinAktual: 76, lemakAktual: 50, karboAktual: 240, seratTarget: 35, seratAktual: 30, hidrasiTarget: 2.5, hidrasiAktual: 2.3, catatan: 'Diet Jantung');
-      await saveNutrisiPasien(rmPasien: '100003', energiTarget: 2200, proteinTarget: 90, lemakTarget: 70, karboTarget: 290, energiAktual: 2050, proteinAktual: 82, lemakAktual: 63, karboAktual: 270, seratTarget: 32, seratAktual: 27, hidrasiTarget: 3.0, hidrasiAktual: 2.6, catatan: 'Makanan Sehat Ibu Hamil');
-      await saveNutrisiPasien(rmPasien: '100004', energiTarget: 1900, proteinTarget: 72, lemakTarget: 55, karboTarget: 240, energiAktual: 1750, proteinAktual: 65, lemakAktual: 48, karboAktual: 220, seratTarget: 30, seratAktual: 24, hidrasiTarget: 2.0, hidrasiAktual: 1.8, catatan: 'Diet Ginjal + Garam Rendah');
-      await saveNutrisiPasien(rmPasien: '100005', energiTarget: 1600, proteinTarget: 70, lemakTarget: 45, karboTarget: 195, energiAktual: 1450, proteinAktual: 62, lemakAktual: 40, karboAktual: 178, seratTarget: 30, seratAktual: 22, hidrasiTarget: 2.5, hidrasiAktual: 2.0, catatan: 'Diet Energi Rendah');
+      await saveNutrisiPasien(rmPasien: '100001', energiTarget: 1800, proteinTarget: 75, lemakTarget: 50, karboTarget: 220, seratTarget: 30, hidrasiTarget: 2.5, catatan: 'Diet Diabetes + Energi Rendah');
+      await saveNutrisiPasien(rmPasien: '100002', energiTarget: 2000, proteinTarget: 80, lemakTarget: 55, karboTarget: 250, seratTarget: 35, hidrasiTarget: 2.5, catatan: 'Diet Jantung');
+      await saveNutrisiPasien(rmPasien: '100003', energiTarget: 2200, proteinTarget: 90, lemakTarget: 70, karboTarget: 290, seratTarget: 32, hidrasiTarget: 3.0, catatan: 'Makanan Sehat Ibu Hamil');
+      await saveNutrisiPasien(rmPasien: '100004', energiTarget: 1900, proteinTarget: 72, lemakTarget: 55, karboTarget: 240, seratTarget: 30, hidrasiTarget: 2.0, catatan: 'Diet Ginjal + Garam Rendah');
+      await saveNutrisiPasien(rmPasien: '100005', energiTarget: 1600, proteinTarget: 70, lemakTarget: 45, karboTarget: 195, seratTarget: 30, hidrasiTarget: 2.5, catatan: 'Diet Energi Rendah');
     }
 
     // ── Seed meal logs dummy ─────────────────────────────────────────────────

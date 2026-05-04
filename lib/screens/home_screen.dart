@@ -117,21 +117,16 @@ class _HomeScreenState extends State<HomeScreen> {
   Map<String, dynamic>? get _currentDietNutrisi =>
       _nutrisiPerDiet.isNotEmpty ? _nutrisiPerDiet[_dietPageIndex] : _nutrisi;
 
-  double get _kaloriTarget => (_currentDietNutrisi?['kalori_target'] as num?)?.toDouble() ?? 0;
-  double get _kaloriAktual => (_currentDietNutrisi?['kalori_aktual'] as num?)?.toDouble() ?? 0;
+  Map<String, dynamic> get _targetNutrients {
+    if (_currentDietNutrisi != null && _currentDietNutrisi!.containsKey('target_nutrients')) {
+      return _currentDietNutrisi!['target_nutrients'] as Map<String, dynamic>;
+    }
+    return {};
+  }
+
+  double get _kaloriTarget => (_targetNutrients['Energi (kkal)']?['target'] as num?)?.toDouble() ?? 0;
+  double get _kaloriAktual => (_targetNutrients['Energi (kkal)']?['aktual'] as num?)?.toDouble() ?? 0;
   double get _kaloriPercent => _kaloriTarget > 0 ? (_kaloriAktual / _kaloriTarget).clamp(0.0, 1.0) : 0.0;
-
-  double get _proteinTarget => (_currentDietNutrisi?['protein_target'] as num?)?.toDouble() ?? 0;
-  double get _proteinAktual => (_currentDietNutrisi?['protein_aktual'] as num?)?.toDouble() ?? 0;
-  double get _proteinPercent => _proteinTarget > 0 ? (_proteinAktual / _proteinTarget).clamp(0.0, 1.0) : 0.0;
-
-  double get _lemakTarget => (_currentDietNutrisi?['lemak_target'] as num?)?.toDouble() ?? 0;
-  double get _lemakAktual => (_currentDietNutrisi?['lemak_aktual'] as num?)?.toDouble() ?? 0;
-  double get _lemakPercent => _lemakTarget > 0 ? (_lemakAktual / _lemakTarget).clamp(0.0, 1.0) : 0.0;
-
-  double get _karboTarget => (_currentDietNutrisi?['karbo_target'] as num?)?.toDouble() ?? 0;
-  double get _karboAktual => (_currentDietNutrisi?['karbo_aktual'] as num?)?.toDouble() ?? 0;
-  double get _karboPercent => _karboTarget > 0 ? (_karboAktual / _karboTarget).clamp(0.0, 1.0) : 0.0;
 
   // ── BB/TB dari histori terakhir ──
   double get _bbTerakhir {
@@ -601,15 +596,21 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildDietCard(Map<String, dynamic> n, int idx) {
     final dietName = n['diet_type'] as String? ?? 'Diet ${idx + 1}';
-    final kT = (n['kalori_target'] as num?)?.toDouble() ?? 0;
-    final kA = (n['kalori_aktual'] as num?)?.toDouble() ?? 0;
+    final targetNutrients = n['target_nutrients'] as Map<String, dynamic>? ?? {};
+    
+    final kT = (targetNutrients['Energi (kkal)']?['target'] as num?)?.toDouble() ?? 0;
+    final kA = (targetNutrients['Energi (kkal)']?['aktual'] as num?)?.toDouble() ?? 0;
     final kPct = kT > 0 ? (kA / kT).clamp(0.0, 1.0) : 0.0;
-    final pA = (n['protein_aktual'] as num?)?.toDouble() ?? 0;
-    final pT = (n['protein_target'] as num?)?.toDouble() ?? 0;
-    final lA = (n['lemak_aktual'] as num?)?.toDouble() ?? 0;
-    final lT = (n['lemak_target'] as num?)?.toDouble() ?? 0;
-    final cA = (n['karbo_aktual'] as num?)?.toDouble() ?? 0;
-    final cT = (n['karbo_target'] as num?)?.toDouble() ?? 0;
+    
+    final pT = (targetNutrients['Protein (g)']?['target'] as num?)?.toDouble() ?? 0;
+    final pA = (targetNutrients['Protein (g)']?['aktual'] as num?)?.toDouble() ?? 0;
+    
+    final lT = (targetNutrients['Lemak (g)']?['target'] as num?)?.toDouble() ?? 0;
+    final lA = (targetNutrients['Lemak (g)']?['aktual'] as num?)?.toDouble() ?? 0;
+    
+    final cT = (targetNutrients['Karbohidrat (g)']?['target'] as num?)?.toDouble() ?? 0;
+    final cA = (targetNutrients['Karbohidrat (g)']?['aktual'] as num?)?.toDouble() ?? 0;
+    
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -629,7 +630,7 @@ class _HomeScreenState extends State<HomeScreen> {
         const SizedBox(height: 14),
         Text('${_fmt(kA)} / ${_fmt(kT)} kkal', style: GoogleFonts.manrope(fontSize: 22, fontWeight: FontWeight.w700, color: Colors.white)),
         const SizedBox(height: 4),
-        Text('Kalori Aktual / Target', style: GoogleFonts.manrope(fontSize: 11, color: Colors.white.withValues(alpha: 0.7))),
+        Text('Energi Aktual / Target', style: GoogleFonts.manrope(fontSize: 11, color: Colors.white.withValues(alpha: 0.7))),
         const SizedBox(height: 8),
         ClipRRect(borderRadius: BorderRadius.circular(4), child: LinearProgressIndicator(value: kPct, backgroundColor: Colors.white.withValues(alpha: 0.25), color: Colors.white, minHeight: 8)),
         const SizedBox(height: 16),
@@ -970,6 +971,15 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildNutritionSummary() {
+    final Map<String, dynamic> nutrients = _targetNutrients;
+    if (nutrients.isEmpty) return const SizedBox.shrink();
+
+    // Filter out basic macros already shown in _buildDietCard
+    final basicMacros = ['Energi (kkal)', 'Protein (g)', 'Lemak (g)', 'Karbohidrat (g)'];
+    final additionalNutrients = nutrients.entries.where((e) => !basicMacros.contains(e.key)).toList();
+
+    if (additionalNutrients.isEmpty) return const SizedBox.shrink();
+
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
       padding: const EdgeInsets.all(16),
@@ -993,7 +1003,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const SizedBox(width: 10),
               Text(
-                'Target & Capaian Nutrisi',
+                'Target Tambahan (Mineral, Vitamin, dll)',
                 style: GoogleFonts.manrope(
                   fontSize: 14,
                   fontWeight: FontWeight.w800,
@@ -1003,23 +1013,58 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           ),
           const SizedBox(height: 16),
-          _buildNutrientRow(
-              'PROTEIN',
-              _proteinPercent,
-              AppColors.protein,
-              '${_fmt(_proteinAktual)}g / ${_fmt(_proteinTarget)}g'),
-          const SizedBox(height: 12),
-          _buildNutrientRow(
-              'LEMAK SEHAT',
-              _lemakPercent,
-              AppColors.fat,
-              '${_fmt(_lemakAktual)}g / ${_fmt(_lemakTarget)}g'),
-          const SizedBox(height: 12),
-          _buildNutrientRow(
-              'KARBOHIDRAT',
-              _karboPercent,
-              AppColors.carb,
-              '${_fmt(_karboAktual)}g / ${_fmt(_karboTarget)}g'),
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              crossAxisSpacing: 12,
+              mainAxisSpacing: 12,
+              childAspectRatio: 2.2,
+            ),
+            itemCount: additionalNutrients.length,
+            itemBuilder: (context, index) {
+              final nutrient = additionalNutrients[index];
+              final target = (nutrient.value['target'] as num?)?.toDouble() ?? 0;
+              final aktual = (nutrient.value['aktual'] as num?)?.toDouble() ?? 0;
+              final pct = target > 0 ? (aktual / target).clamp(0.0, 1.0) : 0.0;
+              
+              return Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: AppColors.background,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.divider),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      nutrient.key,
+                      style: GoogleFonts.manrope(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.textSecondary),
+                      maxLines: 1, overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${_fmt(aktual)} / ${_fmt(target)}',
+                      style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.textPrimary),
+                    ),
+                    const SizedBox(height: 4),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(2),
+                      child: LinearProgressIndicator(
+                        value: pct,
+                        minHeight: 4,
+                        backgroundColor: AppColors.divider,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
         ],
       ),
     );
@@ -1126,47 +1171,21 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildNutrientRow(
-      String label, double percent, Color color, String caption) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              label,
-              style: GoogleFonts.manrope(
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-                letterSpacing: 1,
-                color: AppColors.textSecondary,
-              ),
-            ),
-            Text(
-              caption,
-              style: GoogleFonts.manrope(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: color,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 4),
-        LinearPercentIndicator(
-          padding: EdgeInsets.zero,
-          lineHeight: 8,
-          percent: min(percent, 1.0),
-          backgroundColor: AppColors.divider,
-          progressColor: color,
-          barRadius: const Radius.circular(4),
-        ),
-      ],
-    );
-  }
 
   Widget _buildDailyTargetChart() {
+    final targetNutrients = _targetNutrients;
+    final pT = (targetNutrients['Protein (g)']?['target'] as num?)?.toDouble() ?? 0;
+    final pA = (targetNutrients['Protein (g)']?['aktual'] as num?)?.toDouble() ?? 0;
+    final pPct = pT > 0 ? (pA / pT).clamp(0.0, 1.0) : 0.0;
+    
+    final lT = (targetNutrients['Lemak (g)']?['target'] as num?)?.toDouble() ?? 0;
+    final lA = (targetNutrients['Lemak (g)']?['aktual'] as num?)?.toDouble() ?? 0;
+    final lPct = lT > 0 ? (lA / lT).clamp(0.0, 1.0) : 0.0;
+    
+    final cT = (targetNutrients['Karbohidrat (g)']?['target'] as num?)?.toDouble() ?? 0;
+    final cA = (targetNutrients['Karbohidrat (g)']?['aktual'] as num?)?.toDouble() ?? 0;
+    final cPct = cT > 0 ? (cA / cT).clamp(0.0, 1.0) : 0.0;
+
     return Container(
       color: AppColors.surface,
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
@@ -1237,9 +1256,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 gridData: const FlGridData(show: true, drawVerticalLine: false),
                 barGroups: [
                   BarChartGroupData(x: 0, barRods: [BarChartRodData(toY: _kaloriPercent, color: AppColors.primary, width: 16, borderRadius: BorderRadius.circular(4))]),
-                  BarChartGroupData(x: 1, barRods: [BarChartRodData(toY: _proteinPercent, color: AppColors.protein, width: 16, borderRadius: BorderRadius.circular(4))]),
-                  BarChartGroupData(x: 2, barRods: [BarChartRodData(toY: _lemakPercent, color: AppColors.fat, width: 16, borderRadius: BorderRadius.circular(4))]),
-                  BarChartGroupData(x: 3, barRods: [BarChartRodData(toY: _karboPercent, color: AppColors.carb, width: 16, borderRadius: BorderRadius.circular(4))]),
+                  BarChartGroupData(x: 1, barRods: [BarChartRodData(toY: pPct, color: AppColors.protein, width: 16, borderRadius: BorderRadius.circular(4))]),
+                  BarChartGroupData(x: 2, barRods: [BarChartRodData(toY: lPct, color: AppColors.fat, width: 16, borderRadius: BorderRadius.circular(4))]),
+                  BarChartGroupData(x: 3, barRods: [BarChartRodData(toY: cPct, color: AppColors.carb, width: 16, borderRadius: BorderRadius.circular(4))]),
                 ],
               ),
             ),

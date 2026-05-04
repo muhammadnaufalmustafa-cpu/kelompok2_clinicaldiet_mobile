@@ -20,6 +20,11 @@ class Pasien {
   String? nik;
   String? agama;
   String? profilePhotoPath;
+  // ── Clinical Fields ──
+  String? diagnosis;
+  String? statusGizi;
+  String? catatanKlinis;
+  String? targetDietText;
 
   Pasien({
     this.role = 'pasien',
@@ -42,6 +47,10 @@ class Pasien {
     this.nik,
     this.agama,
     this.profilePhotoPath,
+    this.diagnosis,
+    this.statusGizi,
+    this.catatanKlinis,
+    this.targetDietText,
   });
 
   // Convert to Map for SharedPreferences storage
@@ -67,6 +76,10 @@ class Pasien {
       'nik': nik,
       'agama': agama,
       'profile_photo_path': profilePhotoPath,
+      'diagnosis': diagnosis,
+      'status_gizi': statusGizi,
+      'catatan_klinis': catatanKlinis,
+      'target_diet_text': targetDietText,
     };
   }
 
@@ -93,6 +106,10 @@ class Pasien {
       nik: map['nik'],
       agama: map['agama'],
       profilePhotoPath: map['profile_photo_path'],
+      diagnosis: map['diagnosis'],
+      statusGizi: map['status_gizi'],
+      catatanKlinis: map['catatan_klinis'],
+      targetDietText: map['target_diet_text'] ?? map['target_diet'], // backward compat
     );
   }
 

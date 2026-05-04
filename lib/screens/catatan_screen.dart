@@ -35,6 +35,8 @@ class _CatatanScreenState extends State<CatatanScreen> {
   bool _isLocked = false;
   List<String> _dietList = [];
   String? _selectedDietType;
+  String _targetDietText = '';
+  String _birthdate = '';
 
   final _bbCtrl = TextEditingController();
   final _tbCtrl = TextEditingController();
@@ -54,12 +56,17 @@ class _CatatanScreenState extends State<CatatanScreen> {
   void initState() {
     super.initState();
     _loadInitialData();
+    _bbCtrl.addListener(() => setState(() {}));
+    _tbCtrl.addListener(() => setState(() {}));
   }
 
   Future<void> _loadInitialData() async {
     final user = await AuthService.getLoggedInUser();
     if (user != null && mounted) {
       setState(() {
+        _targetDietText = user['target_diet'] as String? ?? '';
+        _birthdate = user['birthdate'] as String? ?? '';
+        
         // Fetch diet list
         final raw = user['diet_types'];
         if (raw is List && raw.isNotEmpty) {
@@ -362,6 +369,17 @@ class _CatatanScreenState extends State<CatatanScreen> {
                         ],
                       ),
                     ),
+                  if (_targetDietText.isNotEmpty) ...[
+                    Text('TARGET DIET', style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w700, letterSpacing: 1.2, color: AppColors.textSecondary)),
+                    const SizedBox(height: 12),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(color: AppColors.primaryLight, borderRadius: BorderRadius.circular(12), border: Border.all(color: AppColors.primary.withValues(alpha: 0.3))),
+                      child: Text(_targetDietText, style: GoogleFonts.manrope(fontSize: 14, color: AppColors.primaryDark)),
+                    ),
+                    const SizedBox(height: 24),
+                  ],
                   if (_dietList.isNotEmpty) ...[
                     Text('PILIHAN PROGRAM DIET', style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w700, letterSpacing: 1.2, color: AppColors.textSecondary)),
                     const SizedBox(height: 12),
@@ -383,13 +401,16 @@ class _CatatanScreenState extends State<CatatanScreen> {
                         value: _selectedDietType,
                         decoration: InputDecoration(
                           filled: true,
-                          fillColor: AppColors.surface,
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.divider)),
-                          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.divider)),
+                          fillColor: const Color(0xFFEEF2FF),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFC7D2FE))),
+                          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFC7D2FE))),
                           disabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.divider)),
                           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                         ),
-                        items: _dietList.map((d) => DropdownMenuItem(value: d, child: Text(d, style: GoogleFonts.manrope(fontSize: 14, color: AppColors.textPrimary)))).toList(),
+                        icon: const Icon(Icons.keyboard_arrow_down, color: Color(0xFF4F46E5)),
+                        style: GoogleFonts.manrope(fontSize: 14, fontWeight: FontWeight.w600, color: const Color(0xFF4F46E5)),
+                        dropdownColor: const Color(0xFFEEF2FF),
+                        items: _dietList.map((d) => DropdownMenuItem(value: d, child: Text(d))).toList(),
                         onChanged: _isLocked ? null : (v) => setState(() => _selectedDietType = v),
                       ),
                     const SizedBox(height: 24),
@@ -404,6 +425,7 @@ class _CatatanScreenState extends State<CatatanScreen> {
                       Expanded(child: _buildPhysicalField('Tinggi Badan (cm)', _tbCtrl)),
                     ],
                   ),
+                  _buildStatusGizi(),
                   const SizedBox(height: 24),
                   Row(
                     children: [
@@ -615,4 +637,71 @@ class _CatatanScreenState extends State<CatatanScreen> {
       ),
     );
   }
+
+  Widget _buildStatusGizi() {
+    if (_birthdate.isEmpty) return const SizedBox.shrink();
+    
+    final bbText = _bbCtrl.text;
+    final tbText = _tbCtrl.text;
+    if (bbText.isEmpty || tbText.isEmpty) return const SizedBox.shrink();
+
+    final bb = double.tryParse(bbText) ?? 0;
+    final tb = double.tryParse(tbText) ?? 0;
+    if (bb == 0 || tb == 0) return const SizedBox.shrink();
+
+    DateTime? bDate;
+    try {
+      if (_birthdate.contains('/')) {
+        final p = _birthdate.split('/');
+        bDate = DateTime(int.parse(p[2]), int.parse(p[1]), int.parse(p[0]));
+      } else {
+        bDate = DateTime.parse(_birthdate);
+      }
+    } catch (_) {}
+    bDate ??= DateTime.now();
+
+    final now = DateTime.now();
+    int months = (now.year - bDate.year) * 12 + now.month - bDate.month;
+    if (now.day < bDate.day) months--;
+
+    final tbM = tb / 100;
+    final imt = bb / (tbM * tbM);
+    
+    String imtKategori = '';
+    if (months >= 216) {
+      if (imt < 18.5) imtKategori = 'Kurus';
+      else if (imt <= 24.9) imtKategori = 'Normal';
+      else if (imt <= 29.9) imtKategori = 'Overweight';
+      else imtKategori = 'Obesitas';
+    } else {
+      imtKategori = 'Lihat grafik anak';
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(top: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF0FDF4),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFF86EFAC)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.monitor_weight_outlined, color: Color(0xFF166534), size: 18),
+              const SizedBox(width: 8),
+              Text('Indikator Status Gizi', style: GoogleFonts.manrope(fontSize: 12, fontWeight: FontWeight.w700, color: const Color(0xFF166534))),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text('IMT: ${imt.toStringAsFixed(1)} ($imtKategori)', style: GoogleFonts.manrope(fontSize: 12, color: AppColors.textPrimary)),
+          if (months < 216)
+            Text('Usia: $months bulan (Plot BB/U & IMT/U via grafik harian)', style: GoogleFonts.manrope(fontSize: 11, color: AppColors.textSecondary)),
+        ],
+      ),
+    );
+  }
 }
+
