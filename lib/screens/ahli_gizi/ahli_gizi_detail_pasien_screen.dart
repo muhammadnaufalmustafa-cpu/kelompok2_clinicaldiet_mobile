@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../theme/app_theme.dart';
@@ -846,11 +847,34 @@ class _AhliGiziDetailPasienScreenState
     );
   }
 
-  void _downloadConsent(String? consentDocB64, String? base64Sig, String? filePath, String rm) {
+  Future<void> _downloadConsent(String? consentDocB64, String? base64Sig, String? filePath, String rm) async {
     if (kIsWeb) {
       if (consentDocB64 != null && consentDocB64.isNotEmpty) {
         // Download dokumen HTML lengkap (isi + centang + tanda tangan)
-        final htmlContent = String.fromCharCodes(base64Decode(consentDocB64));
+        String htmlContent;
+        try {
+          htmlContent = utf8.decode(base64Decode(consentDocB64));
+        } catch (_) {
+          htmlContent = String.fromCharCodes(base64Decode(consentDocB64));
+        }
+
+        try {
+          final ByteData logoData = await rootBundle.load('assets/images/icon.png');
+          final String logoBase64 = base64Encode(logoData.buffer.asUint8List());
+          final String logoImg = '<img src="data:image/png;base64,$logoBase64" class="logo-img" alt="Logo" style="height: 28px; margin-right: 8px;">';
+
+          // Ganti string rusak / lama dengan logo asli dan perbaiki styling headline
+          htmlContent = htmlContent.replaceAllMapped(
+            RegExp(r'<div class="logo-title">.*?Clinical Diet<\/div>'),
+            (match) => '<div class="logo-title" style="display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 800; color: #3B7A57; letter-spacing: 1px; margin-bottom: 4px; font-family: \'Manrope\', sans-serif;">$logoImg Clinical Diet</div>'
+          );
+          
+          // Tambahkan import font jika belum ada
+          if (!htmlContent.contains('Manrope')) {
+             htmlContent = htmlContent.replaceFirst('<style>', '<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">\n  <style>');
+          }
+        } catch (_) {}
+
         downloadHtmlFileOnWeb(htmlContent, 'informed_consent_$rm.html');
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text('Dokumen informed_consent_$rm.html berhasil diunduh.', style: GoogleFonts.manrope()),

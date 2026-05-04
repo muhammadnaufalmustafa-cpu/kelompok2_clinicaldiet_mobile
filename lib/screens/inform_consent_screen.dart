@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:google_fonts/google_fonts.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:signature/signature.dart';
@@ -95,6 +96,7 @@ class _InformConsentScreenState extends State<InformConsentScreen> {
         patientRm: patientRm,
         signedDateStr: signedDateStr,
         signatureBase64: sigBase64,
+        logoBase64: logoBase64,
       );
 
       await AuthService.saveInformConsent(
@@ -129,6 +131,7 @@ class _InformConsentScreenState extends State<InformConsentScreen> {
     required String patientRm,
     required String signedDateStr,
     required String signatureBase64,
+    required String logoBase64,
   }) {
     final htmlContent = '''<!DOCTYPE html>
 <html lang="id">
@@ -136,12 +139,14 @@ class _InformConsentScreenState extends State<InformConsentScreen> {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Informed Consent - $patientName</title>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Segoe UI', Arial, sans-serif; background: #f8fafc; color: #1e293b; padding: 32px; }
+    body { font-family: 'Manrope', 'Segoe UI', Arial, sans-serif; background: #f8fafc; color: #1e293b; padding: 32px; }
     .page { max-width: 800px; margin: 0 auto; background: #fff; border-radius: 16px; box-shadow: 0 4px 24px rgba(0,0,0,0.10); padding: 48px 56px; }
     .header { text-align: center; border-bottom: 3px solid #3B7A57; padding-bottom: 24px; margin-bottom: 32px; }
-    .logo-title { font-size: 22px; font-weight: 800; color: #3B7A57; letter-spacing: 1px; margin-bottom: 4px; }
+    .logo-title { display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 800; color: #3B7A57; letter-spacing: 1px; margin-bottom: 4px; }
+    .logo-img { height: 28px; margin-right: 8px; }
     .subtitle { font-size: 13px; color: #64748b; }
     .doc-title { font-size: 18px; font-weight: 700; color: #1e293b; text-align: center; margin-bottom: 24px; letter-spacing: 0.5px; text-transform: uppercase; }
     .patient-info { background: #f1faf5; border: 1px solid #bbf0d4; border-radius: 10px; padding: 16px 20px; margin-bottom: 28px; }
@@ -176,7 +181,7 @@ class _InformConsentScreenState extends State<InformConsentScreen> {
 <body>
   <div class="page">
     <div class="header">
-      <div class="logo-title">🏥 Clinical Diet</div>
+      <div class="logo-title"><img src="data:image/png;base64,$logoBase64" class="logo-img" alt="Logo"> Clinical Diet</div>
       <div class="subtitle">Sistem Pemantauan Gizi Klinik</div>
     </div>
 

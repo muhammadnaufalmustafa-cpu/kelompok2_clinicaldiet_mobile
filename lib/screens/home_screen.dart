@@ -10,6 +10,24 @@ import 'pilih_jenis_diet_screen.dart';
 import 'edukasi_screen.dart';
 import '../services/auth_service.dart';
 
+enum AgeCategory { balita, anakRemaja, dewasa }
+
+class AgeInfo {
+  final int tahun;
+  final int bulan;
+  final int hari;
+  final int totalBulan;
+  final AgeCategory kategori;
+
+  AgeInfo({
+    required this.tahun,
+    required this.bulan,
+    required this.hari,
+    required this.totalBulan,
+    required this.kategori,
+  });
+}
+
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -141,6 +159,53 @@ class _HomeScreenState extends State<HomeScreen> {
   String _fmt(double val) =>
       val == val.truncateToDouble() ? val.toInt().toString() : val.toStringAsFixed(1);
 
+  AgeInfo _computeAge(String birthdateStr) {
+    if (birthdateStr.isEmpty) {
+      return AgeInfo(tahun: 0, bulan: 0, hari: 0, totalBulan: 0, kategori: AgeCategory.dewasa);
+    }
+    DateTime? birthDate;
+    try {
+      if (birthdateStr.contains('/')) {
+        final parts = birthdateStr.split('/');
+        if (parts.length == 3) {
+          birthDate = DateTime(int.parse(parts[2]), int.parse(parts[1]), int.parse(parts[0]));
+        }
+      } else {
+        birthDate = DateTime.parse(birthdateStr);
+      }
+    } catch (_) {}
+
+    birthDate ??= DateTime.now();
+    final now = DateTime.now();
+
+    int tahun = now.year - birthDate.year;
+    int bulan = now.month - birthDate.month;
+    int hari = now.day - birthDate.day;
+
+    if (hari < 0) {
+      bulan--;
+      final prevMonth = DateTime(now.year, now.month, 0);
+      hari += prevMonth.day;
+    }
+    if (bulan < 0) {
+      tahun--;
+      bulan += 12;
+    }
+
+    final totalBulan = (tahun * 12) + bulan;
+
+    AgeCategory kategori;
+    if (totalBulan < 60) {
+      kategori = AgeCategory.balita; // 0-59 bulan
+    } else if (tahun < 18) {
+      kategori = AgeCategory.anakRemaja; // 5 thn - < 18 thn
+    } else {
+      kategori = AgeCategory.dewasa; // >= 18 thn
+    }
+
+    return AgeInfo(tahun: tahun, bulan: bulan, hari: hari, totalBulan: totalBulan, kategori: kategori);
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
@@ -194,14 +259,6 @@ class _HomeScreenState extends State<HomeScreen> {
               right: 24,
               child: FloatingActionButton.extended(
                 onPressed: () async {
-                  if (_kaloriTarget == 0) {
-                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                      content: Text('Anda belum bisa mencatat makan karena Ahli Gizi belum menetapkan target diet Anda.', style: GoogleFonts.manrope()),
-                      backgroundColor: Colors.orange,
-                      behavior: SnackBarBehavior.floating,
-                    ));
-                    return;
-                  }
                   await Navigator.push(
                     context,
                     MaterialPageRoute(builder: (_) => const CatatanScreen()),
@@ -331,9 +388,24 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // ── BB/TB Card ──────────────────────────────────────────────────────────────
   Widget _buildBBTBCard() {
+    final ageInfo = _computeAge(_user?['birthdate']?.toString() ?? '');
     final bmi = _tbTerakhir > 0 ? _bbTerakhir / ((_tbTerakhir / 100) * (_tbTerakhir / 100)) : 0.0;
     final bmiLabel = bmi == 0 ? '-' : bmi < 18.5 ? 'Kurus' : bmi < 25 ? 'Normal' : bmi < 30 ? 'Gemuk' : 'Obesitas';
     final bmiColor = bmi == 0 ? AppColors.textMuted : bmi < 18.5 ? const Color(0xFF0284C7) : bmi < 25 ? AppColors.primary : bmi < 30 ? const Color(0xFFD97706) : const Color(0xFFDC2626);
+    
+    String catLabel;
+    switch (ageInfo.kategori) {
+      case AgeCategory.balita:
+        catLabel = 'Balita';
+        break;
+      case AgeCategory.anakRemaja:
+        catLabel = 'Anak & Remaja';
+        break;
+      case AgeCategory.dewasa:
+        catLabel = 'Dewasa';
+        break;
+    }
+
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
       padding: const EdgeInsets.all(16),
@@ -346,20 +418,67 @@ class _HomeScreenState extends State<HomeScreen> {
           const Spacer(),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-            decoration: BoxDecoration(color: bmiColor.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
-            child: Text(bmiLabel, style: GoogleFonts.manrope(fontSize: 11, fontWeight: FontWeight.w700, color: bmiColor)),
+            decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
+            child: Text(catLabel, style: GoogleFonts.manrope(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.primary)),
           ),
+          if (ageInfo.kategori == AgeCategory.dewasa) ...[
+            const SizedBox(width: 6),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(color: bmiColor.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
+              child: Text(bmiLabel, style: GoogleFonts.manrope(fontSize: 11, fontWeight: FontWeight.w700, color: bmiColor)),
+            ),
+          ],
         ]),
         const SizedBox(height: 12),
-        Row(children: [
-          Expanded(child: _buildPhysCard('BB', '${_fmt(_bbTerakhir)} kg', Icons.fitness_center)),
-          const SizedBox(width: 10),
-          Expanded(child: _buildPhysCard('TB', '${_fmt(_tbTerakhir)} cm', Icons.height)),
-          const SizedBox(width: 10),
-          Expanded(child: _buildPhysCard('IMT', bmi > 0 ? _fmt(bmi) : '-', Icons.calculate_outlined)),
-        ]),
+        _buildDynamicPhysRow(ageInfo, bmi),
       ]),
     );
+  }
+
+  Widget _buildDynamicPhysRow(AgeInfo ageInfo, double bmi) {
+    final gender = _user?['gender']?.toString() ?? '-';
+    
+    String ageStr;
+    if (ageInfo.kategori == AgeCategory.balita) {
+      ageStr = '${ageInfo.totalBulan} bln ${ageInfo.hari} hr';
+    } else if (ageInfo.kategori == AgeCategory.anakRemaja) {
+      ageStr = '${ageInfo.tahun}th ${ageInfo.bulan}bl ${ageInfo.hari}hr';
+    } else {
+      ageStr = '${ageInfo.tahun} thn';
+    }
+
+    if (ageInfo.kategori == AgeCategory.balita) {
+      return Row(children: [
+        Expanded(child: _buildPhysCard('BB', '${_fmt(_bbTerakhir)} kg', Icons.fitness_center)),
+        const SizedBox(width: 10),
+        Expanded(child: _buildPhysCard('TB', '${_fmt(_tbTerakhir)} cm', Icons.height)),
+        const SizedBox(width: 10),
+        Expanded(child: _buildPhysCard('Gender', gender == 'Laki-laki' ? 'L' : (gender == 'Perempuan' ? 'P' : '-'), Icons.wc)),
+        const SizedBox(width: 10),
+        Expanded(child: _buildPhysCard('Umur', ageStr, Icons.cake_outlined)),
+      ]);
+    } else if (ageInfo.kategori == AgeCategory.anakRemaja) {
+      return Row(children: [
+        Expanded(flex: 3, child: _buildPhysCard('BB', '${_fmt(_bbTerakhir)} kg', Icons.fitness_center)),
+        const SizedBox(width: 8),
+        Expanded(flex: 3, child: _buildPhysCard('TB', '${_fmt(_tbTerakhir)} cm', Icons.height)),
+        const SizedBox(width: 8),
+        Expanded(flex: 4, child: _buildPhysCard('Umur', ageStr, Icons.cake_outlined)),
+        const SizedBox(width: 8),
+        Expanded(flex: 3, child: _buildPhysCard('Gender', gender == 'Laki-laki' ? 'L' : (gender == 'Perempuan' ? 'P' : '-'), Icons.wc)),
+      ]);
+    } else {
+      return Row(children: [
+        Expanded(child: _buildPhysCard('BB', '${_fmt(_bbTerakhir)} kg', Icons.fitness_center)),
+        const SizedBox(width: 10),
+        Expanded(child: _buildPhysCard('TB', '${_fmt(_tbTerakhir)} cm', Icons.height)),
+        const SizedBox(width: 10),
+        Expanded(child: _buildPhysCard('IMT', bmi > 0 ? _fmt(bmi) : '-', Icons.calculate_outlined)),
+        const SizedBox(width: 10),
+        Expanded(child: _buildPhysCard('Umur', ageStr, Icons.cake_outlined)),
+      ]);
+    }
   }
 
   Widget _buildPhysCard(String label, String value, IconData icon) {
@@ -369,8 +488,8 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Column(children: [
         Icon(icon, color: AppColors.primary, size: 18),
         const SizedBox(height: 4),
-        Text(value, style: GoogleFonts.manrope(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
-        Text(label, style: GoogleFonts.manrope(fontSize: 10, color: AppColors.textSecondary), textAlign: TextAlign.center),
+        FittedBox(fit: BoxFit.scaleDown, child: Text(value, style: GoogleFonts.manrope(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textPrimary))),
+        Text(label, style: GoogleFonts.manrope(fontSize: 10, color: AppColors.textSecondary), textAlign: TextAlign.center, maxLines: 1, overflow: TextOverflow.ellipsis),
       ]),
     );
   }
@@ -1160,29 +1279,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   fontWeight: FontWeight.w600,
                   color: AppColors.textPrimary,
                 ),
-              ),
-            ),
-            const SizedBox(width: 8),
-            TextButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const CatatanScreen()),
-                );
-              },
-              style: TextButton.styleFrom(
-                backgroundColor: AppColors.primaryLight,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20)),
-              ),
-              child: Text(
-                'Catat',
-                style: GoogleFonts.manrope(
-                    color: AppColors.primaryDark,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 12),
               ),
             ),
           ],

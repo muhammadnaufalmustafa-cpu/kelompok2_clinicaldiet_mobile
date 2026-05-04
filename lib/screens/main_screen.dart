@@ -5,6 +5,7 @@ import 'home_screen.dart';
 import 'catatan_screen.dart';
 import 'edukasi_screen.dart';
 import 'profil_screen.dart';
+import '../services/auth_service.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});

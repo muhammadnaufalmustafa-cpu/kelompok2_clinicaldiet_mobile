@@ -20,10 +20,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _phoneController = TextEditingController();
 
   final _nikController = TextEditingController();
-  final _agamaController = TextEditingController();
-  final _pendidikanController = TextEditingController();
-  final _pekerjaanController = TextEditingController();
+  final _agamaLainnyaController = TextEditingController();
+  final _pendidikanLainnyaController = TextEditingController();
+  final _pekerjaanLainnyaController = TextEditingController();
   final _alamatController = TextEditingController();
+  
+  String? _selectedAgama;
+  String? _selectedPendidikan;
+  String? _selectedPekerjaan;
+
+  final List<String> _agamaOptions = ['Islam', 'Kristen Protestan', 'Katolik', 'Hindu', 'Buddha', 'Konghucu', 'Lainnya'];
+  final List<String> _pendidikanOptions = ['Tidak Sekolah', 'Belum Tamat SD/Sederajat', 'SD/Sederajat', 'SMP/Sederajat', 'SMA/SMK/Sederajat', 'Diploma I/II/III', 'Diploma IV/S1', 'S2', 'S3', 'Lainnya'];
+  final List<String> _pekerjaanOptions = ['Tidak Bekerja', 'Pelajar/Mahasiswa', 'Ibu Rumah Tangga', 'PNS', 'TNI/Polri', 'Pegawai Swasta', 'Wiraswasta', 'Petani', 'Nelayan', 'Buruh', 'Pedagang', 'Guru/Dosen', 'Tenaga Kesehatan', 'Pensiunan', 'Lainnya'];
   
   final _passController = TextEditingController();
   final _confirmPassController = TextEditingController();
@@ -63,9 +71,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
     _phoneController.dispose();
 
     _nikController.dispose();
-    _agamaController.dispose();
-    _pendidikanController.dispose();
-    _pekerjaanController.dispose();
+    _agamaLainnyaController.dispose();
+    _pendidikanLainnyaController.dispose();
+    _pekerjaanLainnyaController.dispose();
     _alamatController.dispose();
     _passController.dispose();
     _confirmPassController.dispose();
@@ -102,9 +110,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final phone = _phoneController.text.trim();
 
     final nik = _nikController.text.trim();
-    final agama = _agamaController.text.trim();
-    final pendidikan = _pendidikanController.text.trim();
-    final pekerjaan = _pekerjaanController.text.trim();
+    String agama = _selectedAgama ?? '';
+    if (agama == 'Lainnya') agama = _agamaLainnyaController.text.trim();
+    
+    String pendidikan = _selectedPendidikan ?? '';
+    if (pendidikan == 'Lainnya') pendidikan = _pendidikanLainnyaController.text.trim();
+    
+    String pekerjaan = _selectedPekerjaan ?? '';
+    if (pekerjaan == 'Lainnya') pekerjaan = _pekerjaanLainnyaController.text.trim();
+
     final alamat = _alamatController.text.trim();
     final password = _passController.text;
     final confirmPass = _confirmPassController.text;
@@ -112,6 +126,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     if (name.isEmpty || rm.isEmpty || email.isEmpty || phone.isEmpty || password.isEmpty || username.isEmpty) {
       _showSnackBar('Semua field wajib (yang bukan opsional) harus diisi.', isError: true);
+      return;
+    }
+    if (_selectedAgama == 'Lainnya' && agama.isEmpty) {
+      _showSnackBar('Harap isi agama/kepercayaan Anda.', isError: true);
+      return;
+    }
+    if (_selectedPendidikan == 'Lainnya' && pendidikan.isEmpty) {
+      _showSnackBar('Harap isi pendidikan terakhir Anda.', isError: true);
+      return;
+    }
+    if (_selectedPekerjaan == 'Lainnya' && pekerjaan.isEmpty) {
+      _showSnackBar('Harap isi pekerjaan Anda.', isError: true);
       return;
     }
     if (_selectedBirthdate == null) {
@@ -378,23 +404,53 @@ class _RegisterScreenState extends State<RegisterScreen> {
               maxLength: 16,
             ),
             const SizedBox(height: 14),
-            _buildTextField(
-              controller: _agamaController,
+            _buildDropdownField(
               label: 'Agama',
-              hint: 'Contoh: Islam, Kristen, dll',
+              hint: 'Pilih agama',
+              value: _selectedAgama,
+              items: _agamaOptions,
+              onChanged: (val) => setState(() => _selectedAgama = val),
             ),
+            if (_selectedAgama == 'Lainnya') ...[
+              const SizedBox(height: 10),
+              _buildTextField(
+                controller: _agamaLainnyaController,
+                label: 'Tuliskan Agama/Kepercayaan',
+                hint: 'Masukkan agama',
+              ),
+            ],
             const SizedBox(height: 14),
-            _buildTextField(
-              controller: _pendidikanController,
+            _buildDropdownField(
               label: 'Pendidikan Terakhir',
-              hint: 'Contoh: SMA, S1, dll',
+              hint: 'Pilih pendidikan terakhir',
+              value: _selectedPendidikan,
+              items: _pendidikanOptions,
+              onChanged: (val) => setState(() => _selectedPendidikan = val),
             ),
+            if (_selectedPendidikan == 'Lainnya') ...[
+              const SizedBox(height: 10),
+              _buildTextField(
+                controller: _pendidikanLainnyaController,
+                label: 'Tuliskan Pendidikan',
+                hint: 'Masukkan pendidikan',
+              ),
+            ],
             const SizedBox(height: 14),
-            _buildTextField(
-              controller: _pekerjaanController,
+            _buildDropdownField(
               label: 'Pekerjaan',
-              hint: 'Contoh: Wiraswasta',
+              hint: 'Pilih pekerjaan',
+              value: _selectedPekerjaan,
+              items: _pekerjaanOptions,
+              onChanged: (val) => setState(() => _selectedPekerjaan = val),
             ),
+            if (_selectedPekerjaan == 'Lainnya') ...[
+              const SizedBox(height: 10),
+              _buildTextField(
+                controller: _pekerjaanLainnyaController,
+                label: 'Tuliskan Pekerjaan',
+                hint: 'Masukkan pekerjaan',
+              ),
+            ],
             const SizedBox(height: 14),
             _buildTextField(
               controller: _alamatController,
@@ -647,6 +703,54 @@ class _RegisterScreenState extends State<RegisterScreen> {
               contentPadding: const EdgeInsets.symmetric(
                   horizontal: 8, vertical: 14),
             ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDropdownField({
+    required String label,
+    required String hint,
+    required String? value,
+    required List<String> items,
+    required Function(String?) onChanged,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label,
+            style: GoogleFonts.manrope(
+                fontSize: 13, color: AppColors.textPrimary)),
+        const SizedBox(height: 8),
+        Container(
+          decoration: BoxDecoration(
+            color: const Color(0xFFF3F4F6),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+                color: AppColors.divider.withValues(alpha: 0.5)),
+          ),
+          child: DropdownButtonFormField<String>(
+            value: value,
+            isExpanded: true,
+            style: GoogleFonts.manrope(fontSize: 15, color: AppColors.textPrimary),
+            decoration: InputDecoration(
+              hintText: hint,
+              hintStyle: GoogleFonts.manrope(
+                  color: AppColors.textMuted, fontSize: 14),
+              border: InputBorder.none,
+              contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16, vertical: 14),
+            ),
+            dropdownColor: Colors.white,
+            icon: const Icon(Icons.keyboard_arrow_down, color: AppColors.textSecondary),
+            items: items.map((item) {
+              return DropdownMenuItem(
+                value: item,
+                child: Text(item, style: GoogleFonts.manrope(fontSize: 15, color: AppColors.textPrimary)),
+              );
+            }).toList(),
+            onChanged: onChanged,
           ),
         ),
       ],

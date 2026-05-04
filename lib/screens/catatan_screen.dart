@@ -142,6 +142,14 @@ class _CatatanScreenState extends State<CatatanScreen> {
     }
   }
 
+  void _showLockedWarning() {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text('Anda belum bisa mencatat makanan karena ahli gizi belum menetapkan target diet Anda.', style: GoogleFonts.manrope()),
+      backgroundColor: Colors.orange,
+      behavior: SnackBarBehavior.floating,
+    ));
+  }
+
   // ── URT Picker (Bottom Sheet) ──────────────────────────────────────────────
   Future<void> _showURTPicker(TextEditingController targetCtrl) async {
     String query = '';
@@ -332,6 +340,28 @@ class _CatatanScreenState extends State<CatatanScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  if (_isLocked)
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 20),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.orange),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.warning_amber_rounded, color: Colors.orange),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              'Anda belum bisa mencatat makanan karena ahli gizi belum menetapkan target diet Anda.',
+                              style: GoogleFonts.manrope(fontSize: 13, color: Colors.orange[800]),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   if (_dietList.isNotEmpty) ...[
                     Text('PILIHAN PROGRAM DIET', style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w700, letterSpacing: 1.2, color: AppColors.textSecondary)),
                     const SizedBox(height: 12),
@@ -356,10 +386,11 @@ class _CatatanScreenState extends State<CatatanScreen> {
                           fillColor: AppColors.surface,
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.divider)),
                           enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.divider)),
+                          disabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.divider)),
                           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                         ),
                         items: _dietList.map((d) => DropdownMenuItem(value: d, child: Text(d, style: GoogleFonts.manrope(fontSize: 14, color: AppColors.textPrimary)))).toList(),
-                        onChanged: (v) => setState(() => _selectedDietType = v),
+                        onChanged: _isLocked ? null : (v) => setState(() => _selectedDietType = v),
                       ),
                     const SizedBox(height: 24),
                   ],
@@ -462,6 +493,7 @@ class _CatatanScreenState extends State<CatatanScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: TextField(
         controller: controller,
+        enabled: !_isLocked,
         keyboardType: TextInputType.number,
         style: GoogleFonts.manrope(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
         decoration: InputDecoration(
@@ -496,20 +528,20 @@ class _CatatanScreenState extends State<CatatanScreen> {
             Expanded(child: Text(label, style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w600, letterSpacing: 0.8, color: AppColors.textPrimary))),
             // Tombol URT
             GestureDetector(
-              onTap: () => _showURTPicker(controller),
+              onTap: _isLocked ? _showLockedWarning : () => _showURTPicker(controller),
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFE0F2FE),
+                  color: _isLocked ? Colors.grey[200] : const Color(0xFFE0F2FE),
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: const Color(0xFF0284C7).withValues(alpha: 0.5)),
+                  border: Border.all(color: _isLocked ? Colors.grey : const Color(0xFF0284C7).withValues(alpha: 0.5)),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.straighten, size: 13, color: Color(0xFF0284C7)),
+                    Icon(Icons.straighten, size: 13, color: _isLocked ? Colors.grey : const Color(0xFF0284C7)),
                     const SizedBox(width: 4),
-                    Text('URT', style: GoogleFonts.manrope(fontSize: 11, fontWeight: FontWeight.w700, color: const Color(0xFF0284C7))),
+                    Text('URT', style: GoogleFonts.manrope(fontSize: 11, fontWeight: FontWeight.w700, color: _isLocked ? Colors.grey : const Color(0xFF0284C7))),
                   ],
                 ),
               ),
@@ -517,23 +549,23 @@ class _CatatanScreenState extends State<CatatanScreen> {
             const SizedBox(width: 6),
             // Tombol jam
             GestureDetector(
-              onTap: () => _pickTime(session),
+              onTap: _isLocked ? _showLockedWarning : () => _pickTime(session),
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                 decoration: BoxDecoration(
-                  color: jam != null ? AppColors.primaryLight : AppColors.background,
+                  color: jam != null ? AppColors.primaryLight : (_isLocked ? Colors.grey[200] : AppColors.background),
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: jam != null ? AppColors.primary : AppColors.divider),
+                  border: Border.all(color: jam != null ? AppColors.primary : (_isLocked ? Colors.grey : AppColors.divider)),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.access_time, size: 14, color: jam != null ? AppColors.primary : AppColors.textMuted),
+                    Icon(Icons.access_time, size: 14, color: jam != null ? AppColors.primary : (_isLocked ? Colors.grey : AppColors.textMuted)),
                     const SizedBox(width: 4),
                     Text(
                       jam != null ? _timeOfDayToStr(jam) : 'Set Jam',
                       style: GoogleFonts.manrope(fontSize: 11, fontWeight: FontWeight.w600,
-                          color: jam != null ? AppColors.primaryDark : AppColors.textMuted),
+                          color: jam != null ? AppColors.primaryDark : (_isLocked ? Colors.grey : AppColors.textMuted)),
                     ),
                   ],
                 ),
@@ -543,9 +575,10 @@ class _CatatanScreenState extends State<CatatanScreen> {
         ),
         const SizedBox(height: 10),
         Container(
-          decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(14), border: Border.all(color: AppColors.divider)),
+          decoration: BoxDecoration(color: _isLocked ? Colors.grey[100] : AppColors.surface, borderRadius: BorderRadius.circular(14), border: Border.all(color: AppColors.divider)),
           child: TextField(
             controller: controller,
+            enabled: !_isLocked,
             maxLines: 3,
             style: GoogleFonts.manrope(fontSize: 14, color: AppColors.textPrimary),
             decoration: InputDecoration(
