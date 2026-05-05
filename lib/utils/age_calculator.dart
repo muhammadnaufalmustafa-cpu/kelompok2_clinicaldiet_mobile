@@ -2,7 +2,17 @@ class AgeCalculator {
   static Map<String, int>? calculateAge(String? birthdateStr) {
     if (birthdateStr == null || birthdateStr.isEmpty) return null;
     try {
-      final birthDate = DateTime.parse(birthdateStr);
+      DateTime? birthDate;
+      if (birthdateStr.contains('/')) {
+        final parts = birthdateStr.split('/');
+        if (parts.length == 3) {
+          birthDate = DateTime(int.parse(parts[2]), int.parse(parts[1]), int.parse(parts[0]));
+        }
+      } else {
+        birthDate = DateTime.parse(birthdateStr);
+      }
+
+      if (birthDate == null) return null;
       final today = DateTime.now();
       
       int years = today.year - birthDate.year;

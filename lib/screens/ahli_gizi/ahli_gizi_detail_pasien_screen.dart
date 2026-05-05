@@ -33,7 +33,6 @@ class _AhliGiziDetailPasienScreenState
 
   // ── Clinical Inputs ──
   final _diagnosisCtrl = TextEditingController();
-  final _statusGiziCtrl = TextEditingController();
   final _catatanNutrisiCtrl = TextEditingController();
   final _customDietCtrl = TextEditingController();
 
@@ -89,7 +88,6 @@ class _AhliGiziDetailPasienScreenState
   void dispose() {
     _targetCtrl.dispose();
     _diagnosisCtrl.dispose();
-    _statusGiziCtrl.dispose();
     _catatanNutrisiCtrl.dispose();
     for (var c in _targetCtrls.values) { c.dispose(); }
     for (var c in _aktualCtrls.values) { c.dispose(); }
@@ -110,7 +108,6 @@ class _AhliGiziDetailPasienScreenState
     if (mounted) {
       setState(() {
         _diagnosisCtrl.text = widget.pasien['diagnosis'] ?? '';
-        _statusGiziCtrl.text = widget.pasien['status_gizi'] ?? '';
         _catatanNutrisiCtrl.text = widget.pasien['catatan_klinis'] ?? '';
         
         final dt = widget.pasien['diet_type'] as String? ?? 'Diet Normal';
@@ -139,6 +136,10 @@ class _AhliGiziDetailPasienScreenState
               _checkedNutrients[key] = true;
               if (!_targetCtrls.containsKey(key)) _targetCtrls[key] = TextEditingController();
               _targetCtrls[key]!.text = _fmtNum(val['target']);
+              // Load aktual yang sudah diinput AG sebelumnya
+              if (!_aktualCtrls.containsKey(key)) _aktualCtrls[key] = TextEditingController();
+              final aktualVal = (val['aktual'] as num?)?.toDouble() ?? 0.0;
+              _aktualCtrls[key]!.text = aktualVal > 0 ? _fmtNum(aktualVal) : '';
             });
           }
         });
@@ -156,7 +157,7 @@ class _AhliGiziDetailPasienScreenState
     if (plan == null) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Belum ada input target gizi sebelumnya untuk pasien ini.'),
+          content: Text('Belum ada data sebelumnya untuk pasien ini.'),
           backgroundColor: Colors.orange,
         ));
       }
@@ -182,6 +183,10 @@ class _AhliGiziDetailPasienScreenState
             _checkedNutrients[key] = true;
             if (!_targetCtrls.containsKey(key)) _targetCtrls[key] = TextEditingController();
             _targetCtrls[key]!.text = _fmtNum(val['target']);
+            // Load aktual sebelumnya jika ada
+            if (!_aktualCtrls.containsKey(key)) _aktualCtrls[key] = TextEditingController();
+            final aktualVal = (val['aktual'] as num?)?.toDouble() ?? 0.0;
+            _aktualCtrls[key]!.text = aktualVal > 0 ? _fmtNum(aktualVal) : '';
           });
         }
         
@@ -221,36 +226,38 @@ class _AhliGiziDetailPasienScreenState
           ? _customDietCtrl.text 
           : (_selectedDietType ?? 'Diet Normal');
 
-      // Prepare target nutrients map
+      // Prepare target AND aktual nutrients map
       Map<String, dynamic> targetNutrientsToSave = {};
+      Map<String, dynamic> aktualNutrientsToSave = {};
       _checkedNutrients.forEach((key, checked) {
         if (checked) {
-          final val = double.tryParse(_targetCtrls[key]?.text ?? '0') ?? 0.0;
+          final targetVal = double.tryParse(_targetCtrls[key]?.text ?? '0') ?? 0.0;
           targetNutrientsToSave[key] = {
-            'target': val,
-            'aktual': 0.0,
+            'target': targetVal,
+            'aktual': double.tryParse(_aktualCtrls[key]?.text ?? '0') ?? 0.0,
           };
+          aktualNutrientsToSave[key] = double.tryParse(_aktualCtrls[key]?.text ?? '0') ?? 0.0;
         }
       });
 
-      // 1. Save Nutrisi Per Diet (Targets)
+      // 1. Save Nutrisi Per Diet (Target + Aktualisasi dari AG)
       await AuthService.saveNutrisiPerDiet(
         rmPasien: rm,
         dietType: effectiveDiet,
         targetNutrients: targetNutrientsToSave,
+        aktualNutrients: aktualNutrientsToSave,
         catatan: _catatanNutrisiCtrl.text,
       );
 
-      // 2. Simpan data klinis ke model pasien
+      // 2. Simpan data klinis ke model pasien (tanpa statusGizi)
       await AuthService.updateClinicalData(
         rm: rm,
         diagnosis: _diagnosisCtrl.text,
-        statusGizi: _statusGiziCtrl.text,
         catatanKlinis: _catatanNutrisiCtrl.text,
         terapiDiet: effectiveDiet,
       );
 
-      // 3. Simpan target diet (text summary)
+      // 3. Simpan target diet (text summary legacy)
       await AuthService.saveTargetDietPasien(
         rm: rm,
         targetDiet: _targetCtrl.text,
@@ -329,8 +336,6 @@ class _AhliGiziDetailPasienScreenState
                 children: [
                   _buildNutrisiField('Diagnosis (ICD 10)', _diagnosisCtrl, 'Ketik diagnosis...', ''),
                   const SizedBox(height: 12),
-                  _buildNutrisiField('Status Gizi', _statusGiziCtrl, 'Ketik status gizi...', ''),
-                  const SizedBox(height: 12),
                   _buildNutrisiField('Catatan / Evaluasi Klinis', _catatanNutrisiCtrl, 'Ketik catatan...', ''),
                 ],
               ),
@@ -347,12 +352,7 @@ class _AhliGiziDetailPasienScreenState
             ],
             const SizedBox(height: 24),
 
-            // ── Target Diet Text ──
-            _buildSectionLabel('Ringkasan Target Diet'),
-            const SizedBox(height: 8),
-            _buildTextArea(_targetCtrl,
-                'Ringkasan target gizi (misal: "Energi 1800 kkal, Protein 60g"). Akan tampil di Catatan Makan...', 3),
-            const SizedBox(height: 24),
+
 
             // ── NUTRISI SECTION ──
             _buildNutrisiSection(),
@@ -1140,59 +1140,98 @@ class _AhliGiziDetailPasienScreenState
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildSectionLabel('Capaian Gizi Harian'),
+        _buildSectionLabel('Aktualisasi Gizi Harian'),
+        const SizedBox(height: 4),
+        Text(
+          'Input manual oleh Ahli Gizi berdasarkan perhitungan dari catatan makan pasien.',
+          style: GoogleFonts.manrope(fontSize: 12, color: AppColors.textSecondary, height: 1.4),
+        ),
         const SizedBox(height: 12),
         if (_checkedNutrients.values.every((v) => !v))
-          Center(child: Text('Pilih target gizi terlebih dahulu', style: GoogleFonts.manrope(fontSize: 12, color: AppColors.textMuted)))
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: Colors.orange.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.orange.withValues(alpha: 0.4)),
+            ),
+            child: Text(
+              'Pilih dan simpan target gizi terlebih dahulu, lalu isi aktualisasi di sini.',
+              style: GoogleFonts.manrope(fontSize: 12, color: Colors.orange[800]),
+            ),
+          )
         else
           Container(
             padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(color: const Color(0xFFF8FAFC), borderRadius: BorderRadius.circular(16), border: Border.all(color: AppColors.divider)),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppColors.divider),
+            ),
             child: Column(
               children: _checkedNutrients.entries.where((e) => e.value).map((e) {
                 final nutrient = e.key;
-                final target = double.tryParse(_targetCtrls[nutrient]?.text ?? '0') ?? 0.0;
-                
-                // Hitung aktual dari riwayat makan hari ini
-                double aktual = 0;
-                final today = DateTime.now().toIso8601String().split('T')[0];
-                for (var log in _riwayatMakan) {
-                  final logDate = (log['date'] as String? ?? '').split('T')[0];
-                  if (logDate == today) {
-                    final logNutrients = log['target_nutrients'] as Map<String, dynamic>? ?? {};
-                    if (logNutrients.containsKey(nutrient)) {
-                      aktual += (logNutrients[nutrient]['aktual'] as num? ?? 0).toDouble();
-                    } else {
-                      // Fallback ke field legacy
-                      if (nutrient == 'Energi (kkal)') aktual += (log['kalori'] as num? ?? 0).toDouble();
-                      if (nutrient == 'Protein (g)') aktual += (log['protein'] as num? ?? 0).toDouble();
-                      if (nutrient == 'Lemak (g)') aktual += (log['lemak'] as num? ?? 0).toDouble();
-                      if (nutrient == 'Karbohidrat (g)') aktual += (log['karbohidrat'] as num? ?? 0).toDouble();
-                    }
-                  }
+                if (!_aktualCtrls.containsKey(nutrient)) {
+                  _aktualCtrls[nutrient] = TextEditingController();
                 }
+                final target = double.tryParse(_targetCtrls[nutrient]?.text ?? '0') ?? 0.0;
 
-                final percent = target > 0 ? (aktual / target).clamp(0.0, 1.0) : 0.0;
-                
                 return Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.only(bottom: 16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(nutrient, style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w600)),
-                          Text('${(percent * 100).toInt()}%', style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.primary)),
+                          Text(
+                            nutrient,
+                            style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+                          ),
+                          if (target > 0)
+                            Text(
+                              'Target: ${_fmtNum(target)}',
+                              style: GoogleFonts.manrope(fontSize: 11, color: AppColors.textSecondary),
+                            ),
                         ],
                       ),
-                      const SizedBox(height: 6),
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(10),
-                        child: LinearProgressIndicator(value: percent, minHeight: 8, backgroundColor: Colors.grey[200], color: AppColors.primary),
+                      const SizedBox(height: 8),
+                      TextField(
+                        controller: _aktualCtrls[nutrient],
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        style: GoogleFonts.manrope(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
+                        decoration: InputDecoration(
+                          hintText: 'Input aktualisasi $nutrient...',
+                          hintStyle: GoogleFonts.manrope(color: AppColors.textMuted, fontSize: 13),
+                          filled: true,
+                          fillColor: AppColors.background,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                            borderSide: BorderSide.none,
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          suffixIcon: Builder(builder: (ctx) {
+                            // Hitung persentase real-time
+                            final aktualVal = double.tryParse(_aktualCtrls[nutrient]?.text ?? '0') ?? 0.0;
+                            final pct = target > 0 ? (aktualVal / target * 100).clamp(0, 999).toInt() : 0;
+                            return Padding(
+                              padding: const EdgeInsets.only(right: 10),
+                              child: Center(
+                                widthFactor: 1,
+                                child: Text(
+                                  '$pct%',
+                                  style: GoogleFonts.manrope(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                    color: pct >= 100 ? AppColors.primary : AppColors.textSecondary,
+                                  ),
+                                ),
+                              ),
+                            );
+                          }),
+                        ),
+                        onChanged: (_) => setState(() {}),
                       ),
-                      const SizedBox(height: 4),
-                      Text('Target: ${_fmtNum(target)} | Aktual: ${_fmtNum(aktual)}', style: GoogleFonts.manrope(fontSize: 11, color: AppColors.textSecondary)),
                     ],
                   ),
                 );

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_theme.dart';
 import '../services/auth_service.dart';
+import '../utils/age_calculator.dart';
 
 // ─── Daftar lengkap URT sesuai referensi ahli gizi ───────────────────────────
 const List<String> kDaftarURT = [
@@ -24,7 +25,8 @@ const List<String> kDaftarURT = [
 ];
 
 class CatatanScreen extends StatefulWidget {
-  const CatatanScreen({super.key});
+  final VoidCallback? onSaved;
+  const CatatanScreen({super.key, this.onSaved});
 
   @override
   State<CatatanScreen> createState() => _CatatanScreenState();
@@ -37,6 +39,7 @@ class _CatatanScreenState extends State<CatatanScreen> {
   String? _selectedDietType;
   String _targetDietText = '';
   String _birthdate = '';
+  String _gender = '';
 
   final _bbCtrl = TextEditingController();
   final _tbCtrl = TextEditingController();
@@ -48,11 +51,7 @@ class _CatatanScreenState extends State<CatatanScreen> {
 
   Map<String, dynamic> _targetNutrients = {};
   String _diagnosis = '';
-  String _statusGizi = '';
   String _catatanKlinis = '';
-  
-  // Controllers dinamis untuk semua variabel gizi
-  final Map<String, TextEditingController> _nutrientInputs = {};
 
   TimeOfDay? _jamPagi;
   TimeOfDay? _jamSelinganPagi;
@@ -74,6 +73,7 @@ class _CatatanScreenState extends State<CatatanScreen> {
       setState(() {
         _targetDietText = user['target_diet'] as String? ?? '';
         _birthdate = user['birthdate'] as String? ?? '';
+        _gender = user['gender'] as String? ?? '';
         
         // Fetch diet list
         final raw = user['diet_types'];
@@ -87,24 +87,17 @@ class _CatatanScreenState extends State<CatatanScreen> {
           _selectedDietType = _dietList.first;
         }
 
-        // Fetch nutrisi to check if target is set
         final rm = user['rm'] as String;
         _diagnosis = user['diagnosis'] ?? '-';
-        _statusGizi = user['status_gizi'] ?? '-';
         _catatanKlinis = user['catatan_klinis'] ?? '-';
 
+        // Load target nutrients (hanya baca, pasien tidak input angka gizi)
         AuthService.getNutrisiPasienPerDiet(rm, _selectedDietType ?? '').then((nutrisi) {
           if (nutrisi != null) {
             if (mounted) {
               setState(() {
                 _targetNutrients = nutrisi['target_nutrients'] ?? {};
-                // Inisialisasi controller untuk setiap target yang ada
-                _targetNutrients.forEach((key, val) {
-                  if ((val['target'] as num? ?? 0) > 0) {
-                    _nutrientInputs[key] = TextEditingController();
-                  }
-                });
-                // Lock if all targets are 0
+                // Lock jika belum ada target dari AG
                 _isLocked = _targetNutrients.values.every((v) => (v['target'] as num? ?? 0) == 0);
               });
             }
@@ -323,12 +316,6 @@ class _CatatanScreenState extends State<CatatanScreen> {
         await AuthService.updateBBTBWithHistory(rm, bb, tb);
       }
 
-      // Ambil data dari input dinamis
-      Map<String, double> asupanDinamis = {};
-      _nutrientInputs.forEach((key, ctrl) {
-        asupanDinamis[key] = double.tryParse(ctrl.text) ?? 0.0;
-      });
-
       final success = await AuthService.saveMealLog(
         rmPasien: rm,
         dietType: _selectedDietType,
@@ -339,13 +326,6 @@ class _CatatanScreenState extends State<CatatanScreen> {
         mealMalam: _malamCtrl.text,
         beratBadan: bb,
         tinggiBadan: tb,
-        // Map asupan dinamis ke field yang sesuai (backward compatible)
-        kalori: asupanDinamis['Energi (kkal)'],
-        protein: asupanDinamis['Protein (g)'],
-        lemak: asupanDinamis['Lemak (g)'],
-        karbohidrat: asupanDinamis['Karbohidrat (g)'],
-        // Simpan semua variabel ekstra dalam map target_nutrients di log
-        targetNutrients: asupanDinamis.map((k, v) => MapEntry(k, {'aktual': v})),
         jamPagi: _jamPagi != null ? _timeOfDayToStr(_jamPagi!) : '',
         jamSelinganPagi: _jamSelinganPagi != null ? _timeOfDayToStr(_jamSelinganPagi!) : '',
         jamSiang: _jamSiang != null ? _timeOfDayToStr(_jamSiang!) : '',
@@ -355,14 +335,34 @@ class _CatatanScreenState extends State<CatatanScreen> {
 
       if (success) {
         if (!mounted) return;
+        // Reset semua form
+        _pagiCtrl.clear();
+        _selinganPagiCtrl.clear();
+        _siangCtrl.clear();
+        _selinganSoreCtrl.clear();
+        _malamCtrl.clear();
+        _bbCtrl.clear();
+        _tbCtrl.clear();
+        setState(() {
+          _jamPagi = null;
+          _jamSelinganPagi = null;
+          _jamSiang = null;
+          _jamSelinganSore = null;
+          _jamMalam = null;
+        });
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Catatan makan berhasil disimpan! ✅', style: GoogleFonts.manrope(fontWeight: FontWeight.w600)),
             backgroundColor: AppColors.primary,
             behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
         );
-        if (mounted) Navigator.pop(context);
+
+        // Pindah ke tab Beranda (bukan pop)
+        await Future.delayed(const Duration(milliseconds: 600));
+        if (mounted) widget.onSaved?.call();
       } else {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal menyimpan catatan makan.', style: GoogleFonts.manrope()), backgroundColor: Colors.red));
@@ -455,7 +455,20 @@ class _CatatanScreenState extends State<CatatanScreen> {
                   ],
 
                   if (_targetNutrients.isNotEmpty && !_isLocked) ...[
-                    Text('TARGET GIZI HARIAN', style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w700, letterSpacing: 1.2, color: AppColors.textSecondary)),
+                    Row(
+                      children: [
+                        Text('TARGET GIZI HARIAN', style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w700, letterSpacing: 1.2, color: AppColors.textSecondary)),
+                        const Spacer(),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFD1FAE5),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text('Acuan', style: GoogleFonts.manrope(fontSize: 10, fontWeight: FontWeight.w700, color: const Color(0xFF065F46))),
+                        ),
+                      ],
+                    ),
                     const SizedBox(height: 12),
                     Container(
                       padding: const EdgeInsets.all(16),
@@ -463,22 +476,23 @@ class _CatatanScreenState extends State<CatatanScreen> {
                       child: Column(
                         children: _targetNutrients.entries.where((e) => (e.value['target'] as num? ?? 0) > 0).map((e) {
                           final target = (e.value['target'] as num?)?.toDouble() ?? 0;
-                          final aktual = (e.value['aktual'] as num?)?.toDouble() ?? 0;
-                          final pct = target > 0 ? (aktual / target).clamp(0.0, 1.0) : 0.0;
+                          final fmtTarget = target == target.truncateToDouble()
+                              ? target.toInt().toString()
+                              : target.toStringAsFixed(1);
                           return Padding(
                             padding: const EdgeInsets.only(bottom: 8),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text(e.key, style: GoogleFonts.manrope(fontSize: 12, fontWeight: FontWeight.w600)),
-                                    Text('${aktual.toStringAsFixed(0)} / ${target.toStringAsFixed(0)}', style: GoogleFonts.manrope(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.primary)),
-                                  ],
+                                Text(e.key, style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.primaryLight,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(fmtTarget, style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.primary)),
                                 ),
-                                const SizedBox(height: 4),
-                                LinearProgressIndicator(value: pct, minHeight: 4, backgroundColor: Colors.grey[200], color: AppColors.primary),
                               ],
                             ),
                           );
@@ -499,43 +513,6 @@ class _CatatanScreenState extends State<CatatanScreen> {
                   ),
                   _buildStatusGizi(),
                   const SizedBox(height: 24),
-
-                  // ── INPUT ASUPAN GIZI DINAMIS ──
-                  if (_nutrientInputs.isNotEmpty && !_isLocked) ...[
-                    Text('INPUT ASUPAN GIZI', style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w700, letterSpacing: 1.2, color: AppColors.textSecondary)),
-                    const SizedBox(height: 12),
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: AppColors.divider)),
-                      child: Column(
-                        children: _nutrientInputs.entries.map((e) {
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 12),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(e.key, style: GoogleFonts.manrope(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-                                const SizedBox(height: 6),
-                                TextField(
-                                  controller: e.value,
-                                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                                  style: GoogleFonts.manrope(fontSize: 14, fontWeight: FontWeight.w600),
-                                  decoration: InputDecoration(
-                                    hintText: 'Masukkan asupan ${e.key}...',
-                                    filled: true,
-                                    fillColor: AppColors.background,
-                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
-                                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        }).toList(),
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                  ],
 
                   Row(
                     children: [
@@ -749,43 +726,22 @@ class _CatatanScreenState extends State<CatatanScreen> {
   }
 
   Widget _buildStatusGizi() {
-    if (_birthdate.isEmpty) return const SizedBox.shrink();
+    final double? weight = double.tryParse(_bbCtrl.text);
+    final double? height = double.tryParse(_tbCtrl.text);
     
-    final bbText = _bbCtrl.text;
-    final tbText = _tbCtrl.text;
-    if (bbText.isEmpty || tbText.isEmpty) return const SizedBox.shrink();
-
-    final bb = double.tryParse(bbText) ?? 0;
-    final tb = double.tryParse(tbText) ?? 0;
-    if (bb == 0 || tb == 0) return const SizedBox.shrink();
-
-    DateTime? bDate;
-    try {
-      if (_birthdate.contains('/')) {
-        final p = _birthdate.split('/');
-        bDate = DateTime(int.parse(p[2]), int.parse(p[1]), int.parse(p[0]));
-      } else {
-        bDate = DateTime.parse(_birthdate);
-      }
-    } catch (_) {}
-    bDate ??= DateTime.now();
-
-    final now = DateTime.now();
-    int months = (now.year - bDate.year) * 12 + now.month - bDate.month;
-    if (now.day < bDate.day) months--;
-
-    final tbM = tb / 100;
-    final imt = bb / (tbM * tbM);
-    
-    String imtKategori = '';
-    if (months >= 216) {
-      if (imt < 18.5) imtKategori = 'Kurus';
-      else if (imt <= 24.9) imtKategori = 'Normal';
-      else if (imt <= 29.9) imtKategori = 'Overweight';
-      else imtKategori = 'Obesitas';
-    } else {
-      imtKategori = 'Kategori Anak';
+    if (weight == null || height == null || weight == 0 || height == 0) {
+      return const SizedBox.shrink();
     }
+
+    final double imt = weight / ((height / 100) * (height / 100));
+    String imtKategori = 'Normal';
+    if (imt < 18.5) imtKategori = 'Kurus';
+    else if (imt < 25.1) imtKategori = 'Normal';
+    else if (imt < 27.1) imtKategori = 'Gemuk';
+    else imtKategori = 'Obesitas';
+
+    final ageMap = AgeCalculator.calculateAge(_birthdate);
+    final int months = ageMap != null ? (ageMap['years']! * 12) + ageMap['months']! : 0;
 
     return Container(
       margin: const EdgeInsets.only(top: 12),
@@ -802,12 +758,14 @@ class _CatatanScreenState extends State<CatatanScreen> {
             children: [
               const Icon(Icons.analytics_outlined, color: Color(0xFF166534), size: 18),
               const SizedBox(width: 8),
-              Text('Ringkasan Klinis & Status Gizi', style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF166534))),
+              Text('Ringkasan Klinis & Status Gizi', style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w700, color: const Color(0xFF166534))),
             ],
           ),
           const SizedBox(height: 12),
           _clinicalRow('Diagnosis', _diagnosis),
           _clinicalRow('Terapi Diet', _selectedDietType ?? '-'),
+          if (_catatanKlinis.isNotEmpty && _catatanKlinis != '-')
+            _clinicalRow('Catatan Ahli Gizi', _catatanKlinis),
           const Divider(height: 16, color: Color(0xFF86EFAC)),
           Row(
             children: [
@@ -818,19 +776,20 @@ class _CatatanScreenState extends State<CatatanScreen> {
           const SizedBox(height: 8),
           Row(
             children: [
-              Expanded(child: _statusItem('BB/U', 'Normal')), // Placeholder for real calculation
-              Expanded(child: _statusItem('IMT/U', 'Normal')), // Placeholder for real calculation
+              Expanded(child: _statusItem('BB/U', 'Normal')), 
+              Expanded(child: _statusItem('IMT/U', 'Normal')), 
             ],
           ),
-          if (months < 216)
+          if (months > 0 && months < 216)
             Padding(
               padding: const EdgeInsets.only(top: 8),
-              child: Text('* Indikator /U disesuaikan dengan kurva pertumbuhan anak (0-18 thn).', style: GoogleFonts.manrope(fontSize: 10, color: Color(0xFF166534), fontStyle: FontStyle.italic)),
+              child: Text('* Indikator /U disesuaikan dengan kurva pertumbuhan anak (0-18 thn).', style: GoogleFonts.manrope(fontSize: 10, color: const Color(0xFF166534), fontStyle: FontStyle.italic)),
             ),
         ],
       ),
     );
   }
+
 
   Widget _clinicalRow(String label, String value) {
     return Padding(
