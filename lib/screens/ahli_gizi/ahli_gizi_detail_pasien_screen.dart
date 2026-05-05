@@ -9,8 +9,8 @@ import '../../theme/app_theme.dart';
 import '../../services/auth_service.dart';
 import '../../services/web_download.dart';
 import '../../utils/age_calculator.dart';
-import '../grafik_harian_screen.dart';
 import 'laporan_pasien_screen.dart';
+import 'laporan_harian_ag_screen.dart';
 
 class AhliGiziDetailPasienScreen extends StatefulWidget {
   final Map<String, dynamic> pasien;
@@ -150,53 +150,6 @@ class _AhliGiziDetailPasienScreenState
     if (mounted) setState(() => _riwayatMakan = logs);
   }
 
-  Future<void> _loadPreviousPlan() async {
-    final rm = widget.pasien['rm'] as String;
-    final plan = await AuthService.getLatestNutritionPlan(rm);
-    
-    if (plan == null) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Belum ada data sebelumnya untuk pasien ini.'),
-          backgroundColor: Colors.orange,
-        ));
-      }
-      return;
-    }
-
-    if (mounted) {
-      setState(() {
-        final dt = plan['diet_type'] as String? ?? 'Diet Normal';
-        if (_terapiDietList.contains(dt)) {
-          _selectedDietType = dt;
-        } else {
-          _selectedDietType = 'Diet Khusus/Lainnya';
-          _customDietCtrl.text = dt;
-        }
-        
-        _catatanNutrisiCtrl.text = plan['catatan'] ?? '';
-        
-        final Map<String, dynamic>? targets = plan['target_nutrients'];
-        _checkedNutrients.clear();
-        if (targets != null) {
-          targets.forEach((key, val) {
-            _checkedNutrients[key] = true;
-            if (!_targetCtrls.containsKey(key)) _targetCtrls[key] = TextEditingController();
-            _targetCtrls[key]!.text = _fmtNum(val['target']);
-            // Load aktual sebelumnya jika ada
-            if (!_aktualCtrls.containsKey(key)) _aktualCtrls[key] = TextEditingController();
-            final aktualVal = (val['aktual'] as num?)?.toDouble() ?? 0.0;
-            _aktualCtrls[key]!.text = aktualVal > 0 ? _fmtNum(aktualVal) : '';
-          });
-        }
-        
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Data sebelumnya berhasil dimuat.'),
-          backgroundColor: AppColors.primary,
-        ));
-      });
-    }
-  }
 
   String _fmtNum(dynamic val) {
     if (val == null) return '';
@@ -334,9 +287,13 @@ class _AhliGiziDetailPasienScreenState
               decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14)),
               child: Column(
                 children: [
-                  _buildNutrisiField('Diagnosis (ICD 10)', _diagnosisCtrl, 'Ketik diagnosis...', ''),
+                  _buildNutrisiField(
+                      'Diagnosis (ICD 10)', _diagnosisCtrl, 'Ketik diagnosis...', '',
+                      keyboardType: TextInputType.text),
                   const SizedBox(height: 12),
-                  _buildNutrisiField('Catatan / Evaluasi Klinis', _catatanNutrisiCtrl, 'Ketik catatan...', ''),
+                  _buildNutrisiField('Catatan / Evaluasi Klinis',
+                      _catatanNutrisiCtrl, 'Ketik catatan...', '',
+                      keyboardType: TextInputType.multiline),
                 ],
               ),
             ),
@@ -368,36 +325,34 @@ class _AhliGiziDetailPasienScreenState
             Row(
               children: [
                 Expanded(
-                  child: OutlinedButton.icon(
+                  child: ElevatedButton.icon(
                     onPressed: () {
-                      Navigator.push(context, MaterialPageRoute(builder: (_) => GrafikHarianScreen(
-                        rmPasien: widget.pasien['rm'],
-                        namaPasien: widget.pasien['name'],
+                      Navigator.push(context, MaterialPageRoute(builder: (_) => LaporanHarianAGScreen(
+                        pasien: widget.pasien,
                       )));
                     },
-                    icon: const Icon(Icons.show_chart, size: 18, color: AppColors.primary),
-                    label: Text('Grafik', style: GoogleFonts.manrope(fontWeight: FontWeight.w600, color: AppColors.primary, fontSize: 13)),
-                    style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: AppColors.primary),
+                    icon: const Icon(Icons.bar_chart_rounded, size: 18, color: Colors.white),
+                    label: Text('Laporan Harian', style: GoogleFonts.manrope(fontWeight: FontWeight.w700, fontSize: 13, color: Colors.white)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF0284C7),
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      elevation: 0,
                     ),
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: ElevatedButton.icon(
+                  child: OutlinedButton.icon(
                     onPressed: () {
                       Navigator.push(context, MaterialPageRoute(builder: (_) => LaporanPasienScreen(pasien: widget.pasien)));
                     },
-                    icon: const Icon(Icons.summarize_outlined, size: 18),
-                    label: Text('Laporan', style: GoogleFonts.manrope(fontWeight: FontWeight.w700, fontSize: 13)),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: Colors.white,
+                    icon: const Icon(Icons.summarize_outlined, size: 18, color: AppColors.primary),
+                    label: Text('Laporan Bulanan', style: GoogleFonts.manrope(fontWeight: FontWeight.w700, fontSize: 13, color: AppColors.primary)),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: AppColors.primary),
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                      elevation: 0,
                     ),
                   ),
                 ),
@@ -687,7 +642,7 @@ class _AhliGiziDetailPasienScreenState
 
   void _showConsentDialog(String? base64Sig, String? filePath, String signedDate) {
     final String? consentDocB64 = widget.pasien['consent_doc_base64'] as String?;
-    final bool hasFullDoc = consentDocB64 != null && consentDocB64.isNotEmpty;
+
 
     Widget imageWidget;
     if (base64Sig != null && base64Sig.isNotEmpty) {
@@ -1078,58 +1033,86 @@ class _AhliGiziDetailPasienScreenState
   }
 
   Widget _buildNutrisiSection() {
+    final List<String> allNutrients = _nutrientCategories.values.expand((e) => e).toList();
+    final List<String> availableNutrients = allNutrients.where((n) => !(_checkedNutrients[n] ?? false)).toList();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            _buildSectionLabel('Target Gizi Harian'),
-            TextButton.icon(
-              onPressed: _loadPreviousPlan,
-              icon: const Icon(Icons.history, size: 16),
-              label: Text('Gunakan Data Sebelumnya', style: GoogleFonts.manrope(fontSize: 12, fontWeight: FontWeight.w600)),
+        _buildSectionLabel('Target Gizi Harian'),
+        const SizedBox(height: 12),
+        
+        // Dropdown to add nutrient
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppColors.divider),
+          ),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              isExpanded: true,
+              hint: Text('Tambah item gizi...', style: GoogleFonts.manrope(fontSize: 13, color: AppColors.textSecondary)),
+              items: availableNutrients.map((n) => DropdownMenuItem(value: n, child: Text(n, style: GoogleFonts.manrope(fontSize: 14)))).toList(),
+              onChanged: (val) {
+                if (val != null) {
+                  setState(() {
+                    _checkedNutrients[val] = true;
+                    if (!_targetCtrls.containsKey(val)) _targetCtrls[val] = TextEditingController();
+                  });
+                }
+              },
             ),
-          ],
+          ),
         ),
-        const SizedBox(height: 8),
-        ..._nutrientCategories.entries.map((entry) {
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
-                child: Text(entry.key.toUpperCase(), style: GoogleFonts.manrope(fontSize: 11, fontWeight: FontWeight.w800, color: AppColors.textSecondary, letterSpacing: 1.2)),
-              ),
-              Container(
-                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: AppColors.divider)),
-                child: Column(
-                  children: entry.value.map((nutrient) {
-                    final bool isChecked = _checkedNutrients[nutrient] ?? false;
-                    if (!_targetCtrls.containsKey(nutrient)) _targetCtrls[nutrient] = TextEditingController();
-                    
-                    return Column(
-                      children: [
-                        CheckboxListTile(
-                          value: isChecked,
-                          title: Text(nutrient, style: GoogleFonts.manrope(fontSize: 14, fontWeight: isChecked ? FontWeight.w700 : FontWeight.w500)),
-                          activeColor: AppColors.primary,
-                          dense: true,
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 16),
-                          onChanged: (val) => setState(() => _checkedNutrients[nutrient] = val ?? false),
-                        ),
-                        if (isChecked)
-                          Padding(
-                            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                            child: _buildNutrisiField('Nilai Target $nutrient', _targetCtrls[nutrient]!, 'Ketik nilai target...', ''),
-                          ),
-                        if (nutrient != entry.value.last) const Divider(height: 1, indent: 16, endIndent: 16),
-                      ],
-                    );
-                  }).toList(),
+        const SizedBox(height: 16),
+
+        // List of selected nutrients
+        ..._checkedNutrients.entries.where((e) => e.value).map((entry) {
+          final nutrient = entry.key;
+          if (!_targetCtrls.containsKey(nutrient)) _targetCtrls[nutrient] = TextEditingController();
+          
+          return Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: AppColors.divider),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  flex: 3,
+                  child: Text(nutrient, style: GoogleFonts.manrope(fontSize: 14, fontWeight: FontWeight.w700)),
                 ),
-              ),
-            ],
+                const SizedBox(width: 12),
+                Expanded(
+                  flex: 2,
+                  child: TextField(
+                    controller: _targetCtrls[nutrient],
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    decoration: InputDecoration(
+                      hintText: 'Nilai...',
+                      hintStyle: GoogleFonts.manrope(fontSize: 12, color: AppColors.textMuted),
+                      isDense: true,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                    style: GoogleFonts.manrope(fontSize: 14, fontWeight: FontWeight.w600),
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
+                  onPressed: () {
+                    setState(() {
+                      _checkedNutrients[nutrient] = false;
+                    });
+                  },
+                ),
+              ],
+            ),
           );
         }),
       ],
@@ -1210,25 +1193,6 @@ class _AhliGiziDetailPasienScreenState
                             borderSide: BorderSide.none,
                           ),
                           contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                          suffixIcon: Builder(builder: (ctx) {
-                            // Hitung persentase real-time
-                            final aktualVal = double.tryParse(_aktualCtrls[nutrient]?.text ?? '0') ?? 0.0;
-                            final pct = target > 0 ? (aktualVal / target * 100).clamp(0, 999).toInt() : 0;
-                            return Padding(
-                              padding: const EdgeInsets.only(right: 10),
-                              child: Center(
-                                widthFactor: 1,
-                                child: Text(
-                                  '$pct%',
-                                  style: GoogleFonts.manrope(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w700,
-                                    color: pct >= 100 ? AppColors.primary : AppColors.textSecondary,
-                                  ),
-                                ),
-                              ),
-                            );
-                          }),
                         ),
                         onChanged: (_) => setState(() {}),
                       ),
@@ -1332,7 +1296,9 @@ class _AhliGiziDetailPasienScreenState
   }
 
   Widget _buildNutrisiField(String label, TextEditingController ctrl,
-      String hint, String suffix) {
+      String hint, String suffix,
+      {TextInputType keyboardType =
+          const TextInputType.numberWithOptions(decimal: true, signed: false)}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1344,8 +1310,8 @@ class _AhliGiziDetailPasienScreenState
         const SizedBox(height: 6),
         TextField(
           controller: ctrl,
-          keyboardType:
-              const TextInputType.numberWithOptions(decimal: true, signed: false),
+          keyboardType: keyboardType,
+          maxLines: keyboardType == TextInputType.multiline ? null : 1,
           style: GoogleFonts.manrope(
               fontSize: 14,
               color: AppColors.textPrimary,
@@ -1450,29 +1416,6 @@ class _AhliGiziDetailPasienScreenState
           fontWeight: FontWeight.w600,
           color: AppColors.textPrimary));
 
-  Widget _buildSubSectionLabel(String title, String subtitle) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        Container(width: 3, height: 18, color: AppColors.primary,
-            margin: const EdgeInsets.only(right: 8)),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(title,
-                style: GoogleFonts.manrope(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 1.2,
-                    color: AppColors.textMuted)),
-            Text(subtitle,
-                style: GoogleFonts.manrope(
-                    fontSize: 11, color: AppColors.textSecondary)),
-          ],
-        ),
-      ],
-    );
-  }
 
   Widget _buildTextArea(
       TextEditingController ctrl, String hint, int maxLines) {

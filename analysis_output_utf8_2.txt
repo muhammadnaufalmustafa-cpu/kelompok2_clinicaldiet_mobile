@@ -1,0 +1,51 @@
+﻿Analyzing flutter_app...                                        
+
+warning - Unused import: '../grafik_harian_screen.dart' - lib\screens\ahli_gizi\ahli_gizi_detail_pasien_screen.dart:13:8 - unused_import
+warning - The declaration '_loadPreviousPlan' isn't referenced - lib\screens\ahli_gizi\ahli_gizi_detail_pasien_screen.dart:154:16 - unused_element
+warning - The value of the local variable 'hasFullDoc' isn't used - lib\screens\ahli_gizi\ahli_gizi_detail_pasien_screen.dart:695:16 - unused_local_variable
+   info - Don't use 'BuildContext's across async gaps - lib\screens\ahli_gizi\ahli_gizi_detail_pasien_screen.dart:1024:30 - use_build_context_synchronously
+warning - The declaration '_buildSubSectionLabel' isn't referenced - lib\screens\ahli_gizi\ahli_gizi_detail_pasien_screen.dart:1469:10 - unused_element
+   info - Use the null-aware marker '?' rather than a null check via an 'if' - lib\screens\ahli_gizi\ahli_gizi_detail_pasien_screen.dart:1548:11 - use_null_aware_elements
+   info - 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre - lib\screens\ahli_gizi\ahli_gizi_edukasi_screen.dart:305:17 - deprecated_member_use
+   info - Don't use 'BuildContext's across async gaps - lib\screens\ahli_gizi\ahli_gizi_edukasi_screen.dart:327:29 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\screens\ahli_gizi\ahli_gizi_edukasi_screen.dart:361:29 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\screens\ahli_gizi\ahli_gizi_profil_screen.dart:88:50 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\screens\ahli_gizi\ahli_gizi_profil_screen.dart:142:48 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\screens\ahli_gizi\ahli_gizi_profil_screen.dart:194:37 - use_build_context_synchronously
+   info - Unnecessary use of string interpolation - lib\screens\ahli_gizi\ahli_gizi_profil_screen.dart:338:28 - unnecessary_string_interpolations
+   info - Statements in an if should be enclosed in a block - lib\screens\ahli_gizi\laporan_pasien_screen.dart:154:11 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - lib\screens\ahli_gizi\laporan_pasien_screen.dart:156:11 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - lib\screens\ahli_gizi\laporan_pasien_screen.dart:158:11 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - lib\screens\ahli_gizi\laporan_pasien_screen.dart:160:11 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - lib\screens\ahli_gizi\laporan_pasien_screen.dart:162:11 - curly_braces_in_flow_control_structures
+   info - Unnecessary use of 'toList' in a spread - lib\screens\ahli_gizi\laporan_pasien_screen.dart:472:22 - unnecessary_to_list_in_spreads
+   info - Unnecessary use of 'toList' in a spread - lib\screens\ahli_gizi\laporan_pasien_screen.dart:476:14 - unnecessary_to_list_in_spreads
+   info - Unnecessary use of 'toList' in a spread - lib\screens\ahli_gizi\laporan_pasien_screen.dart:562:24 - unnecessary_to_list_in_spreads
+   info - Unnecessary use of 'toList' in a spread - lib\screens\ahli_gizi\laporan_pasien_screen.dart:566:16 - unnecessary_to_list_in_spreads
+warning - The value of the field '_gender' isn't used - lib\screens\catatan_screen.dart:42:10 - unused_field
+   info - 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre - lib\screens\catatan_screen.dart:440:25 - deprecated_member_use
+   info - Statements in an if should be enclosed in a block - lib\screens\catatan_screen.dart:738:21 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - lib\screens\catatan_screen.dart:739:26 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - lib\screens\catatan_screen.dart:740:26 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - lib\screens\catatan_screen.dart:741:10 - curly_braces_in_flow_control_structures
+warning - The value of the field '_isLoading' isn't used - lib\screens\edukasi_screen.dart:47:8 - unused_field
+warning - Unused import: 'dart:math' - lib\screens\home_screen.dart:2:8 - unused_import
+warning - Unused import: 'package:percent_indicator/percent_indicator.dart' - lib\screens\home_screen.dart:5:8 - unused_import
+warning - Unused import: 'pilih_ahli_gizi_screen.dart' - lib\screens\home_screen.dart:10:8 - unused_import
+   info - The private field _dietPageIndex could be 'final' - lib\screens\home_screen.dart:50:7 - prefer_final_fields
+   info - Unnecessary use of 'toList' in a spread - lib\screens\home_screen.dart:1357:20 - unnecessary_to_list_in_spreads
+warning - The declaration '_buildDailyTargetChart' isn't referenced - lib\screens\home_screen.dart:1538:10 - unused_element
+   info - Unnecessary use of string interpolation - lib\screens\laporan_harian_screen.dart:354:33 - unnecessary_string_interpolations
+warning - Unused import: 'dart:convert' - lib\screens\login_screen.dart:1:8 - unused_import
+warning - Unused import: 'package:shared_preferences/shared_preferences.dart' - lib\screens\login_screen.dart:4:8 - unused_import
+warning - Unused import: '../services/auth_service.dart' - lib\screens\main_screen.dart:8:8 - unused_import
+warning - Unused import: 'pilih_ahli_gizi_screen.dart' - lib\screens\profil_screen.dart:9:8 - unused_import
+warning - The declaration '_buildNumberField' isn't referenced - lib\screens\register_screen.dart:659:10 - unused_element
+   info - 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre - lib\screens\register_screen.dart:734:13 - deprecated_member_use
+   info - Statements in an if should be enclosed in a block - lib\screens\welcome_screen.dart:207:51 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - lib\screens\welcome_screen.dart:208:58 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - lib\screens\welcome_screen.dart:209:52 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - lib\screens\welcome_screen.dart:210:38 - curly_braces_in_flow_control_structures
+   info - Dangling library doc comment - lib\services\web_download.dart:1:1 - dangling_library_doc_comments
+   info - 'dart:html' is deprecated and shouldn't be used. Use package:web and dart:js_interop instead - lib\services\web_download_web.dart:2:1 - deprecated_member_use
+

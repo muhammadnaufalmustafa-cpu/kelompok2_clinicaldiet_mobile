@@ -6,7 +6,6 @@ import 'package:url_launcher/url_launcher.dart';
 import '../theme/app_theme.dart';
 import '../services/auth_service.dart';
 import 'login_screen.dart';
-import 'pilih_ahli_gizi_screen.dart';
 import 'pilih_jenis_diet_screen.dart';
 
 class ProfilScreen extends StatefulWidget {
@@ -19,6 +18,7 @@ class ProfilScreen extends StatefulWidget {
 class _ProfilScreenState extends State<ProfilScreen> {
   Map<String, dynamic>? _user;
   Map<String, dynamic>? _selectedAhliGizi;
+  List<Map<String, dynamic>> _nutrisiList = [];
   final ImagePicker _picker = ImagePicker();
 
   @override
@@ -35,7 +35,13 @@ class _ProfilScreenState extends State<ProfilScreen> {
       });
       if (user != null && user['rm'] != null) {
         final ag = await AuthService.getSelectedAhliGizi(user['rm'] as String);
-        if (mounted) setState(() => _selectedAhliGizi = ag);
+        final nutrisi = await AuthService.getAllNutrisiPasien(user['rm'] as String);
+        if (mounted) {
+          setState(() {
+            _selectedAhliGizi = ag;
+            _nutrisiList = nutrisi;
+          });
+        }
       }
     }
   }
@@ -111,6 +117,256 @@ class _ProfilScreenState extends State<ProfilScreen> {
         ),
       );
     }
+  }
+
+  void _showTargetGiziDialog() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => DraggableScrollableSheet(
+        initialChildSize: 0.75,
+        maxChildSize: 0.95,
+        minChildSize: 0.4,
+        builder: (_, scrollCtrl) => Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: Column(
+            children: [
+              Center(
+                child: Container(
+                  margin: const EdgeInsets.only(top: 12, bottom: 8),
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+                child: Row(children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppColors.primaryLight,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.track_changes_outlined,
+                        color: AppColors.primary, size: 20),
+                  ),
+                  const SizedBox(width: 12),
+                  Text('Target Gizi Harian',
+                      style: GoogleFonts.manrope(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.textPrimary)),
+                ]),
+              ),
+              const Divider(height: 1),
+              Expanded(
+                child: _nutrisiList.isEmpty
+                    ? Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(32),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.info_outline,
+                                  size: 48, color: Colors.grey[300]),
+                              const SizedBox(height: 12),
+                              Text(
+                                'Belum ada target gizi yang ditetapkan oleh Ahli Gizi Anda.',
+                                textAlign: TextAlign.center,
+                                style: GoogleFonts.manrope(
+                                    fontSize: 14,
+                                    color: AppColors.textSecondary),
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
+                    : ListView(
+                        controller: scrollCtrl,
+                        padding: const EdgeInsets.all(16),
+                        children: _nutrisiList.map((n) {
+                          final dietName = n['diet_type'] as String? ?? '-';
+                          final targets = n['target_nutrients']
+                                  as Map<String, dynamic>? ??
+                              {};
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: 16),
+                            decoration: BoxDecoration(
+                              color: AppColors.background,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: AppColors.divider),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 16, vertical: 10),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.primaryLight,
+                                    borderRadius: const BorderRadius.vertical(
+                                        top: Radius.circular(16)),
+                                  ),
+                                  child: Text(dietName,
+                                      style: GoogleFonts.manrope(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w700,
+                                          color: AppColors.primaryDark)),
+                                ),
+                                if (targets.isEmpty)
+                                  Padding(
+                                    padding: const EdgeInsets.all(16),
+                                    child: Text('(Belum ada target nutrisi)',
+                                        style: GoogleFonts.manrope(
+                                            fontSize: 13,
+                                            color: AppColors.textMuted)),
+                                  )
+                                else
+                                  ...targets.entries.map((e) {
+                                    final target =
+                                        (e.value['target'] as num?)
+                                                ?.toDouble() ??
+                                            0;
+                                    final aktual =
+                                        (e.value['aktual'] as num?)
+                                                ?.toDouble() ??
+                                            0;
+                                    final pct = target > 0
+                                        ? (aktual / target).clamp(0.0, 1.5)
+                                        : 0.0;
+                                    final isOk = pct >= 0.8 && pct <= 1.2;
+                                    return Padding(
+                                      padding: const EdgeInsets.fromLTRB(
+                                          16, 10, 16, 0),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Row(children: [
+                                            Expanded(
+                                                child: Text(e.key,
+                                                    style: GoogleFonts.manrope(
+                                                        fontSize: 13,
+                                                        fontWeight:
+                                                            FontWeight.w600,
+                                                        color: AppColors
+                                                            .textPrimary))),
+                                            Container(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                      horizontal: 8,
+                                                      vertical: 3),
+                                              decoration: BoxDecoration(
+                                                color: isOk
+                                                    ? const Color(0xFFD1FAE5)
+                                                    : const Color(0xFFFEE2E2),
+                                                borderRadius:
+                                                    BorderRadius.circular(8),
+                                              ),
+                                              child: Text(
+                                                  '${(pct * 100).toInt()}%',
+                                                  style: GoogleFonts.manrope(
+                                                      fontSize: 11,
+                                                      fontWeight:
+                                                          FontWeight.w700,
+                                                      color: isOk
+                                                          ? const Color(
+                                                              0xFF065F46)
+                                                          : const Color(
+                                                              0xFF991B1B))),
+                                            ),
+                                          ]),
+                                          const SizedBox(height: 6),
+                                          Row(children: [
+                                            Expanded(
+                                              child: Column(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
+                                                  children: [
+                                                    Text('Target',
+                                                        style: GoogleFonts.manrope(
+                                                            fontSize: 10,
+                                                            color: AppColors
+                                                                .textMuted)),
+                                                    Text(
+                                                        target
+                                                            .toStringAsFixed(1),
+                                                        style: GoogleFonts.manrope(
+                                                            fontSize: 15,
+                                                            fontWeight:
+                                                                FontWeight.w700,
+                                                            color: AppColors
+                                                                .primary)),
+                                                  ]),
+                                            ),
+                                            Expanded(
+                                              child: Column(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
+                                                  children: [
+                                                    Text('Aktualisasi',
+                                                        style: GoogleFonts.manrope(
+                                                            fontSize: 10,
+                                                            color: AppColors
+                                                                .textMuted)),
+                                                    Text(
+                                                        aktual
+                                                            .toStringAsFixed(1),
+                                                        style: GoogleFonts.manrope(
+                                                            fontSize: 15,
+                                                            fontWeight:
+                                                                FontWeight.w700,
+                                                            color: isOk
+                                                                ? const Color(
+                                                                    0xFF059669)
+                                                                : Colors
+                                                                    .orange)),
+                                                  ]),
+                                            ),
+                                          ]),
+                                          const SizedBox(height: 8),
+                                          ClipRRect(
+                                            borderRadius:
+                                                BorderRadius.circular(4),
+                                            child: LinearProgressIndicator(
+                                              value: pct.clamp(0.0, 1.0),
+                                              minHeight: 6,
+                                              backgroundColor: Colors.grey[200],
+                                              valueColor:
+                                                  AlwaysStoppedAnimation<Color>(
+                                                isOk
+                                                    ? const Color(0xFF10B981)
+                                                    : Colors.orange,
+                                              ),
+                                            ),
+                                          ),
+                                          const SizedBox(height: 12),
+                                          const Divider(height: 1),
+                                        ],
+                                      ),
+                                    );
+                                  }),
+                                const SizedBox(height: 8),
+                              ],
+                            ),
+                          );
+                        }).toList(),
+                      ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   void _showUpdateBBTBDialog() {
@@ -1080,8 +1336,8 @@ class _ProfilScreenState extends State<ProfilScreen> {
                         _divider(),
                         _buildActionItem(
                           icon: Icons.track_changes_outlined,
-                          title: 'Target Diet (Segera)',
-                          onTap: () {},
+                          title: 'Target Gizi Harian',
+                          onTap: _showTargetGiziDialog,
                         ),
                       ],
                     ),

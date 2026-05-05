@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../theme/app_theme.dart';
+import '../services/auth_service.dart';
 
 class EdukasiScreen extends StatefulWidget {
   const EdukasiScreen({super.key});
@@ -42,189 +43,8 @@ class _EdukasiScreenState extends State<EdukasiScreen>
 
   // ─── Data Leaflet (18 leaflet asli dari Ahli Gizi) ───────────────────────
 
-  final List<Map<String, dynamic>> _leaflets = [
-    // Ibu & Anak
-    {
-      'title': 'Makanan Sehat Ibu Hamil',
-      'desc':
-          'Panduan nutrisi lengkap untuk ibu hamil demi kesehatan ibu dan janin',
-      'category': 'Ibu & Anak',
-      'url':
-          'https://drive.google.com/file/d/1DtEIRBLioGTeehUTETRn2dlWY8QjWNoO/view?usp=sharing',
-      'icon': Icons.pregnant_woman_outlined,
-      'color': const Color(0xFFFCE7F3),
-    },
-    {
-      'title': 'Makanan Sehat Ibu Menyusui',
-      'desc':
-          'Kebutuhan gizi ibu menyusui untuk mendukung produksi ASI berkualitas',
-      'category': 'Ibu & Anak',
-      'url':
-          'https://drive.google.com/file/d/16Uesv76NVgnZ5DPtjAJOkAFpFPxtgb8V/view?usp=sharing',
-      'icon': Icons.favorite_border,
-      'color': const Color(0xFFFCE7F3),
-    },
-    {
-      'title': 'Makanan Sehat Bayi',
-      'desc': 'Pemberian MPASI yang tepat untuk tumbuh kembang bayi optimal',
-      'category': 'Ibu & Anak',
-      'url':
-          'https://drive.google.com/file/d/1u1EYyFS-gOVI-aiHTcz8VWbgs-qzdheX/view?usp=sharing',
-      'icon': Icons.child_care_outlined,
-      'color': const Color(0xFFD1FAE5),
-    },
-    {
-      'title': 'Makanan Sehat Anak Balita',
-      'desc':
-          'Panduan gizi untuk anak usia 1-5 tahun agar tumbuh sehat dan cerdas',
-      'category': 'Ibu & Anak',
-      'url':
-          'https://drive.google.com/file/d/1Fl9rdfVJFzf3G-kChGXHHVcx0XQ3Z67y/view?usp=sharing',
-      'icon': Icons.child_friendly_outlined,
-      'color': const Color(0xFFD1FAE5),
-    },
-    // Gizi Khusus
-    {
-      'title': 'Makanan Sehat Lansia',
-      'desc':
-          'Kebutuhan nutrisi khusus untuk menjaga kualitas hidup di usia lanjut',
-      'category': 'Gizi Khusus',
-      'url':
-          'https://drive.google.com/file/d/13yRFdbNbAT6X-e6cvG1xdmGzFqej1BQo/view?usp=sharing',
-      'icon': Icons.elderly_outlined,
-      'color': const Color(0xFFFEF3C7),
-    },
-    {
-      'title': 'Makanan Sehat Jemaah Haji',
-      'desc': 'Panduan menjaga asupan gizi selama menjalankan ibadah haji',
-      'category': 'Gizi Khusus',
-      'url':
-          'https://drive.google.com/file/d/1SdpV1JQwBQw58c2WyUIPzcbqCtgKRX5X/view?usp=sharing',
-      'icon': Icons.mosque_outlined,
-      'color': const Color(0xFFFEF3C7),
-    },
-    // Penyakit Organ
-    {
-      'title': 'Diet Hati',
-      'desc':
-          'Pengaturan makan untuk pasien dengan gangguan fungsi hati / liver',
-      'category': 'Penyakit Organ',
-      'url':
-          'https://drive.google.com/file/d/1AWJyvHUsXiTSaXB4vJWRV8DuVueeg-11/view?usp=sharing',
-      'icon': Icons.monitor_heart_outlined,
-      'color': const Color(0xFFDBEAFE),
-    },
-    {
-      'title': 'Diet Lambung',
-      'desc': 'Diet khusus untuk penderita gastritis dan gangguan lambung',
-      'category': 'Penyakit Organ',
-      'url':
-          'https://drive.google.com/file/d/1gTHCfYnHRpMWlzDg2Fpn174_amfBPB78/view?usp=sharing',
-      'icon': Icons.medical_services_outlined,
-      'color': const Color(0xFFDBEAFE),
-    },
-    // Kardiovaskular
-    {
-      'title': 'Diet Jantung',
-      'desc': 'Panduan diet rendah lemak jenuh untuk pasien kardiovaskular',
-      'category': 'Kardiovaskular',
-      'url':
-          'https://drive.google.com/file/d/1AMmx0UVPXAi-rWn5MdANHgVCz3AjnfE9/view?usp=sharing',
-      'icon': Icons.favorite_outlined,
-      'color': const Color(0xFFFCE7F3),
-    },
-    {
-      'title': 'Diet Penyakit Ginjal Kronik',
-      'desc':
-          'Pembatasan protein dan mineral untuk pasien gagal ginjal kronik',
-      'category': 'Kardiovaskular',
-      'url':
-          'https://drive.google.com/file/d/1ULJ2xjXQVqhIL-uwzgyYMbPxGXSJdVbg/view?usp=sharing',
-      'icon': Icons.water_drop_outlined,
-      'color': const Color(0xFFDBEAFE),
-    },
-    {
-      'title': 'Diet Garam Rendah',
-      'desc':
-          'Pembatasan natrium untuk pasien hipertensi dan retensi cairan',
-      'category': 'Kardiovaskular',
-      'url':
-          'https://drive.google.com/file/d/1ILDn0y04uS0pbgugZyKKGiQ5pXUQY6ET/view?usp=sharing',
-      'icon': Icons.no_meals_outlined,
-      'color': const Color(0xFFDBEAFE),
-    },
-    // Metabolik
-    {
-      'title': 'Diet Diabetes Melitus',
-      'desc':
-          'Pengaturan karbohidrat dan indeks glikemik untuk pasien DM tipe 1 & 2',
-      'category': 'Metabolik',
-      'url':
-          'https://drive.google.com/file/d/1rPTX_FR46-CaYOZN-lT-2GwE-ExiKpxY/view?usp=sharing',
-      'icon': Icons.bloodtype_outlined,
-      'color': const Color(0xFFFEF3C7),
-    },
-    {
-      'title': 'Diet Diabetes Melitus Saat Puasa',
-      'desc':
-          'Panduan khusus pengaturan makan bagi penderita DM yang berpuasa',
-      'category': 'Metabolik',
-      'url':
-          'https://drive.google.com/file/d/1WU8gTXow_V4wuPQEjSFZhZ95BA5A4m0h/view?usp=sharing',
-      'icon': Icons.no_food_outlined,
-      'color': const Color(0xFFFEF3C7),
-    },
-    {
-      'title': 'Diet Energi Rendah',
-      'desc': 'Program diet kalori terkontrol untuk manajemen berat badan',
-      'category': 'Metabolik',
-      'url':
-          'https://drive.google.com/file/d/16aiV08zXHsS_275djT5MXlo6n8aopqVy/view?usp=sharing',
-      'icon': Icons.local_fire_department_outlined,
-      'color': const Color(0xFFFEF3C7),
-    },
-    {
-      'title': 'Diet Purin Rendah',
-      'desc':
-          'Pembatasan purin untuk mencegah dan menangani penyakit asam urat',
-      'category': 'Metabolik',
-      'url':
-          'https://drive.google.com/file/d/1D_dhoFxw8ZoK8sYBcCaKrMZsr_k0R2ZL/view?usp=sharing',
-      'icon': Icons.science_outlined,
-      'color': const Color(0xFFFEF3C7),
-    },
-    // Diet Khusus
-    {
-      'title': 'Diet Protein Rendah',
-      'desc':
-          'Pengurangan asupan protein untuk perlindungan fungsi ginjal dan hati',
-      'category': 'Diet Khusus',
-      'url':
-          'https://drive.google.com/file/d/1pUfHw-KGuJGi64ujMwzAHwtZyBi-WXUK/view?usp=sharing',
-      'icon': Icons.egg_outlined,
-      'color': const Color(0xFFEDE9FE),
-    },
-    {
-      'title': 'Diet Lemak Rendah',
-      'desc':
-          'Pembatasan lemak total dan lemak jenuh untuk kesehatan kardiovaskular',
-      'category': 'Diet Khusus',
-      'url':
-          'https://drive.google.com/file/d/1QREic6oki2pyC2xFQ5Qvulx0-UvTXCm-/view?usp=sharing',
-      'icon': Icons.oil_barrel_outlined,
-      'color': const Color(0xFFEDE9FE),
-    },
-    {
-      'title': 'Diet Kekebalan Tubuh Menurun',
-      'desc':
-          'Panduan gizi untuk pasien dengan kondisi imunokompromais / daya tahan tubuh rendah',
-      'category': 'Diet Khusus',
-      'url':
-          'https://drive.google.com/file/d/1oDCEedQNVE-FRyhAXIvky7cHmIWuTnhZ/view?usp=sharing',
-      'icon': Icons.shield_outlined,
-      'color': const Color(0xFFEDE9FE),
-    },
-  ];
+  List<Map<String, dynamic>> _leaflets = [];
+  bool _isLoading = true;
 
   // ─── Data Artikel ─────────────────────────────────────────────────────────
 
@@ -295,6 +115,18 @@ class _EdukasiScreenState extends State<EdukasiScreen>
         () => setState(() => _leafletSearch = _searchLeafletCtrl.text.toLowerCase()));
     _searchArtikelCtrl.addListener(
         () => setState(() => _artikelSearch = _searchArtikelCtrl.text.toLowerCase()));
+    _loadLeaflets();
+  }
+
+  Future<void> _loadLeaflets() async {
+    await AuthService.seedDummyDataIfNeeded();
+    final leaflets = await AuthService.getLeaflets();
+    if (mounted) {
+      setState(() {
+        _leaflets = leaflets;
+        _isLoading = false;
+      });
+    }
   }
 
   @override
@@ -411,6 +243,9 @@ class _EdukasiScreenState extends State<EdukasiScreen>
   // ─── LEAFLET TAB ──────────────────────────────────────────────────────────
 
   Widget _buildLeafletTab() {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator(color: AppColors.primary));
+    }
     final filtered = _filteredLeaflets;
 
     return Column(
@@ -471,8 +306,8 @@ class _EdukasiScreenState extends State<EdukasiScreen>
   }
 
   Widget _buildLeafletCard(Map<String, dynamic> leaflet) {
-    final color = leaflet['color'] as Color;
-    final icon = leaflet['icon'] as IconData;
+    final color = leaflet['colorVal'] != null ? Color(leaflet['colorVal']) : const Color(0xFFE0F2FE);
+    final icon = leaflet['iconCode'] != null ? IconData(leaflet['iconCode'], fontFamily: 'MaterialIcons') : Icons.picture_as_pdf;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),

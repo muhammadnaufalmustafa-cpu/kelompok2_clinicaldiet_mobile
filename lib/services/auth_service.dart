@@ -7,6 +7,8 @@ class AuthService {
   static const String _loggedInUserKey = 'logged_in_user';
   static const String _ahliGiziKey = 'registered_ahli_gizi';
   static const String _dietTypesKey = 'diet_types';
+  static const String _leafletsKey = 'leaflets_v1';
+  static const String _nutrisiHistoryKey = 'nutrisi_daily_history_v1';
 
   // ─────────────────────────── REGISTRASI PASIEN ───────────────────────────
 
@@ -858,9 +860,70 @@ class AuthService {
       list.add(data);
     }
     await prefs.setString(_nutrisiPerDietKey, jsonEncode(list));
+
+    // ─── SAVE TO DAILY HISTORY ───
+    final historyJson = prefs.getString(_nutrisiHistoryKey);
+    List<Map<String, dynamic>> history = [];
+    if (historyJson != null) {
+      final decoded = jsonDecode(historyJson) as List;
+      history = decoded.cast<Map<String, dynamic>>();
+    }
+
+    final today = DateTime.now();
+    final dateKey = '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+
+    // Key unik history: rm_pasien + diet_type + date
+    final hIdx = history.indexWhere(
+      (h) => h['rm_pasien'] == rmPasien && h['diet_type'] == dietType && h['date'] == dateKey,
+    );
+
+    final historyData = {
+      'rm_pasien': rmPasien,
+      'diet_type': dietType,
+      'date': dateKey,
+      'target_nutrients': cleanTargets,
+      'catatan': catatan,
+      'evaluasi_ahli_gizi': evaluasiAhliGizi,
+      'updated_at': DateTime.now().toIso8601String(),
+    };
+
+    if (hIdx != -1) {
+      history[hIdx] = historyData;
+    } else {
+      history.add(historyData);
+    }
+    await prefs.setString(_nutrisiHistoryKey, jsonEncode(history));
+
     return true;
   }
 
+  static Future<Map<String, dynamic>?> getNutrisiHistoryForDate(
+      String rmPasien, String dietType, String dateKey) async {
+    final prefs = await SharedPreferences.getInstance();
+    final json = prefs.getString(_nutrisiHistoryKey);
+    if (json == null) return null;
+    final decoded = jsonDecode(json) as List;
+    final list = decoded.cast<Map<String, dynamic>>();
+    try {
+      return list.firstWhere(
+        (h) => h['rm_pasien'] == rmPasien && h['diet_type'] == dietType && h['date'] == dateKey,
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static Future<List<Map<String, dynamic>>> getNutrisiHistoryForMonth(
+      String rmPasien, int month, int year) async {
+    final prefs = await SharedPreferences.getInstance();
+    final json = prefs.getString(_nutrisiHistoryKey);
+    if (json == null) return [];
+    final decoded = jsonDecode(json) as List;
+    final list = decoded.cast<Map<String, dynamic>>();
+    
+    final prefix = '$year-${month.toString().padLeft(2, '0')}';
+    return list.where((h) => h['rm_pasien'] == rmPasien && (h['date'] as String).startsWith(prefix)).toList();
+  }
   static Future<Map<String, dynamic>?> getLatestNutritionPlan(String rm) async {
     final all = await getAllNutrisiPasien(rm);
     if (all.isEmpty) return null;
@@ -1191,6 +1254,74 @@ class AuthService {
     }
   }
 
+  static Future<Map<String, dynamic>> deleteDietType(String title) async {
+    final prefs = await SharedPreferences.getInstance();
+    
+    // Check if used by any patient
+    final usersJson = prefs.getString(_usersKey);
+    if (usersJson != null) {
+      final users = (jsonDecode(usersJson) as List).cast<Map<String, dynamic>>();
+      final isUsed = users.any((u) {
+        final dTypes = u['diet_types'];
+        if (dTypes is List) return dTypes.contains(title);
+        return u['diet_type'] == title;
+      });
+      if (isUsed) {
+        return {'success': false, 'message': 'Program terapi diet ini sedang digunakan oleh pasien dan tidak dapat dihapus.'};
+      }
+    }
+
+    final String? dietJson = prefs.getString(_dietTypesKey);
+    if (dietJson != null) {
+      List diets = jsonDecode(dietJson);
+      diets.removeWhere((d) => d['title'] == title);
+      await prefs.setString(_dietTypesKey, jsonEncode(diets));
+      return {'success': true, 'message': 'Program terapi diet berhasil dihapus.'};
+    }
+    return {'success': false, 'message': 'Data tidak ditemukan.'};
+  }
+
+  // ─────────────────────────── KELOLA LEAFLET ────────────────────────────────
+
+  static Future<List<Map<String, dynamic>>> getLeaflets() async {
+    final prefs = await SharedPreferences.getInstance();
+    final String? json = prefs.getString(_leafletsKey);
+    if (json != null) {
+      final List decoded = jsonDecode(json);
+      return decoded.cast<Map<String, dynamic>>();
+    }
+    return [];
+  }
+
+  static Future<bool> addLeaflet(Map<String, dynamic> leaflet) async {
+    final prefs = await SharedPreferences.getInstance();
+    List<Map<String, dynamic>> leaflets = await getLeaflets();
+    
+    // Check duplicates
+    final exists = leaflets.any((l) => l['title'] == leaflet['title']);
+    if (exists) {
+      final idx = leaflets.indexWhere((l) => l['title'] == leaflet['title']);
+      leaflets[idx] = leaflet;
+    } else {
+      leaflets.add(leaflet);
+    }
+    
+    await prefs.setString(_leafletsKey, jsonEncode(leaflets));
+    return true;
+  }
+
+  static Future<bool> deleteLeaflet(String title) async {
+    final prefs = await SharedPreferences.getInstance();
+    final String? json = prefs.getString(_leafletsKey);
+    if (json != null) {
+      List leaflets = jsonDecode(json);
+      leaflets.removeWhere((l) => l['title'] == title);
+      await prefs.setString(_leafletsKey, jsonEncode(leaflets));
+      return true;
+    }
+    return false;
+  }
+
   // ─────────────────────────── SEED DUMMY DATA ─────────────────────────────
 
   static Future<void> seedDummyDataIfNeeded() async {
@@ -1408,8 +1539,159 @@ class AuthService {
         jamSelinganPagi: '09.00 WIB',
         jamSiang: '12.00 WIB',
         jamSelinganSore: '15.30 WIB',
-        jamMalam: '18.00 WIB',
       );
+    }
+
+    // ── Seed Leaflets if empty ──
+    final leafletsJson = prefs.getString(_leafletsKey);
+    if (leafletsJson == null || (jsonDecode(leafletsJson) as List).isEmpty) {
+      final List<Map<String, dynamic>> initialLeaflets = [
+        {
+          'title': 'Makanan Sehat Ibu Hamil',
+          'desc': 'Panduan nutrisi lengkap untuk ibu hamil demi kesehatan ibu dan janin',
+          'category': 'Ibu & Anak',
+          'url': 'https://drive.google.com/file/d/1DtEIRBLioGTeehUTETRn2dlWY8QjWNoO/view?usp=sharing',
+          'iconCode': Icons.pregnant_woman_outlined.codePoint,
+          'colorVal': 0xFFFCE7F3,
+        },
+        {
+          'title': 'Makanan Sehat Ibu Menyusui',
+          'desc': 'Kebutuhan gizi ibu menyusui untuk mendukung produksi ASI berkualitas',
+          'category': 'Ibu & Anak',
+          'url': 'https://drive.google.com/file/d/16Uesv76NVgnZ5DPtjAJOkAFpFPxtgb8V/view?usp=sharing',
+          'iconCode': Icons.favorite_border.codePoint,
+          'colorVal': 0xFFFCE7F3,
+        },
+        {
+          'title': 'Makanan Sehat Bayi',
+          'desc': 'Pemberian MPASI yang tepat untuk tumbuh kembang bayi optimal',
+          'category': 'Ibu & Anak',
+          'url': 'https://drive.google.com/file/d/1u1EYyFS-gOVI-aiHTcz8VWbgs-qzdheX/view?usp=sharing',
+          'iconCode': Icons.child_care_outlined.codePoint,
+          'colorVal': 0xFFD1FAE5,
+        },
+        {
+          'title': 'Makanan Sehat Anak Balita',
+          'desc': 'Panduan gizi untuk anak usia 1-5 tahun agar tumbuh sehat dan cerdas',
+          'category': 'Ibu & Anak',
+          'url': 'https://drive.google.com/file/d/1Fl9rdfVJFzf3G-kChGXHHVcx0XQ3Z67y/view?usp=sharing',
+          'iconCode': Icons.child_friendly_outlined.codePoint,
+          'colorVal': 0xFFD1FAE5,
+        },
+        {
+          'title': 'Makanan Sehat Lansia',
+          'desc': 'Kebutuhan nutrisi khusus untuk menjaga kualitas hidup di usia lanjut',
+          'category': 'Gizi Khusus',
+          'url': 'https://drive.google.com/file/d/13yRFdbNbAT6X-e6cvG1xdmGzFqej1BQo/view?usp=sharing',
+          'iconCode': Icons.elderly_outlined.codePoint,
+          'colorVal': 0xFFFEF3C7,
+        },
+        {
+          'title': 'Makanan Sehat Jemaah Haji',
+          'desc': 'Panduan menjaga asupan gizi selama menjalankan ibadah haji',
+          'category': 'Gizi Khusus',
+          'url': 'https://drive.google.com/file/d/1SdpV1JQwBQw58c2WyUIPzcbqCtgKRX5X/view?usp=sharing',
+          'iconCode': Icons.mosque_outlined.codePoint,
+          'colorVal': 0xFFFEF3C7,
+        },
+        {
+          'title': 'Diet Hati',
+          'desc': 'Pengaturan makan untuk pasien dengan gangguan fungsi hati / liver',
+          'category': 'Penyakit Organ',
+          'url': 'https://drive.google.com/file/d/1AWJyvHUsXiTSaXB4vJWRV8DuVueeg-11/view?usp=sharing',
+          'iconCode': Icons.monitor_heart_outlined.codePoint,
+          'colorVal': 0xFFDBEAFE,
+        },
+        {
+          'title': 'Diet Lambung',
+          'desc': 'Diet khusus untuk penderita gastritis dan gangguan lambung',
+          'category': 'Penyakit Organ',
+          'url': 'https://drive.google.com/file/d/1gTHCfYnHRpMWlzDg2Fpn174_amfBPB78/view?usp=sharing',
+          'iconCode': Icons.medical_services_outlined.codePoint,
+          'colorVal': 0xFFDBEAFE,
+        },
+        {
+          'title': 'Diet Jantung',
+          'desc': 'Panduan diet rendah lemak jenuh untuk pasien kardiovaskular',
+          'category': 'Kardiovaskular',
+          'url': 'https://drive.google.com/file/d/1AMmx0UVPXAi-rWn5MdANHgVCz3AjnfE9/view?usp=sharing',
+          'iconCode': Icons.favorite_outlined.codePoint,
+          'colorVal': 0xFFFCE7F3,
+        },
+        {
+          'title': 'Diet Penyakit Ginjal Kronik',
+          'desc': 'Pembatasan protein dan mineral untuk pasien gagal ginjal kronik',
+          'category': 'Kardiovaskular',
+          'url': 'https://drive.google.com/file/d/1ULJ2xjXQVqhIL-uwzgyYMbPxGXSJdVbg/view?usp=sharing',
+          'iconCode': Icons.water_drop_outlined.codePoint,
+          'colorVal': 0xFFDBEAFE,
+        },
+        {
+          'title': 'Diet Garam Rendah',
+          'desc': 'Pembatasan natrium untuk pasien hipertensi dan retensi cairan',
+          'category': 'Kardiovaskular',
+          'url': 'https://drive.google.com/file/d/1ILDn0y04uS0pbgugZyKKGiQ5pXUQY6ET/view?usp=sharing',
+          'iconCode': Icons.no_meals_outlined.codePoint,
+          'colorVal': 0xFFDBEAFE,
+        },
+        {
+          'title': 'Diet Diabetes Melitus',
+          'desc': 'Pengaturan karbohidrat dan indeks glikemik untuk pasien DM tipe 1 & 2',
+          'category': 'Metabolik',
+          'url': 'https://drive.google.com/file/d/1rPTX_FR46-CaYOZN-lT-2GwE-ExiKpxY/view?usp=sharing',
+          'iconCode': Icons.bloodtype_outlined.codePoint,
+          'colorVal': 0xFFFEF3C7,
+        },
+        {
+          'title': 'Diet Diabetes Melitus Saat Puasa',
+          'desc': 'Panduan khusus pengaturan makan bagi penderita DM yang berpuasa',
+          'category': 'Metabolik',
+          'url': 'https://drive.google.com/file/d/1WU8gTXow_V4wuPQEjSFZhZ95BA5A4m0h/view?usp=sharing',
+          'iconCode': Icons.no_food_outlined.codePoint,
+          'colorVal': 0xFFFEF3C7,
+        },
+        {
+          'title': 'Diet Energi Rendah',
+          'desc': 'Program diet kalori terkontrol untuk manajemen berat badan',
+          'category': 'Metabolik',
+          'url': 'https://drive.google.com/file/d/16aiV08zXHsS_275djT5MXlo6n8aopqVy/view?usp=sharing',
+          'iconCode': Icons.local_fire_department_outlined.codePoint,
+          'colorVal': 0xFFFEF3C7,
+        },
+        {
+          'title': 'Diet Purin Rendah',
+          'desc': 'Pembatasan purin untuk mencegah dan menangani penyakit asam urat',
+          'category': 'Metabolik',
+          'url': 'https://drive.google.com/file/d/1D_dhoFxw8ZoK8sYBcCaKrMZsr_k0R2ZL/view?usp=sharing',
+          'iconCode': Icons.science_outlined.codePoint,
+          'colorVal': 0xFFFEF3C7,
+        },
+        {
+          'title': 'Diet Protein Rendah',
+          'desc': 'Pengurangan asupan protein untuk perlindungan fungsi ginjal dan hati',
+          'category': 'Diet Khusus',
+          'url': 'https://drive.google.com/file/d/1pUfHw-KGuJGi64ujMwzAHwtZyBi-WXUK/view?usp=sharing',
+          'iconCode': Icons.egg_outlined.codePoint,
+          'colorVal': 0xFFEDE9FE,
+        },
+        {
+          'title': 'Diet Lemak Rendah',
+          'desc': 'Pembatasan lemak total dan lemak jenuh untuk kesehatan kardiovaskular',
+          'category': 'Diet Khusus',
+          'url': 'https://drive.google.com/file/d/1QREic6oki2pyC2xFQ5Qvulx0-UvTXCm-/view?usp=sharing',
+          'iconCode': Icons.oil_barrel_outlined.codePoint,
+          'colorVal': 0xFFEDE9FE,
+        },
+        {
+          'title': 'Diet Kekebalan Tubuh Menurun',
+          'desc': 'Panduan gizi untuk pasien dengan kondisi imunokompromais / daya tahan tubuh rendah',
+          'category': 'Diet Khusus',
+          'url': 'https://drive.google.com/file/d/1oDCEedQNVE-FRyhAXIvky7cHmIWuTnhZ/view?usp=sharing',
+          'iconCode': Icons.shield_outlined.codePoint,
+          'colorVal': 0xFFEDE9FE,
+        },
+      ];
+      await prefs.setString(_leafletsKey, jsonEncode(initialLeaflets));
     }
   }
 }

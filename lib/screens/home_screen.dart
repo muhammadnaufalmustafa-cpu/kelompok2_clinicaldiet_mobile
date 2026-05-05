@@ -1,15 +1,13 @@
 import 'dart:convert';
-import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:percent_indicator/percent_indicator.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../theme/app_theme.dart';
 import 'catatan_screen.dart';
-import 'pilih_ahli_gizi_screen.dart';
 import 'pilih_jenis_diet_screen.dart';
 import 'edukasi_screen.dart';
+import 'laporan_harian_screen.dart';
 import '../services/auth_service.dart';
 
 enum AgeCategory { balita, anakRemaja, dewasa }
@@ -276,12 +274,12 @@ class _HomeScreenState extends State<HomeScreen> {
                   if (_selectedAhliGizi != null) _buildAhliGiziCard(context),
                   // ── Evaluasi Ahli Gizi ──
                   if (_evaluasiAhliGizi.isNotEmpty) _buildEvaluasiCard(),
-                  // ── Catatan Makan Terakhir ──
-                  if (_lastMealLog != null) _buildLastMealCard(),
                   if (_currentDietNutrisi != null && _kaloriTarget > 0)
                     _buildNutritionSummary()
                   else if (_currentDietNutrisi != null && _kaloriTarget == 0)
                     _buildNoDataState(),
+                  // ── Catatan Makan Terakhir ──
+                  if (_lastMealLog != null) _buildLastMealCard(),
                   _buildReminderCard(context),
                   _buildEdukasiCard(context),
                   const SizedBox(height: 16),
@@ -903,7 +901,7 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header: Badge & Atur
+          // Header: Badge, Atur, & Laporan
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -930,16 +928,48 @@ class _HomeScreenState extends State<HomeScreen> {
                   ],
                 ),
               ),
-              GestureDetector(
-                onTap: () => _showAturTampilanDialog(active),
-                child: Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.2),
-                    shape: BoxShape.circle,
+              Row(
+                children: [
+                  TextButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (ctx) => LaporanHarianScreen(
+                            rmPasien: _user!['rm'],
+                            namaPasien: _user!['name'],
+                            dietType: dietType,
+                          ),
+                        ),
+                      );
+                    },
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
+                      backgroundColor: Colors.white.withValues(alpha: 0.2),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.bar_chart_rounded, size: 14, color: Colors.white),
+                        const SizedBox(width: 4),
+                        Text('Laporan', style: GoogleFonts.manrope(fontSize: 10, fontWeight: FontWeight.w700, color: Colors.white)),
+                      ],
+                    ),
                   ),
-                  child: const Icon(Icons.tune_rounded, size: 14, color: Colors.white),
-                ),
+                  const SizedBox(width: 8),
+                  GestureDetector(
+                    onTap: () => _showAturTampilanDialog(active),
+                    child: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.2),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.tune_rounded, size: 14, color: Colors.white),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
