@@ -847,8 +847,7 @@ class AuthService {
   // ─────────────────────────── NUTRISI (6 KOMPONEN) ────────────────────────
 
 
-  static const String _nutrisiKey = 'nutrisi_pasien_v2';
-  static const String _nutrisiPerDietKey = 'nutrisi_per_diet_v1';
+
 
   // ─── Nutrisi per Jenis Diet (NEW) ────────────────────────────────────────
 
@@ -902,41 +901,6 @@ class AuthService {
     }
   }
 
-    // ─── SAVE TO DAILY HISTORY ───
-    final historyJson = prefs.getString(_nutrisiHistoryKey);
-    List<Map<String, dynamic>> history = [];
-    if (historyJson != null) {
-      final decoded = jsonDecode(historyJson) as List;
-      history = decoded.cast<Map<String, dynamic>>();
-    }
-
-    final today = DateTime.now();
-    final dateKey = '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
-
-    // Key unik history: rm_pasien + diet_type + date
-    final hIdx = history.indexWhere(
-      (h) => h['rm_pasien'] == rmPasien && h['diet_type'] == dietType && h['date'] == dateKey,
-    );
-
-    final historyData = {
-      'rm_pasien': rmPasien,
-      'diet_type': dietType,
-      'date': dateKey,
-      'target_nutrients': cleanTargets,
-      'catatan': catatan,
-      'evaluasi_ahli_gizi': evaluasiAhliGizi,
-      'updated_at': DateTime.now().toIso8601String(),
-    };
-
-    if (hIdx != -1) {
-      history[hIdx] = historyData;
-    } else {
-      history.add(historyData);
-    }
-    await prefs.setString(_nutrisiHistoryKey, jsonEncode(history));
-
-    return true;
-  }
 
   static Future<Map<String, dynamic>?> getNutrisiHistoryForDate(
       String rmPasien, String dietType, String dateKey) async {
