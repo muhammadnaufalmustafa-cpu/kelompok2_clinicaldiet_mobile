@@ -48,20 +48,29 @@ class MealLog {
 
   // Create from Map
   factory MealLog.fromMap(Map<String, dynamic> map) {
+    DateTime parseDateTime(dynamic value) {
+      if (value == null) return DateTime.now();
+      if (value is String) return DateTime.parse(value);
+      // Handle Firestore Timestamp if present
+      try {
+        if (value.runtimeType.toString() == 'Timestamp') {
+          return (value as dynamic).toDate();
+        }
+      } catch (_) {}
+      return DateTime.now();
+    }
+
     return MealLog(
-      id: map['id'] ?? '',
-      rmPasien: map['rm_pasien'] ?? '',
-      date: DateTime.parse(map['date'] ?? DateTime.now().toIso8601String()),
-      mealPagi: map['meal_pagi'] ?? '',
-      selinganPagi: map['selingan_pagi'] ?? '',
-      mealSiang: map['meal_siang'] ?? '',
-      selinganSore: map['selingan_sore'] ?? '',
-      mealMalam: map['meal_malam'] ?? '',
-      createdAt:
-          DateTime.parse(map['created_at'] ?? DateTime.now().toIso8601String()),
-      updatedAt: map['updated_at'] != null
-          ? DateTime.parse(map['updated_at'])
-          : null,
+      id: map['id']?.toString() ?? '',
+      rmPasien: map['rm_pasien']?.toString() ?? '',
+      date: parseDateTime(map['date']),
+      mealPagi: map['meal_pagi']?.toString() ?? '',
+      selinganPagi: map['selingan_pagi']?.toString() ?? '',
+      mealSiang: map['meal_siang']?.toString() ?? '',
+      selinganSore: map['selingan_sore']?.toString() ?? '',
+      mealMalam: map['meal_malam']?.toString() ?? '',
+      createdAt: parseDateTime(map['created_at']),
+      updatedAt: map['updated_at'] != null ? parseDateTime(map['updated_at']) : null,
       beratBadan: (map['berat_badan'] as num?)?.toDouble(),
       tinggiBadan: (map['tinggi_badan'] as num?)?.toDouble(),
     );

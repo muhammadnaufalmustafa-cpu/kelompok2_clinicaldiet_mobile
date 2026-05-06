@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class AuthService {
   static const String _usersKey = 'registered_users';
@@ -29,54 +31,63 @@ class AuthService {
     String? nik,
     String? agama,
   }) async {
-    final prefs = await SharedPreferences.getInstance();
-
-    final usersJson = prefs.getString(_usersKey);
-    List<Map<String, dynamic>> users = [];
-    if (usersJson != null) {
-      final decoded = jsonDecode(usersJson) as List;
-      users = decoded.cast<Map<String, dynamic>>();
-    }
-
-    final alreadyExists =
-        users.any((u) => u['rm'].toString().toLowerCase() == rm.toLowerCase());
-    if (alreadyExists) {
-      return {'success': false, 'message': 'Nomor RM sudah terdaftar!'};
-    }
-    
-    // Check if username already exists
-    if (username != null && username.isNotEmpty) {
-      final usernameExists = users.any((u) => 
-        u['username']?.toString().toLowerCase() == username.toLowerCase());
-      if (usernameExists) {
-        return {'success': false, 'message': 'Username sudah digunakan!'};
+    try {
+      final usersRef = FirebaseFirestore.instance.collection('users');
+      
+      // 1. Cek duplikasi RM di Firestore
+      final rmCheck = await usersRef.where('rm', isEqualTo: rm).get();
+      if (rmCheck.docs.isNotEmpty) {
+        return {'success': false, 'message': 'Nomor RM sudah terdaftar!'};
       }
+      
+      // 2. Cek duplikasi Username di Firestore
+      if (username != null && username.isNotEmpty) {
+        final usernameCheck = await usersRef.where('username', isEqualTo: username).get();
+        if (usernameCheck.docs.isNotEmpty) {
+          return {'success': false, 'message': 'Username sudah digunakan!'};
+        }
+      }
+
+      // 3. Buat akun di Firebase Auth
+      final userCredential = await FirebaseAuth.instance
+          .createUserWithEmailAndPassword(email: email, password: password);
+
+      final uid = userCredential.user!.uid;
+
+      // 4. Simpan profil pasien ke Firestore
+      final newUser = {
+        'uid': uid,
+        'role': 'pasien',
+        'name': name,
+        'rm': rm,
+        'email': email,
+        'weight': double.tryParse(weight) ?? 0.0,
+        'height': double.tryParse(height) ?? 0.0,
+        'gender': gender,
+        'birthdate': birthdate,
+        'phone': phone,
+        'diet_type': '',
+        'status': 'aktif',
+        'username': username,
+        'alamat': alamat,
+        'pendidikan': pendidikan,
+        'pekerjaan': pekerjaan,
+        'nik': nik,
+        'agama': agama,
+        'created_at': FieldValue.serverTimestamp(),
+      };
+
+      await usersRef.doc(uid).set(newUser);
+      
+      return {'success': true, 'message': 'Registrasi berhasil!'};
+    } on FirebaseAuthException catch (e) {
+      String msg = 'Terjadi kesalahan saat registrasi.';
+      if (e.code == 'weak-password') msg = 'Kata sandi minimal 6 karakter.';
+      else if (e.code == 'email-already-in-use') msg = 'Email sudah terdaftar.';
+      return {'success': false, 'message': msg};
+    } catch (e) {
+      return {'success': false, 'message': 'Error: $e'};
     }
-
-    final newUser = {
-      'role': 'pasien',
-      'name': name,
-      'rm': rm,
-      'email': email,
-      'weight': double.tryParse(weight) ?? 0.0,
-      'height': double.tryParse(height) ?? 0.0,
-      'password': password,
-      'gender': gender,
-      'birthdate': birthdate,
-      'phone': phone,
-      'diet_type': '', // Kosong di awal, diisi setelah login
-      'status': 'aktif',
-      'username': username,
-      'alamat': alamat,
-      'pendidikan': pendidikan,
-      'pekerjaan': pekerjaan,
-      'nik': nik,
-      'agama': agama,
-    };
-    users.add(newUser);
-    await prefs.setString(_usersKey, jsonEncode(users));
-
-    return {'success': true, 'message': 'Registrasi berhasil!'};
   }
 
   // ─────────────────────────── REGISTRASI AHLI GIZI ────────────────────────
@@ -88,47 +99,61 @@ class AuthService {
     required String phone,
     required String password,
   }) async {
-    final prefs = await SharedPreferences.getInstance();
+    try {
+      final usersRef = FirebaseFirestore.instance.collection('users');
+      
+      // 1. Cek duplikasi NIP
+      final nipCheck = await usersRef.where('nip', isEqualTo: nip).get();
+      if (nipCheck.docs.isNotEmpty) {
+        return {'success': false, 'message': 'NIP sudah terdaftar!'};
+      }
 
-    final ahliGiziJson = prefs.getString(_ahliGiziKey);
-    List<Map<String, dynamic>> ahliGiziList = [];
-    if (ahliGiziJson != null) {
-      final decoded = jsonDecode(ahliGiziJson) as List;
-      ahliGiziList = decoded.cast<Map<String, dynamic>>();
+      // 2. Buat akun di Firebase Auth
+      final userCredential = await FirebaseAuth.instance
+          .createUserWithEmailAndPassword(email: email, password: password);
+
+      final uid = userCredential.user!.uid;
+
+      // 3. Simpan data Ahli Gizi
+      final newAhliGizi = {
+        'uid': uid,
+        'role': 'ahli_gizi',
+        'name': name,
+        'nip': nip,
+        'email': email,
+        'phone': phone,
+        'specialization': '',
+        'rating': 0.0,
+        'rating_count': 0,
+        'reviews': [],
+        'created_at': FieldValue.serverTimestamp(),
+      };
+      
+      await usersRef.doc(uid).set(newAhliGizi);
+      
+      return {'success': true, 'message': 'Registrasi ahli gizi berhasil!'};
+    } on FirebaseAuthException catch (e) {
+      String msg = 'Terjadi kesalahan saat registrasi.';
+      if (e.code == 'weak-password') msg = 'Kata sandi minimal 6 karakter.';
+      else if (e.code == 'email-already-in-use') msg = 'Email sudah terdaftar.';
+      return {'success': false, 'message': msg};
+    } catch (e) {
+      return {'success': false, 'message': 'Error: $e'};
     }
-
-    final alreadyExists = ahliGiziList
-        .any((u) => u['nip'].toString().toLowerCase() == nip.toLowerCase());
-    if (alreadyExists) {
-      return {'success': false, 'message': 'NIP sudah terdaftar!'};
-    }
-
-    final newAhliGizi = {
-      'role': 'ahli_gizi',
-      'name': name,
-      'nip': nip,
-      'email': email,
-      'phone': phone,
-      'password': password,
-      'specialization': '', // tidak dipakai saat registrasi lagi
-      'rating': 0.0,
-      'rating_count': 0,
-      'reviews': [],
-    };
-    ahliGiziList.add(newAhliGizi);
-    await prefs.setString(_ahliGiziKey, jsonEncode(ahliGiziList));
-
-    return {'success': true, 'message': 'Registrasi ahli gizi berhasil!'};
   }
 
   // ─────────────────────────── AMBIL SEMUA AHLI GIZI ───────────────────────
 
   static Future<List<Map<String, dynamic>>> getAllAhliGizi() async {
-    final prefs = await SharedPreferences.getInstance();
-    final ahliGiziJson = prefs.getString(_ahliGiziKey);
-    if (ahliGiziJson == null) return [];
-    final decoded = jsonDecode(ahliGiziJson) as List;
-    return decoded.cast<Map<String, dynamic>>();
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .where('role', isEqualTo: 'ahli_gizi')
+          .get();
+      return snapshot.docs.map((doc) => doc.data()).toList();
+    } catch (e) {
+      return [];
+    }
   }
 
   // ─────────────────────────── RATING AHLI GIZI ────────────────────────────
@@ -173,34 +198,50 @@ class AuthService {
     required String identifier, // bisa rm, email, atau username
     required String password,
   }) async {
-    final prefs = await SharedPreferences.getInstance();
-
-    final usersJson = prefs.getString(_usersKey);
-    if (usersJson == null) {
-      return {
-        'success': false,
-        'message': 'Akun tidak ditemukan. Silakan daftar terlebih dahulu.'
-      };
-    }
-
-    final decoded = jsonDecode(usersJson) as List;
-    final users = decoded.cast<Map<String, dynamic>>();
-
     try {
-      final user = users.firstWhere(
-        (u) =>
-            (u['rm'].toString().toLowerCase() == identifier.toLowerCase() ||
-             u['email']?.toString().toLowerCase() == identifier.toLowerCase() ||
-             u['username']?.toString().toLowerCase() == identifier.toLowerCase()) &&
-            u['password'].toString() == password,
-      );
-      await prefs.setString(_loggedInUserKey, jsonEncode(user));
-      return {'success': true, 'user': user};
-    } catch (_) {
-      return {
-        'success': false,
-        'message': 'Username/Email/RM atau kata sandi salah.'
-      };
+      final usersRef = FirebaseFirestore.instance.collection('users');
+      String loginEmail = identifier;
+
+      // 1. Jika bukan format email, cari emailnya di Firestore berdasarkan RM atau Username
+      if (!identifier.contains('@')) {
+        final rmCheck = await usersRef.where('rm', isEqualTo: identifier).where('role', isEqualTo: 'pasien').get();
+        if (rmCheck.docs.isNotEmpty) {
+          loginEmail = rmCheck.docs.first.data()['email'] ?? '';
+        } else {
+          final usernameCheck = await usersRef.where('username', isEqualTo: identifier).where('role', isEqualTo: 'pasien').get();
+          if (usernameCheck.docs.isNotEmpty) {
+            loginEmail = usernameCheck.docs.first.data()['email'] ?? '';
+          } else {
+            return {'success': false, 'message': 'RM/Username tidak terdaftar.'};
+          }
+        }
+      }
+
+      // 2. Login ke Firebase Auth
+      final userCredential = await FirebaseAuth.instance
+          .signInWithEmailAndPassword(email: loginEmail, password: password);
+          
+      final uid = userCredential.user!.uid;
+
+      // 3. Ambil profil lengkap dari Firestore
+      final userDoc = await usersRef.doc(uid).get();
+      if (!userDoc.exists || userDoc.data()?['role'] != 'pasien') {
+         await FirebaseAuth.instance.signOut();
+         return {'success': false, 'message': 'Akun ini bukan pasien.'};
+      }
+
+      final userData = userDoc.data()!;
+      // Backup session ke SharedPreferences agar tidak merusak halaman lain (SANGAT AMAN)
+      final prefs = await SharedPreferences.getInstance();
+      userData['password'] = password; // Tetap simpan dummy password untuk backward compatibility jika ada fitur yang butuh
+      await prefs.setString(_loggedInUserKey, jsonEncode(userData));
+
+      return {'success': true, 'user': userData};
+
+    } on FirebaseAuthException catch (_) {
+      return {'success': false, 'message': 'Email/RM atau kata sandi salah.'};
+    } catch (e) {
+      return {'success': false, 'message': 'Terjadi kesalahan: $e'};
     }
   }
 
@@ -208,33 +249,46 @@ class AuthService {
     required String identifier, // bisa nip atau email
     required String password,
   }) async {
-    final prefs = await SharedPreferences.getInstance();
-
-    final ahliGiziJson = prefs.getString(_ahliGiziKey);
-    if (ahliGiziJson == null) {
-      return {
-        'success': false,
-        'message': 'Akun ahli gizi tidak ditemukan. Silakan daftar terlebih dahulu.'
-      };
-    }
-
-    final decoded = jsonDecode(ahliGiziJson) as List;
-    final ahliGiziList = decoded.cast<Map<String, dynamic>>();
-
     try {
-      final user = ahliGiziList.firstWhere(
-        (u) =>
-            (u['nip'].toString().toLowerCase() == identifier.toLowerCase() ||
-             u['email']?.toString().toLowerCase() == identifier.toLowerCase()) &&
-            u['password'].toString() == password,
-      );
-      await prefs.setString(_loggedInUserKey, jsonEncode(user));
-      return {'success': true, 'user': user};
-    } catch (_) {
-      return {
-        'success': false,
-        'message': 'NIP/Email atau kata sandi salah.'
-      };
+      final usersRef = FirebaseFirestore.instance.collection('users');
+      String loginEmail = identifier;
+
+      // 1. Jika bukan format email, cari emailnya berdasarkan NIP
+      if (!identifier.contains('@')) {
+        final nipCheck = await usersRef.where('nip', isEqualTo: identifier).where('role', isEqualTo: 'ahli_gizi').get();
+        if (nipCheck.docs.isNotEmpty) {
+          loginEmail = nipCheck.docs.first.data()['email'] ?? '';
+        } else {
+          return {'success': false, 'message': 'NIP tidak terdaftar.'};
+        }
+      }
+
+      // 2. Login ke Firebase Auth
+      final userCredential = await FirebaseAuth.instance
+          .signInWithEmailAndPassword(email: loginEmail, password: password);
+          
+      final uid = userCredential.user!.uid;
+
+      // 3. Ambil profil dari Firestore
+      final userDoc = await usersRef.doc(uid).get();
+      if (!userDoc.exists || userDoc.data()?['role'] != 'ahli_gizi') {
+         await FirebaseAuth.instance.signOut();
+         return {'success': false, 'message': 'Akun ini bukan ahli gizi.'};
+      }
+
+      final userData = userDoc.data()!;
+      
+      // Backup session ke SharedPreferences
+      final prefs = await SharedPreferences.getInstance();
+      userData['password'] = password;
+      await prefs.setString(_loggedInUserKey, jsonEncode(userData));
+
+      return {'success': true, 'user': userData};
+
+    } on FirebaseAuthException catch (_) {
+      return {'success': false, 'message': 'Email/NIP atau kata sandi salah.'};
+    } catch (e) {
+      return {'success': false, 'message': 'Terjadi kesalahan: $e'};
     }
   }
   
@@ -361,42 +415,36 @@ class AuthService {
     required String pendidikan,
     required String pekerjaan,
   }) async {
-    final prefs = await SharedPreferences.getInstance();
-    final usersJson = prefs.getString(_usersKey);
-    if (usersJson == null) return false;
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return false;
 
-    final decoded = jsonDecode(usersJson) as List;
-    final users = decoded.cast<Map<String, dynamic>>();
+      final updateData = {
+        'name': name,
+        'username': username,
+        'phone': phone,
+        'email': email,
+        'nik': nik,
+        'agama': agama,
+        'alamat': alamat,
+        'pendidikan': pendidikan,
+        'pekerjaan': pekerjaan,
+        'updated_at': FieldValue.serverTimestamp(),
+      };
 
-    final idx = users.indexWhere(
-      (u) => u['rm'].toString().toLowerCase() == rm.toLowerCase(),
-    );
-    if (idx == -1) return false;
-
-    // Check username uniqueness if changed
-    if (users[idx]['username'] != username && username.isNotEmpty) {
-      final usernameExists = users.any((u) => 
-        u['username']?.toString().toLowerCase() == username.toLowerCase());
-      if (usernameExists) return false;
+      await FirebaseFirestore.instance.collection('users').doc(user.uid).update(updateData);
+      
+      // Update session local
+      final prefs = await SharedPreferences.getInstance();
+      final freshData = (await FirebaseFirestore.instance.collection('users').doc(user.uid).get()).data();
+      if (freshData != null) {
+        await prefs.setString(_loggedInUserKey, jsonEncode(freshData));
+      }
+      
+      return true;
+    } catch (e) {
+      return false;
     }
-
-    users[idx]['name'] = name;
-    users[idx]['username'] = username;
-    users[idx]['phone'] = phone;
-    users[idx]['email'] = email;
-    users[idx]['nik'] = nik;
-    users[idx]['agama'] = agama;
-    users[idx]['alamat'] = alamat;
-    users[idx]['pendidikan'] = pendidikan;
-    users[idx]['pekerjaan'] = pekerjaan;
-
-    await prefs.setString(_usersKey, jsonEncode(users));
-    
-    final loggedIn = await getLoggedInUser();
-    if (loggedIn != null && loggedIn['rm'] == rm) {
-      await prefs.setString(_loggedInUserKey, jsonEncode(users[idx]));
-    }
-    return true;
   }
 
   static Future<bool> updatePasienEmailPassword({
@@ -480,26 +528,30 @@ class AuthService {
   }
 
   static Future<List<Map<String, dynamic>>> getAllPasien() async {
-    final prefs = await SharedPreferences.getInstance();
-    final usersJson = prefs.getString(_usersKey);
-    if (usersJson == null) return [];
-    final decoded = jsonDecode(usersJson) as List;
-    return decoded.cast<Map<String, dynamic>>();
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .where('role', isEqualTo: 'pasien')
+          .get();
+      return snapshot.docs.map((doc) => doc.data()).toList();
+    } catch (e) {
+      return [];
+    }
   }
 
   static Future<Map<String, dynamic>?> getPasienByRm(String rm) async {
-    final prefs = await SharedPreferences.getInstance();
-    final usersJson = prefs.getString(_usersKey);
-    if (usersJson == null) return null;
-
-    final decoded = jsonDecode(usersJson) as List;
-    final users = decoded.cast<Map<String, dynamic>>();
-
     try {
-      return users.firstWhere(
-        (u) => u['rm'].toString().toLowerCase() == rm.toLowerCase(),
-      );
-    } catch (_) {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .where('rm', isEqualTo: rm)
+          .where('role', isEqualTo: 'pasien')
+          .limit(1)
+          .get();
+      if (snapshot.docs.isNotEmpty) {
+        return snapshot.docs.first.data();
+      }
+      return null;
+    } catch (e) {
       return null;
     }
   }
@@ -511,30 +563,29 @@ class AuthService {
     double weight,
     double height,
   ) async {
-    final prefs = await SharedPreferences.getInstance();
-    final usersJson = prefs.getString(_usersKey);
-    if (usersJson == null) return false;
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return false;
 
-    final decoded = jsonDecode(usersJson) as List;
-    final users = decoded.cast<Map<String, dynamic>>();
+      final updateData = {
+        'weight': weight,
+        'height': height,
+        'updated_at': FieldValue.serverTimestamp(),
+      };
 
-    final idx = users.indexWhere(
-      (u) => u['rm'].toString().toLowerCase() == rm.toLowerCase(),
-    );
-    if (idx == -1) return false;
-
-    users[idx]['weight'] = weight;
-    users[idx]['height'] = height;
-
-    await prefs.setString(_usersKey, jsonEncode(users));
-
-    final loggedIn = await getLoggedInUser();
-    if (loggedIn != null &&
-        loggedIn['rm'].toString().toLowerCase() == rm.toLowerCase()) {
-      await prefs.setString(_loggedInUserKey, jsonEncode(users[idx]));
+      await FirebaseFirestore.instance.collection('users').doc(user.uid).update(updateData);
+      
+      // Update session local
+      final prefs = await SharedPreferences.getInstance();
+      final freshData = (await FirebaseFirestore.instance.collection('users').doc(user.uid).get()).data();
+      if (freshData != null) {
+        await prefs.setString(_loggedInUserKey, jsonEncode(freshData));
+      }
+      
+      return true;
+    } catch (e) {
+      return false;
     }
-
-    return true;
   }
 
   // ───────────────────────── PILIH AHLI GIZI & DIET ──────────────────────────
@@ -617,22 +668,16 @@ class AuthService {
     String rmPasien,
     DateTime date,
   ) async {
-    final prefs = await SharedPreferences.getInstance();
-    final logsJson = prefs.getString(_mealLogsKey);
-    if (logsJson == null) return null;
-
-    final decoded = jsonDecode(logsJson) as List;
-    final logs = decoded.cast<Map<String, dynamic>>();
-
-    final dateString = '${date.year}-${date.month}-${date.day}';
-
     try {
-      return logs.firstWhere(
-        (log) =>
-            log['rm_pasien'] == rmPasien &&
-            log['date'].toString().startsWith(dateString),
-      );
-    } catch (_) {
+      final dateString = '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+      final docId = '${rmPasien}_$dateString';
+      
+      final doc = await FirebaseFirestore.instance.collection('meal_logs').doc(docId).get();
+      if (doc.exists) {
+        return doc.data();
+      }
+      return null;
+    } catch (e) {
       return null;
     }
   }
@@ -641,25 +686,20 @@ class AuthService {
     String rmPasien, {
     int days = 30,
   }) async {
-    final prefs = await SharedPreferences.getInstance();
-    final logsJson = prefs.getString(_mealLogsKey);
-    if (logsJson == null) return [];
-
-    final decoded = jsonDecode(logsJson) as List;
-    final logs = decoded.cast<Map<String, dynamic>>();
-
-    final cutoffDate = DateTime.now().subtract(Duration(days: days));
-    final result = logs
-        .where((log) =>
-            log['rm_pasien'] == rmPasien &&
-            DateTime.parse(log['date']).isAfter(cutoffDate))
-        .toList();
-
-    result.sort((a, b) => DateTime.parse(b['date']).compareTo(
-      DateTime.parse(a['date']),
-    ));
-
-    return result;
+    try {
+      final cutoffDate = DateTime.now().subtract(Duration(days: days));
+      final snapshot = await FirebaseFirestore.instance
+          .collection('meal_logs')
+          .where('rm_pasien', isEqualTo: rmPasien)
+          .where('date', isGreaterThanOrEqualTo: cutoffDate.toIso8601String())
+          .get();
+      
+      final result = snapshot.docs.map((doc) => doc.data()).toList();
+      result.sort((a, b) => (b['date'] as String).compareTo(a['date'] as String));
+      return result;
+    } catch (e) {
+      return [];
+    }
   }
 
   // ─────────────────────────── SESSION ─────────────────────────────────────
@@ -672,6 +712,7 @@ class AuthService {
   }
 
   static Future<void> logout() async {
+    await FirebaseAuth.instance.signOut();
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_loggedInUserKey);
   }
@@ -815,51 +856,51 @@ class AuthService {
     required String rmPasien,
     required String dietType,
     required Map<String, dynamic> targetNutrients,
-    Map<String, dynamic>? aktualNutrients, // Aktualisasi manual dari Ahli Gizi
+    Map<String, dynamic>? aktualNutrients,
     String catatan = '',
     String evaluasiAhliGizi = '',
   }) async {
-    final prefs = await SharedPreferences.getInstance();
-    final json = prefs.getString(_nutrisiPerDietKey);
-    List<Map<String, dynamic>> list = [];
-    if (json != null) {
-      final decoded = jsonDecode(json) as List;
-      list = decoded.cast<Map<String, dynamic>>();
-    }
-    
-    // Key unik: rm_pasien + diet_type
-    final idx = list.indexWhere(
-      (n) => n['rm_pasien'] == rmPasien && n['diet_type'] == dietType,
-    );
+    try {
+      final docId = '${rmPasien}_${dietType.replaceAll(' ', '_')}';
+      
+      Map<String, dynamic> cleanTargets = {};
+      targetNutrients.forEach((key, value) {
+        final targetVal = (value['target'] as num?)?.toDouble() ?? 0.0;
+        final aktualVal = aktualNutrients != null
+            ? (aktualNutrients[key] as num?)?.toDouble() ?? 0.0
+            : (value['aktual'] as num?)?.toDouble() ?? 0.0;
+        cleanTargets[key] = {
+          'target': targetVal,
+          'aktual': aktualVal,
+        };
+      });
 
-    // Bangun map gabungan: target dari targetNutrients, aktual dari aktualNutrients (jika ada)
-    Map<String, dynamic> cleanTargets = {};
-    targetNutrients.forEach((key, value) {
-      final targetVal = (value['target'] as num?)?.toDouble() ?? 0.0;
-      // Ambil aktual dari: (1) aktualNutrients parameter, (2) value yang sudah ada, (3) default 0
-      final aktualVal = aktualNutrients != null
-          ? (aktualNutrients[key] as num?)?.toDouble() ?? 0.0
-          : (value['aktual'] as num?)?.toDouble() ?? 0.0;
-      cleanTargets[key] = {
-        'target': targetVal,
-        'aktual': aktualVal,
+      final data = {
+        'rm_pasien': rmPasien,
+        'diet_type': dietType,
+        'target_nutrients': cleanTargets,
+        'catatan': catatan,
+        'evaluasi_ahli_gizi': evaluasiAhliGizi,
+        'updated_at': DateTime.now().toIso8601String(),
       };
-    });
 
-    final data = {
-      'rm_pasien': rmPasien,
-      'diet_type': dietType,
-      'target_nutrients': cleanTargets,
-      'catatan': catatan,
-      'evaluasi_ahli_gizi': evaluasiAhliGizi,
-      'updated_at': DateTime.now().toIso8601String(),
-    };
-    if (idx != -1) {
-      list[idx] = data;
-    } else {
-      list.add(data);
+      await FirebaseFirestore.instance.collection('nutrition_plans').doc(docId).set(data);
+
+      // Save to history too
+      final today = DateTime.now();
+      final dateKey = '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+      final historyId = '${rmPasien}_${dietType.replaceAll(' ', '_')}_$dateKey';
+      
+      final historyData = Map<String, dynamic>.from(data);
+      historyData['date'] = dateKey;
+      
+      await FirebaseFirestore.instance.collection('nutrition_history').doc(historyId).set(historyData);
+      
+      return true;
+    } catch (e) {
+      return false;
     }
-    await prefs.setString(_nutrisiPerDietKey, jsonEncode(list));
+  }
 
     // ─── SAVE TO DAILY HISTORY ───
     final historyJson = prefs.getString(_nutrisiHistoryKey);
@@ -899,30 +940,33 @@ class AuthService {
 
   static Future<Map<String, dynamic>?> getNutrisiHistoryForDate(
       String rmPasien, String dietType, String dateKey) async {
-    final prefs = await SharedPreferences.getInstance();
-    final json = prefs.getString(_nutrisiHistoryKey);
-    if (json == null) return null;
-    final decoded = jsonDecode(json) as List;
-    final list = decoded.cast<Map<String, dynamic>>();
     try {
-      return list.firstWhere(
-        (h) => h['rm_pasien'] == rmPasien && h['diet_type'] == dietType && h['date'] == dateKey,
-      );
-    } catch (_) {
+      final historyId = '${rmPasien}_${dietType.replaceAll(' ', '_')}_$dateKey';
+      final doc = await FirebaseFirestore.instance.collection('nutrition_history').doc(historyId).get();
+      if (doc.exists) {
+        return doc.data();
+      }
+      return null;
+    } catch (e) {
       return null;
     }
   }
 
   static Future<List<Map<String, dynamic>>> getNutrisiHistoryForMonth(
       String rmPasien, int month, int year) async {
-    final prefs = await SharedPreferences.getInstance();
-    final json = prefs.getString(_nutrisiHistoryKey);
-    if (json == null) return [];
-    final decoded = jsonDecode(json) as List;
-    final list = decoded.cast<Map<String, dynamic>>();
-    
-    final prefix = '$year-${month.toString().padLeft(2, '0')}';
-    return list.where((h) => h['rm_pasien'] == rmPasien && (h['date'] as String).startsWith(prefix)).toList();
+    try {
+      final prefix = '$year-${month.toString().padLeft(2, '0')}';
+      final snapshot = await FirebaseFirestore.instance
+          .collection('nutrition_history')
+          .where('rm_pasien', isEqualTo: rmPasien)
+          .where('date', isGreaterThanOrEqualTo: '$prefix-01')
+          .where('date', isLessThanOrEqualTo: '$prefix-31')
+          .get();
+      
+      return snapshot.docs.map((doc) => doc.data()).toList();
+    } catch (e) {
+      return [];
+    }
   }
   static Future<Map<String, dynamic>?> getLatestNutritionPlan(String rm) async {
     final all = await getAllNutrisiPasien(rm);
@@ -939,12 +983,15 @@ class AuthService {
   }
 
   static Future<List<Map<String, dynamic>>> getAllNutrisiPasien(String rmPasien) async {
-    final prefs = await SharedPreferences.getInstance();
-    final json = prefs.getString(_nutrisiPerDietKey);
-    if (json == null) return [];
-    final decoded = jsonDecode(json) as List;
-    final list = decoded.cast<Map<String, dynamic>>();
-    return list.where((n) => n['rm_pasien'] == rmPasien).toList();
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('nutrition_plans')
+          .where('rm_pasien', isEqualTo: rmPasien)
+          .get();
+      return snapshot.docs.map((doc) => doc.data()).toList();
+    } catch (e) {
+      return [];
+    }
   }
 
   static Future<Map<String, dynamic>?> getNutrisiPasienPerDiet(
@@ -1175,47 +1222,37 @@ class AuthService {
     String? jamMalam,
     String? date,
   }) async {
-    final prefs = await SharedPreferences.getInstance();
-    final logsJson = prefs.getString(_mealLogsKey);
-    List<Map<String, dynamic>> logs = [];
-    if (logsJson != null) {
-      final decoded = jsonDecode(logsJson) as List;
-      logs = decoded.cast<Map<String, dynamic>>();
+    try {
+      final today = date != null ? DateTime.parse(date) : DateTime.now();
+      final dateString = '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+      final docId = '${rmPasien}_$dateString';
+
+      final logData = {
+        'id': docId,
+        'rm_pasien': rmPasien,
+        'date': today.toIso8601String(),
+        'meal_pagi': mealPagi,
+        'selingan_pagi': selinganPagi,
+        'meal_siang': mealSiang,
+        'selingan_sore': selinganSore,
+        'meal_malam': mealMalam,
+        'jam_pagi': jamPagi ?? '',
+        'jam_selingan_pagi': jamSelinganPagi ?? '',
+        'jam_siang': jamSiang ?? '',
+        'jam_selingan_sore': jamSelinganSore ?? '',
+        'jam_malam': jamMalam ?? '',
+        'diet_type': dietType ?? '',
+        'berat_badan': beratBadan,
+        'tinggi_badan': tinggiBadan,
+        'created_at': today.toIso8601String(),
+        'updated_at': DateTime.now().toIso8601String(),
+      };
+
+      await FirebaseFirestore.instance.collection('meal_logs').doc(docId).set(logData, SetOptions(merge: true));
+      return true;
+    } catch (e) {
+      return false;
     }
-    final today = date != null ? DateTime.parse(date) : DateTime.now();
-    final todayString = '${today.year}-${today.month}-${today.day}';
-    final existingLogIndex = logs.indexWhere(
-      (log) => log['rm_pasien'] == rmPasien && log['date'].toString().startsWith(todayString),
-    );
-    final newLog = {
-      'id': '${rmPasien}_${today.millisecondsSinceEpoch}',
-      'rm_pasien': rmPasien,
-      'date': today.toIso8601String(),
-      'meal_pagi': mealPagi,
-      'selingan_pagi': selinganPagi,
-      'meal_siang': mealSiang,
-      'selingan_sore': selinganSore,
-      'meal_malam': mealMalam,
-      'jam_pagi': jamPagi ?? '',
-      'jam_selingan_pagi': jamSelinganPagi ?? '',
-      'jam_siang': jamSiang ?? '',
-      'jam_selingan_sore': jamSelinganSore ?? '',
-      'jam_malam': jamMalam ?? '',
-      'diet_type': dietType ?? '',
-      'berat_badan': beratBadan,
-      'tinggi_badan': tinggiBadan,
-      'created_at': today.toIso8601String(),
-      'updated_at': today.toIso8601String(),
-    };
-    if (existingLogIndex != -1) {
-      newLog['id'] = logs[existingLogIndex]['id'];
-      newLog['created_at'] = logs[existingLogIndex]['created_at'];
-      logs[existingLogIndex] = newLog;
-    } else {
-      logs.add(newLog);
-    }
-    await prefs.setString(_mealLogsKey, jsonEncode(logs));
-    return true;
   }
 
   // ─────────────────────────── KELOLA JENIS DIET ─────────────────────────────
@@ -1324,27 +1361,16 @@ class AuthService {
 
   // ─────────────────────────── SEED DUMMY DATA ─────────────────────────────
 
-  static Future<void> seedDummyDataIfNeeded() async {
+  static Future<void> initializeAppDataIfNeeded() async {
     final prefs = await SharedPreferences.getInstance();
 
-    // Bump seed_version ke 9 untuk force-refresh data dummy diet dinamis dan persetujuan
     final seedVersion = prefs.getInt('seed_version') ?? 0;
     if (seedVersion < 9) {
       await prefs.clear();
       await prefs.setInt('seed_version', 9);
     }
 
-    // ── Seed ahli gizi ──────────────────────────────────────────────────────
-    final ahliGiziJson = prefs.getString(_ahliGiziKey);
-    if (ahliGiziJson == null || (jsonDecode(ahliGiziJson) as List).isEmpty) {
-      await registerAhliGizi(name: 'Siti Rahmadhani, S.Gz', nip: '200001', email: 'siti.rahmadhani@rsud.go.id', phone: '08129876543', password: 'password123');
-      await registerAhliGizi(name: 'Hendra Wijaya, S.Gz', nip: '200002', email: 'hendra.wijaya@rsud.go.id', phone: '08121112223', password: 'password123');
-      await submitRatingAhliGizi('200001', 5.0, ulasan: 'Sangat ramah dan sabar menjelaskan detail diet saya.', pasienName: 'Budi Santoso');
-      await submitRatingAhliGizi('200001', 4.0, ulasan: 'Menu diet yang diberikan sangat membantu!', pasienName: 'Siti Aminah');
-      await submitRatingAhliGizi('200002', 4.5, ulasan: 'Penjelasan jelas dan terukur.', pasienName: 'Dewi Lestari');
-    }
-
-    // ── Seed jenis diet ─────────────────────────────────────────────────────
+    // ── Seed jenis diet (Materi Edukasi) ─────────────────────────────────────
     final dietJson = prefs.getString(_dietTypesKey);
     if (dietJson == null || (jsonDecode(dietJson) as List).isEmpty) {
       final List<Map<String, dynamic>> initialDiets = [
@@ -1370,179 +1396,7 @@ class AuthService {
       await prefs.setString(_dietTypesKey, jsonEncode(initialDiets));
     }
 
-    // ── Seed pasien ─────────────────────────────────────────────────────────
-    final usersJson = prefs.getString(_usersKey);
-    if (usersJson == null || (jsonDecode(usersJson) as List).isEmpty) {
-      // Daftar pasien
-      await register(name: 'Budi Santoso', rm: '100001', email: 'budi@gmail.com', weight: '72', height: '170', password: 'password123', gender: 'Laki-laki', birthdate: '1990-01-01', phone: '08123456789', username: 'budi123');
-      await register(name: 'Andi Pratama', rm: '100002', email: 'andi@gmail.com', weight: '68', height: '175', password: 'password123', gender: 'Laki-laki', birthdate: '1985-05-12', phone: '08129876543', username: 'andi123');
-      await register(name: 'Siti Aminah', rm: '100003', email: 'siti@gmail.com', weight: '58', height: '157', password: 'password123', gender: 'Perempuan', birthdate: '1992-08-17', phone: '08123334445', username: 'siti123');
-      await register(name: 'Dewi Lestari', rm: '100004', email: 'dewi@gmail.com', weight: '62', height: '163', password: 'password123', gender: 'Perempuan', birthdate: '1988-11-20', phone: '08129998887', username: 'dewi123');
-      await register(name: 'Rudi Hermawan', rm: '100005', email: 'rudi@gmail.com', weight: '88', height: '172', password: 'password123', gender: 'Laki-laki', birthdate: '1975-03-30', phone: '08125556667', username: 'rudi123');
-
-      // Pilihkan ahli gizi & consent untuk semua pasien
-      for (final rm in ['100001', '100002', '100003', '100004', '100005']) {
-        final nip = (rm == '100004' || rm == '100005') ? '200002' : '200001';
-        await selectAhliGizi(rm, nip);
-        await saveInformConsent(rm, ''); // consent sudah ditandatangani
-      }
-
-      // Pilih jenis diet untuk tiap pasien
-      await updateDietTypes('100001', ['Diet Diabetes Melitus', 'Diet Energi Rendah']);
-      await updateDietTypes('100002', ['Diet Jantung']);
-      await updateDietTypes('100003', ['Makanan Sehat Ibu Hamil']);
-      await updateDietTypes('100004', ['Diet Garam Rendah', 'Diet Penyakit Ginjal Kronik']);
-      await updateDietTypes('100005', ['Diet Energi Rendah']);
-
-      // Status
-      await updatePasienStatus('100002', 'berhasil');
-      await updatePasienStatus('100004', 'aktif');
-
-      // BB/TB history untuk pasien 100001
-      await updateBBTBWithHistory('100001', 72.0, 170.0);
-      await updateBBTBWithHistory('100001', 71.5, 170.0);
-      await updateBBTBWithHistory('100001', 71.0, 170.0);
-      await updateBBTBWithHistory('100001', 72.5, 170.0);
-
-      // BB/TB history untuk pasien 100003
-      await updateBBTBWithHistory('100003', 58.0, 157.0);
-      await updateBBTBWithHistory('100003', 57.5, 157.0);
-    }
-
-    // ── Seed nutrisi per diet ────────────────────────────────────────────────
-    final nutrisiPerDietJson = prefs.getString(_nutrisiPerDietKey);
-    if (nutrisiPerDietJson == null || (jsonDecode(nutrisiPerDietJson) as List).isEmpty) {
-      // Pasien 100001
-      await saveNutrisiPerDiet(
-        rmPasien: '100001', dietType: 'Diet Diabetes Melitus',
-        targetNutrients: {'Energi (kkal)': {'target': 1800.0, 'aktual': 1620.0}},
-        catatan: 'Hindari makanan tinggi GI. Perbanyak serat dan protein nabati.',
-        evaluasiAhliGizi: 'Asupan kalori sudah mendekati target. Tingkatkan konsumsi sayuran hijau dan kurangi nasi putih. Tetap pertahankan olahraga ringan 30 menit/hari.',
-      );
-      // Pasien 100001
-      await saveNutrisiPerDiet(
-        rmPasien: '100001', dietType: 'Diet Energi Rendah',
-        targetNutrients: {'Energi (kkal)': {'target': 1500.0, 'aktual': 1380.0}},
-        catatan: 'Batasi karbohidrat sederhana. Prioritaskan protein tanpa lemak.',
-        evaluasiAhliGizi: 'Progres baik. Defisit kalori sudah ideal untuk penurunan berat badan. Pantau BB minggu depan.',
-      );
-
-      // Pasien 100002
-      await saveNutrisiPerDiet(
-        rmPasien: '100002', dietType: 'Diet Jantung',
-        targetNutrients: {'Energi (kkal)': {'target': 2000.0, 'aktual': 1920.0}},
-        catatan: 'Batasi lemak jenuh. Perbanyak omega-3 dari ikan.',
-        evaluasiAhliGizi: 'Asupan sudah sangat baik. Pertahankan pola makan ini dan rutin kontrol tekanan darah.',
-      );
-
-      // Pasien 100003
-      await saveNutrisiPerDiet(
-        rmPasien: '100003', dietType: 'Makanan Sehat Ibu Hamil',
-        targetNutrients: {'Energi (kkal)': {'target': 2200.0, 'aktual': 2050.0}},
-        catatan: 'Pastikan asupan asam folat, zat besi, dan kalsium tercukupi.',
-        evaluasiAhliGizi: 'Kondisi nutrisi ibu dan janin dalam kondisi baik. Tambahkan susu ibu hamil 1x/hari. Perbanyak sayuran berdaun hijau.',
-      );
-
-      // Pasien 100004
-      await saveNutrisiPerDiet(
-        rmPasien: '100004', dietType: 'Diet Garam Rendah',
-        targetNutrients: {'Energi (kkal)': {'target': 1900.0, 'aktual': 1750.0}},
-        catatan: 'Batasi garam < 2g/hari. Hindari makanan olahan dan acar.',
-        evaluasiAhliGizi: 'Tekanan darah membaik. Pertahankan diet rendah natrium. Konsumsi buah kalium tinggi seperti pisang dan alpukat.',
-      );
-      // Pasien 100004
-      await saveNutrisiPerDiet(
-        rmPasien: '100004', dietType: 'Diet Penyakit Ginjal Kronik',
-        targetNutrients: {'Energi (kkal)': {'target': 1800.0, 'aktual': 1680.0}},
-        catatan: 'Batasi protein dan fosfor. Kontrol asupan kalium.',
-        evaluasiAhliGizi: 'Fungsi ginjal stabil. Tetap batasi protein hewani dan konsumsi lebih banyak karbohidrat kompleks.',
-      );
-
-      // Pasien 100005
-      await saveNutrisiPerDiet(
-        rmPasien: '100005', dietType: 'Diet Energi Rendah',
-        targetNutrients: {'Energi (kkal)': {'target': 1600.0, 'aktual': 1450.0}},
-        catatan: 'Target penurunan 0.5 kg/minggu. Hindari makanan gorengan.',
-        evaluasiAhliGizi: 'Penurunan berat badan konsisten. Lanjutkan pola makan saat ini. Tambahkan aktivitas fisik 3x seminggu.',
-      );
-
-      // ── Seed nutrisi global (legacy) untuk backward-compat ──
-      await saveNutrisiPasien(rmPasien: '100001', energiTarget: 1800, proteinTarget: 75, lemakTarget: 50, karboTarget: 220, seratTarget: 30, hidrasiTarget: 2.5, catatan: 'Diet Diabetes + Energi Rendah');
-      await saveNutrisiPasien(rmPasien: '100002', energiTarget: 2000, proteinTarget: 80, lemakTarget: 55, karboTarget: 250, seratTarget: 35, hidrasiTarget: 2.5, catatan: 'Diet Jantung');
-      await saveNutrisiPasien(rmPasien: '100003', energiTarget: 2200, proteinTarget: 90, lemakTarget: 70, karboTarget: 290, seratTarget: 32, hidrasiTarget: 3.0, catatan: 'Makanan Sehat Ibu Hamil');
-      await saveNutrisiPasien(rmPasien: '100004', energiTarget: 1900, proteinTarget: 72, lemakTarget: 55, karboTarget: 240, seratTarget: 30, hidrasiTarget: 2.0, catatan: 'Diet Ginjal + Garam Rendah');
-      await saveNutrisiPasien(rmPasien: '100005', energiTarget: 1600, proteinTarget: 70, lemakTarget: 45, karboTarget: 195, seratTarget: 30, hidrasiTarget: 2.5, catatan: 'Diet Energi Rendah');
-    }
-
-    // ── Seed meal logs dummy ─────────────────────────────────────────────────
-    final mealLogsJson = prefs.getString(_mealLogsKey);
-    if (mealLogsJson == null || (jsonDecode(mealLogsJson) as List).isEmpty) {
-      List<Map<String, dynamic>> allLogs = [];
-      
-      // Pasien 100001 – Budi Santoso (7 Hari)
-      final now = DateTime.now();
-      for (int i = 0; i <= 6; i++) {
-        final date = now.subtract(Duration(days: i));
-        allLogs.add({
-          'id': '100001_${date.millisecondsSinceEpoch}',
-          'rm_pasien': '100001',
-          'date': date.toIso8601String(),
-          'meal_pagi': i == 0 ? 'Nasi merah 1 centong rice cooker, Telur rebus 1 btr' : 'Oatmeal pisang (Hari -$i)',
-          'selingan_pagi': 'Apel 1 bh sdg, Air putih 1 gelas',
-          'meal_siang': 'Nasi putih 1 centong, Ikan goreng 1 ptg',
-          'selingan_sore': 'Buah pisang 1 bh sdg, Teh tawar 1 cup',
-          'meal_malam': 'Nasi merah 1 centong, Ayam rebus 1 ptg',
-          'jam_pagi': '07.00 WIB',
-          'jam_selingan_pagi': '10.00 WIB',
-          'jam_siang': '12.30 WIB',
-          'jam_selingan_sore': '15.30 WIB',
-          'jam_malam': '19.00 WIB',
-          'diet_type': 'Diet Diabetes Melitus',
-          'berat_badan': 72.5 - (i * 0.1),
-          'tinggi_badan': 170.0,
-          'created_at': date.toIso8601String(),
-          'updated_at': date.toIso8601String(),
-        });
-      }
-      
-      // Simpan logs ke prefs
-      await prefs.setString(_mealLogsKey, jsonEncode(allLogs));
-
-      // Pasien 100003 – Siti Aminah
-      await saveMealLog(
-        rmPasien: '100003',
-        mealPagi: 'Nasi putih 1 centong rice cooker, Telur dadar 1 btr, Sayur sop 1 mangkok',
-        selinganPagi: 'Susu ibu hamil 1 cup, Biskuit 3 bh',
-        mealSiang: 'Nasi putih 1 centong rice cooker, Ikan bakar 1 ptg, Tumis kangkung 1 sd sayur, Tahu goreng 1 ptg sdg',
-        selinganSore: 'Jus jeruk 1 gelas, Roti tawar 1 lembar tanpa pinggiran',
-        mealMalam: 'Nasi putih 1 centong plastik, Soto ayam 1 mangkok, Tempe bacem 1 ptg',
-        beratBadan: 58.0,
-        tinggiBadan: 157.0,
-        jamPagi: '06.30 WIB',
-        jamSelinganPagi: '09.30 WIB',
-        jamSiang: '12.00 WIB',
-        jamSelinganSore: '15.00 WIB',
-        jamMalam: '18.30 WIB',
-      );
-
-      // Pasien 100005 – Rudi Hermawan
-      await saveMealLog(
-        rmPasien: '100005',
-        mealPagi: 'Roti gandum 2 lembar ada pinggiran, Telur rebus 1 btr, Susu rendah lemak 1 cup',
-        selinganPagi: 'Pepaya 1 ptg sdg, Air putih 1 gelas',
-        mealSiang: 'Nasi merah 1 centong rice cooker, Ikan tuna panggang 1 ptg, Salad sayur 1 piring',
-        selinganSore: 'Yogurt 1 cup, Kacang almond 1 genggam',
-        mealMalam: 'Ayam rebus tanpa kulit 1 ptg dada, Brokoli kukus 1 sd sayur, Nasi merah 1 centong plastik',
-        beratBadan: 87.0,
-        tinggiBadan: 172.0,
-        jamPagi: '06.00 WIB',
-        jamSelinganPagi: '09.00 WIB',
-        jamSiang: '12.00 WIB',
-        jamSelinganSore: '15.30 WIB',
-      );
-    }
-
-    // ── Seed Leaflets if empty ──
+    // ── Seed Leaflets (Materi Edukasi Tambahan) ──────────────────────────────
     final leafletsJson = prefs.getString(_leafletsKey);
     if (leafletsJson == null || (jsonDecode(leafletsJson) as List).isEmpty) {
       final List<Map<String, dynamic>> initialLeaflets = [

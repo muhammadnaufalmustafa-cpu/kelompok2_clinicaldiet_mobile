@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "383205435470",
+    "project_id": "clinicaldietbase",
+    "storage_bucket": "clinicaldietbase.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:383205435470:android:8bd2faa634aa8da2f4bb1f",
+        "android_client_info": {
+          "package_name": "com.polije.clinical_diet"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD2DC5_kmLITNONx5pSqm4vY1UL8WX-hj8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

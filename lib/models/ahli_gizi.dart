@@ -54,16 +54,16 @@ class AhliGizi {
           .toList();
     }
     return AhliGizi(
-      role: map['role'] ?? 'ahli_gizi',
-      name: map['name'] ?? '',
-      nip: map['nip'] ?? '',
-      email: map['email'] ?? '',
-      phone: map['phone'] ?? '',
-      password: map['password'] ?? '',
-      specialization: map['specialization'] ?? '',
+      role: map['role']?.toString() ?? 'ahli_gizi',
+      name: map['name']?.toString() ?? '',
+      nip: map['nip']?.toString() ?? '',
+      email: map['email']?.toString() ?? '',
+      phone: map['phone']?.toString() ?? '',
+      password: map['password']?.toString() ?? '',
+      specialization: map['specialization']?.toString() ?? '',
       rating: (map['rating'] as num?)?.toDouble() ?? 0.0,
       ratingCount: (map['rating_count'] as num?)?.toInt() ?? 0,
-      profilePhotoPath: map['profile_photo_path'],
+      profilePhotoPath: map['profile_photo_path']?.toString(),
       reviews: reviewsList,
     );
   }
