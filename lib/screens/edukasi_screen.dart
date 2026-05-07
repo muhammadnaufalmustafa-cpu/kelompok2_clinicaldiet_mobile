@@ -119,7 +119,7 @@ class _EdukasiScreenState extends State<EdukasiScreen>
   }
 
   Future<void> _loadLeaflets() async {
-    await AuthService.seedDummyDataIfNeeded();
+    await AuthService.initializeAppDataIfNeeded();
     final leaflets = await AuthService.getLeaflets();
     if (mounted) {
       setState(() {

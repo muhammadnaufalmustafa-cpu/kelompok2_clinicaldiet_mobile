@@ -27,7 +27,7 @@ class _AhliGiziEdukasiScreenState extends State<AhliGiziEdukasiScreen>
 
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
-    await AuthService.seedDummyDataIfNeeded();
+    await AuthService.initializeAppDataIfNeeded();
     final leaflets = await AuthService.getLeaflets();
     final diets = await AuthService.getDietTypes();
     
