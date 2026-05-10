@@ -28,6 +28,12 @@ class _AhliGiziDetailPasienScreenState
   List<Map<String, dynamic>> _riwayatMakan = [];
   String? _selectedDietType; // Jenis diet yang sedang diedit
 
+  // ── Patient Therapy Programs ──
+  List<Map<String, dynamic>> _patientPrograms = [];
+  Map<String, dynamic>? _selectedPatientProgram;
+  bool _isLoadingPrograms = false;
+  List<Map<String, dynamic>> _availableTherapyPrograms = [];
+
   // ── Existing controllers ──
   final _targetCtrl = TextEditingController();
 
@@ -36,7 +42,7 @@ class _AhliGiziDetailPasienScreenState
   final _catatanNutrisiCtrl = TextEditingController();
   final _customDietCtrl = TextEditingController();
 
-  static const List<String> _terapiDietList = [
+  List<String> _terapiDietList = [
     'Diet Normal',
     'Diet Rendah Garam',
     'Diet Rendah Gula',
@@ -78,10 +84,66 @@ class _AhliGiziDetailPasienScreenState
     super.initState();
     _status = widget.pasien['status'] ?? 'aktif';
     _targetCtrl.text = widget.pasien['target_diet'] ?? '';
-    // Set default diet ke diet pertama pasien
-    final diets = _getDietList();
-    if (diets.isNotEmpty) _selectedDietType = diets.first;
-    _loadNutrisi();
+    _loadInitialData();
+  }
+
+  Future<void> _loadInitialData() async {
+    setState(() => _isLoadingPrograms = true);
+
+    // 1. Load therapy programs from new collection
+    final programs = await AuthService.getTherapyPrograms();
+    if (mounted && programs.isNotEmpty) {
+      final newTitles = programs.map((p) => p['name'] as String).toList();
+      for (var title in newTitles) {
+        if (!_terapiDietList.contains(title)) {
+          _terapiDietList.insert(_terapiDietList.length - 1, title);
+        }
+      }
+    }
+
+    // 2. Load patient therapy programs
+    final patientId = widget.pasien['uid'] as String? ?? '';
+    final rm = widget.pasien['rm'] as String? ?? '';
+    List<Map<String, dynamic>> patientPrograms = [];
+    if (patientId.isNotEmpty) {
+      patientPrograms = await AuthService.getPatientTherapyPrograms(patientId);
+    }
+    if (patientPrograms.isEmpty && rm.isNotEmpty) {
+      patientPrograms = await AuthService.getPatientTherapyProgramsByRm(rm);
+    }
+
+    // [BARU] Jika program masih kosong, cek apakah pasien punya diet dari onboarding
+    if (patientPrograms.isEmpty) {
+      final initialDiet = widget.pasien['diet_type'] as String? ?? '';
+      if (initialDiet.isNotEmpty && initialDiet != '(Belum ada diet)') {
+        // Buat program virtual agar muncul di UI
+        patientPrograms.add({
+          'patientProgramId': 'initial_onboarding',
+          'therapyProgramName': initialDiet,
+          'status': 'active',
+          'isInitial': true, // Flag untuk menandai ini data onboarding
+        });
+      }
+    }
+
+    if (mounted) {
+      setState(() {
+        _availableTherapyPrograms = programs;
+        _patientPrograms = patientPrograms;
+        _isLoadingPrograms = false;
+        // Auto-select first active program
+        final active = patientPrograms.where((p) => p['status'] == 'active').toList();
+        if (active.isNotEmpty) _selectedPatientProgram = active.first;
+      });
+    }
+
+    if (_selectedPatientProgram != null) {
+      await _loadNutrisiForProgram(_selectedPatientProgram!);
+    } else {
+      final diets = _getDietList();
+      if (diets.isNotEmpty) _selectedDietType = diets.first;
+      _loadNutrisi();
+    }
   }
 
   @override
@@ -146,8 +208,76 @@ class _AhliGiziDetailPasienScreenState
       }
     }
 
-    final logs = await AuthService.getMealLogsForPasien(rm, days: 7);
+    final logs = await AuthService.getMealLogsForPasien(rm, days: 30);
     if (mounted) setState(() => _riwayatMakan = logs);
+  }
+
+  Future<void> _loadNutrisiForProgram(Map<String, dynamic> program) async {
+    final patientProgramId = program['patientProgramId'] as String;
+    final programName = program['therapyProgramName'] as String? ?? '';
+    final rm = widget.pasien['rm'] as String;
+
+    if (mounted) {
+      setState(() {
+        _selectedDietType = programName;
+        _checkedNutrients.clear();
+        for (var c in _targetCtrls.values) { c.clear(); }
+        for (var c in _aktualCtrls.values) { c.clear(); }
+      });
+    }
+
+    // 1. Coba load dari nutritionTargets (collection baru)
+    final nutritionTarget = await AuthService.getNutritionTarget(patientProgramId);
+    if (mounted) {
+      setState(() {
+        if (nutritionTarget != null) {
+          final nutrientItems = (nutritionTarget['nutrientItems'] as Map?)?.cast<String, dynamic>() ?? {};
+          nutrientItems.forEach((key, val) {
+            _checkedNutrients[key] = true;
+            if (!_targetCtrls.containsKey(key)) _targetCtrls[key] = TextEditingController();
+            _targetCtrls[key]!.text = _fmtNum(val['target']);
+            if (!_aktualCtrls.containsKey(key)) _aktualCtrls[key] = TextEditingController();
+            final aktualVal = (val['aktual'] as num?)?.toDouble() ?? 0.0;
+            _aktualCtrls[key]!.text = aktualVal > 0 ? _fmtNum(aktualVal) : '';
+          });
+          _catatanNutrisiCtrl.text = nutritionTarget['catatan'] ?? widget.pasien['catatan_klinis'] ?? '';
+        } else {
+          // 2. Fallback ke nutrition_plans lama berdasarkan nama program
+          _diagnosisCtrl.text = widget.pasien['diagnosis'] ?? '';
+          _catatanNutrisiCtrl.text = widget.pasien['catatan_klinis'] ?? '';
+        }
+      });
+    }
+
+    // Jika nutritionTarget null, coba fallback ke nutrition_plans lama
+    if (nutritionTarget == null) {
+      final legacyNutrisi = await AuthService.getNutrisiPasienPerDiet(rm, programName);
+      if (mounted && legacyNutrisi != null) {
+        setState(() {
+          final Map<String, dynamic> targetNutrients = legacyNutrisi['target_nutrients'] ?? {};
+          targetNutrients.forEach((key, val) {
+            _checkedNutrients[key] = true;
+            if (!_targetCtrls.containsKey(key)) _targetCtrls[key] = TextEditingController();
+            _targetCtrls[key]!.text = _fmtNum(val['target']);
+            if (!_aktualCtrls.containsKey(key)) _aktualCtrls[key] = TextEditingController();
+            final aktualVal = (val['aktual'] as num?)?.toDouble() ?? 0.0;
+            _aktualCtrls[key]!.text = aktualVal > 0 ? _fmtNum(aktualVal) : '';
+          });
+          if (legacyNutrisi['evaluasi_ahli_gizi'] != null) {
+            _catatanNutrisiCtrl.text = legacyNutrisi['evaluasi_ahli_gizi'];
+          }
+        });
+      }
+    }
+
+    // Load meal logs: utamakan per-RM (30 hari), karena meal logs lama tidak punya patientProgramId
+    final logs = await AuthService.getMealLogsForPasien(rm, days: 30);
+    if (mounted) setState(() => _riwayatMakan = logs);
+  }
+
+  void _selectProgram(Map<String, dynamic> program) {
+    setState(() => _selectedPatientProgram = program);
+    _loadNutrisiForProgram(program);
   }
 
 
@@ -175,9 +305,12 @@ class _AhliGiziDetailPasienScreenState
     setState(() => _isSaving = true);
     try {
       final rm = widget.pasien['rm'] as String;
-      final String effectiveDiet = _selectedDietType == 'Diet Khusus/Lainnya' 
-          ? _customDietCtrl.text 
-          : (_selectedDietType ?? 'Diet Normal');
+      final patientId = widget.pasien['uid'] as String? ?? '';
+      final String effectiveDiet = _selectedPatientProgram != null
+          ? (_selectedPatientProgram!['therapyProgramName'] as String? ?? '')
+          : (_selectedDietType == 'Diet Khusus/Lainnya'
+              ? _customDietCtrl.text
+              : (_selectedDietType ?? 'Diet Normal'));
 
       // Prepare target AND aktual nutrients map
       Map<String, dynamic> targetNutrientsToSave = {};
@@ -193,7 +326,48 @@ class _AhliGiziDetailPasienScreenState
         }
       });
 
-      // 1. Save Nutrisi Per Diet (Target + Aktualisasi dari AG)
+      // 1a. Jika ada program terpilih → save ke nutritionTargets (collection baru)
+      if (_selectedPatientProgram != null) {
+        String patientProgramId = _selectedPatientProgram!['patientProgramId'] as String;
+        String therapyProgramId = _selectedPatientProgram!['therapyProgramId'] as String? ?? '';
+        
+        // [BARU] Jika ini program virtual dari onboarding, buat program aslinya dulu
+        if (patientProgramId == 'initial_onboarding') {
+          final currentUser = await AuthService.getLoggedInUser();
+          final String createdBy = currentUser?['uid'] ?? 'unknown_ag';
+          
+          final newProg = await AuthService.addPatientTherapyProgram(
+            patientId: patientId,
+            patientRm: rm,
+            therapyProgramName: effectiveDiet,
+            therapyProgramId: '', // Kosongkan jika tidak ada template ID
+            createdBy: createdBy,
+          );
+          if (newProg != null && newProg['patientProgramId'] != null) {
+            patientProgramId = newProg['patientProgramId'];
+            // Update state agar program virtual diganti yang asli
+            if (mounted) {
+              setState(() {
+                _selectedPatientProgram = newProg;
+                // Update list programs juga agar tidak duplikat
+                _patientPrograms = _patientPrograms.where((p) => p['patientProgramId'] != 'initial_onboarding').toList();
+                _patientPrograms.insert(0, newProg);
+              });
+            }
+          }
+        }
+
+        await AuthService.saveNutritionTarget(
+          patientProgramId: patientProgramId,
+          patientId: patientId,
+          patientRm: rm,
+          therapyProgramId: therapyProgramId,
+          nutrientItems: targetNutrientsToSave,
+          catatan: _catatanNutrisiCtrl.text,
+        );
+      }
+
+      // 1b. Tetap save ke nutrition_plans (backward compat)
       await AuthService.saveNutrisiPerDiet(
         rmPasien: rm,
         dietType: effectiveDiet,
@@ -202,7 +376,7 @@ class _AhliGiziDetailPasienScreenState
         catatan: _catatanNutrisiCtrl.text,
       );
 
-      // 2. Simpan data klinis ke model pasien (tanpa statusGizi)
+      // 2. Simpan data klinis ke model pasien
       await AuthService.updateClinicalData(
         rm: rm,
         diagnosis: _diagnosisCtrl.text,
@@ -279,6 +453,10 @@ class _AhliGiziDetailPasienScreenState
             _buildInfoGrid(),
             const SizedBox(height: 16),
 
+            // ── Program Terapi Diet Pasien ──
+            _buildPatientProgramsSection(),
+            const SizedBox(height: 24),
+
             // ── Clinical Info ──
             _buildSectionLabel('Kondisi Klinis Pasien'),
             const SizedBox(height: 8),
@@ -299,17 +477,59 @@ class _AhliGiziDetailPasienScreenState
             ),
             const SizedBox(height: 24),
 
-            // ── Terapi Diet Selection ──
-            _buildSectionLabel('Pilih Terapi Diet'),
-            const SizedBox(height: 8),
-            _buildTerapiDietDropdown(),
-            if (_selectedDietType == 'Diet Khusus/Lainnya') ...[
-              const SizedBox(height: 12),
-              _buildTextArea(_customDietCtrl, 'Ketik nama diet khusus...', 1),
+            // ── Terapi Diet Selection (hanya tampil jika belum ada program dipilih) ──
+            if (_selectedPatientProgram == null) ...[
+              _buildSectionLabel('Pilih Terapi Diet'),
+              const SizedBox(height: 8),
+              _buildTerapiDietDropdown(),
+              if (_selectedDietType == 'Diet Khusus/Lainnya') ...[
+                const SizedBox(height: 12),
+                _buildTextArea(_customDietCtrl, 'Ketik nama diet khusus...', 1),
+              ],
+              const SizedBox(height: 24),
             ],
-            const SizedBox(height: 24),
 
-
+            // ── Banner: Program yang sedang diedit ──
+            if (_selectedPatientProgram != null) ...[
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF4F46E5), Color(0xFF7C3AED)],
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
+                  ),
+                  borderRadius: BorderRadius.circular(14),
+                  boxShadow: [BoxShadow(color: const Color(0xFF4F46E5).withValues(alpha: 0.25), blurRadius: 10, offset: const Offset(0, 4))],
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.edit_note_rounded, color: Colors.white, size: 20),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Sedang mengedit program:', style: GoogleFonts.manrope(fontSize: 11, color: Colors.white70)),
+                          Text(_selectedPatientProgram!['therapyProgramName'] as String? ?? '-',
+                            style: GoogleFonts.manrope(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.white)),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(8)),
+                      child: Text(
+                        _selectedPatientProgram!['status'] == 'active' ? 'Aktif' :
+                        _selectedPatientProgram!['status'] == 'completed' ? 'Selesai' : 'Nonaktif',
+                        style: GoogleFonts.manrope(fontSize: 11, fontWeight: FontWeight.w700, color: Colors.white),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
 
             // ── NUTRISI SECTION ──
             _buildNutrisiSection(),
@@ -1501,4 +1721,270 @@ class _AhliGiziDetailPasienScreenState
       ),
     );
   }
+
+  // ── PATIENT PROGRAMS SECTION ─────────────────────────────────────────────
+
+  Widget _buildPatientProgramsSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(child: _buildSectionLabel('Program Terapi Diet Pasien')),
+            TextButton.icon(
+              onPressed: _showAddProgramDialog,
+              icon: const Icon(Icons.add_circle_outline, size: 18, color: AppColors.primary),
+              label: Text('Tambah', style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.primary)),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        if (_isLoadingPrograms)
+          const Center(child: Padding(
+            padding: EdgeInsets.all(16),
+            child: CircularProgressIndicator(color: AppColors.primary, strokeWidth: 2),
+          ))
+        else if (_patientPrograms.isEmpty)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF1F5F9),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: AppColors.divider),
+            ),
+            child: Column(
+              children: [
+                const Icon(Icons.assignment_outlined, color: AppColors.textMuted, size: 32),
+                const SizedBox(height: 8),
+                Text('Belum ada Program Terapi Diet.\nKlik "+ Tambah" untuk menambahkan.',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.manrope(fontSize: 13, color: AppColors.textSecondary, height: 1.5)),
+              ],
+            ),
+          )
+        else
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: _patientPrograms.map((program) {
+                    final isSelected = _selectedPatientProgram?['patientProgramId'] == program['patientProgramId'];
+                    final status = program['status'] as String? ?? 'active';
+                    final programName = program['therapyProgramName'] as String? ?? '-';
+                    Color statusColor;
+                    String statusLabel;
+                    switch (status) {
+                      case 'active': statusColor = AppColors.primary; statusLabel = 'Aktif'; break;
+                      case 'completed': statusColor = const Color(0xFF0284C7); statusLabel = 'Selesai'; break;
+                      default: statusColor = const Color(0xFF6B7280); statusLabel = 'Nonaktif';
+                    }
+                    return GestureDetector(
+                      onTap: () => _selectProgram(program),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        margin: const EdgeInsets.only(right: 10),
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: isSelected ? AppColors.primary : Colors.white,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: isSelected ? AppColors.primary : AppColors.divider, width: isSelected ? 2 : 1),
+                          boxShadow: isSelected ? [BoxShadow(color: AppColors.primary.withValues(alpha: 0.2), blurRadius: 8, offset: const Offset(0, 3))] : [],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(programName,
+                              style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w700,
+                                color: isSelected ? Colors.white : AppColors.textPrimary)),
+                            const SizedBox(height: 4),
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: isSelected ? Colors.white.withValues(alpha: 0.2) : statusColor.withValues(alpha: 0.12),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Text(statusLabel, style: GoogleFonts.manrope(fontSize: 10, fontWeight: FontWeight.w700,
+                                      color: isSelected ? Colors.white : statusColor)),
+                                  ),
+                                  if (program['isInitial'] == true) ...[
+                                    const SizedBox(width: 4),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: isSelected ? Colors.white.withValues(alpha: 0.2) : Colors.orange.withValues(alpha: 0.12),
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: Text('Program Awal', style: GoogleFonts.manrope(fontSize: 10, fontWeight: FontWeight.w700,
+                                        color: isSelected ? Colors.white : Colors.orange[800])),
+                                    ),
+                                  ],
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+              if (_selectedPatientProgram != null) ...[
+                const SizedBox(height: 12),
+                _buildProgramStatusButtons(),
+              ],
+            ],
+          ),
+      ],
+    );
+  }
+
+  Widget _buildProgramStatusButtons() {
+    final currentStatus = _selectedPatientProgram?['status'] as String? ?? 'active';
+    final patientProgramId = _selectedPatientProgram?['patientProgramId'] as String? ?? '';
+    return Row(
+      children: [
+        for (final s in [
+          {'status': 'active', 'label': 'Aktif', 'color': AppColors.primary},
+          {'status': 'completed', 'label': 'Selesai', 'color': const Color(0xFF0284C7)},
+          {'status': 'inactive', 'label': 'Nonaktif', 'color': const Color(0xFF6B7280)},
+        ]) ...[
+          Expanded(
+            child: GestureDetector(
+              onTap: () async {
+                final newStatus = s['status'] as String;
+                if (newStatus == currentStatus || patientProgramId.isEmpty) return;
+                await AuthService.updatePatientProgramStatus(patientProgramId, newStatus);
+                final idx = _patientPrograms.indexWhere((p) => p['patientProgramId'] == patientProgramId);
+                if (idx != -1 && mounted) {
+                  setState(() {
+                    _patientPrograms[idx] = {..._patientPrograms[idx], 'status': newStatus};
+                    _selectedPatientProgram = _patientPrograms[idx];
+                  });
+                }
+              },
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                decoration: BoxDecoration(
+                  color: currentStatus == s['status'] as String
+                      ? (s['color'] as Color) : (s['color'] as Color).withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Center(child: Text(s['label'] as String,
+                  style: GoogleFonts.manrope(fontSize: 12, fontWeight: FontWeight.w600,
+                    color: currentStatus == s['status'] as String ? Colors.white : s['color'] as Color))),
+              ),
+            ),
+          ),
+          if (s != [
+            {'status': 'active', 'label': 'Aktif', 'color': AppColors.primary},
+            {'status': 'completed', 'label': 'Selesai', 'color': const Color(0xFF0284C7)},
+            {'status': 'inactive', 'label': 'Nonaktif', 'color': const Color(0xFF6B7280)},
+          ].last) const SizedBox(width: 8),
+        ],
+      ],
+    );
+  }
+
+  Future<void> _showAddProgramDialog() async {
+    String? selectedTherapyId;
+    String? selectedTherapyName;
+    final notesCtrl = TextEditingController();
+    final List<Map<String, dynamic>> available = _availableTherapyPrograms;
+
+    await showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDlgState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Text('Tambah Program Terapi Diet', style: GoogleFonts.manrope(fontWeight: FontWeight.w700, fontSize: 16, color: AppColors.textPrimary)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Pilih Program', style: GoogleFonts.manrope(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+              const SizedBox(height: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                decoration: BoxDecoration(color: AppColors.background, borderRadius: BorderRadius.circular(12), border: Border.all(color: AppColors.divider)),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    isExpanded: true,
+                    hint: Text('Pilih program terapi...', style: GoogleFonts.manrope(fontSize: 13)),
+                    value: selectedTherapyId,
+                    items: available.map((p) => DropdownMenuItem(
+                      value: p['id'] as String? ?? p['name'] as String,
+                      child: Text(p['name'] as String? ?? '', style: GoogleFonts.manrope(fontSize: 13)),
+                    )).toList(),
+                    onChanged: (v) {
+                      setDlgState(() {
+                        selectedTherapyId = v;
+                        final found = available.firstWhere((p) => (p['id'] ?? p['name']) == v, orElse: () => {});
+                        selectedTherapyName = found['name'] as String?;
+                      });
+                    },
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text('Catatan (opsional)', style: GoogleFonts.manrope(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+              const SizedBox(height: 6),
+              TextField(
+                controller: notesCtrl,
+                maxLines: 2,
+                style: GoogleFonts.manrope(fontSize: 13),
+                decoration: InputDecoration(
+                  hintText: 'Catatan program...',
+                  hintStyle: GoogleFonts.manrope(fontSize: 12, color: AppColors.textMuted),
+                  filled: true, fillColor: AppColors.background,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+                  contentPadding: const EdgeInsets.all(10),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Batal', style: GoogleFonts.manrope(color: AppColors.textSecondary))),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)), elevation: 0),
+              onPressed: selectedTherapyId == null ? null : () async {
+                Navigator.pop(ctx);
+                setState(() => _isLoadingPrograms = true);
+                final patientId = widget.pasien['uid'] as String? ?? '';
+                final rm = widget.pasien['rm'] as String? ?? '';
+                final loggedIn = await AuthService.getLoggedInUser();
+                final result = await AuthService.addPatientTherapyProgram(
+                  patientId: patientId,
+                  patientRm: rm,
+                  therapyProgramId: selectedTherapyId!,
+                  therapyProgramName: selectedTherapyName ?? selectedTherapyId!,
+                  createdBy: loggedIn?['uid'] ?? '',
+                  notes: notesCtrl.text,
+                );
+                if (result['success'] == true) {
+                  await _loadInitialData();
+                } else {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                      content: Text(result['message'] ?? 'Gagal menambahkan program.', style: GoogleFonts.manrope()),
+                      backgroundColor: Colors.red, behavior: SnackBarBehavior.floating,
+                    ));
+                    setState(() => _isLoadingPrograms = false);
+                  }
+                }
+              },
+              child: Text('Tambahkan', style: GoogleFonts.manrope(fontWeight: FontWeight.w700, color: Colors.white)),
+            ),
+          ],
+        ),
+      ),
+    );
+    notesCtrl.dispose();
+  }
 }
+

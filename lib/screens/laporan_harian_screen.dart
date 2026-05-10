@@ -257,16 +257,28 @@ class _LaporanHarianScreenState extends State<LaporanHarianScreen> {
   }
 
   Widget _buildChartSection(Map<String, dynamic> data) {
-    // Nutrient keys to display
-    final keys = [
-      'Energi (kkal)',
-      'Protein (g)',
-      'Lemak (g)',
-      'Karbohidrat (g)',
-      'Air (ml)',
-      'Natrium (mg)',
-      'Kalium (mg)'
+    // Ambil SEMUA key yang ada di data secara dinamis
+    final allKeys = data.keys.toList();
+    
+    // Tentukan urutan prioritas agar tampilan tetap rapi
+    final priority = [
+      'Energi (kkal)', 'Protein (g)', 'Lemak (g)', 'Karbohidrat (g)', 
+      'Serat (g)', 'Air (ml)', 'Natrium (mg)', 'Kalium (mg)'
     ];
+
+    final keys = allKeys.where((k) {
+      final target = (data[k]?['target'] as num? ?? 0).toDouble();
+      return target > 0;
+    }).toList();
+
+    // Sort berdasarkan priority, yang tidak ada di list priority ditaruh di akhir
+    keys.sort((a, b) {
+      int idxA = priority.indexOf(a);
+      int idxB = priority.indexOf(b);
+      if (idxA == -1) idxA = 99;
+      if (idxB == -1) idxB = 99;
+      return idxA.compareTo(idxB);
+    });
 
     final barGroups = <BarChartGroupData>[];
     double maxVal = 0;
@@ -426,15 +438,28 @@ class _LaporanHarianScreenState extends State<LaporanHarianScreen> {
   }
 
   Widget _buildSummaryTable(Map<String, dynamic> data) {
-    final keys = [
-      'Energi (kkal)',
-      'Protein (g)',
-      'Lemak (g)',
-      'Karbohidrat (g)',
-      'Air (ml)',
-      'Natrium (mg)',
-      'Kalium (mg)'
+    // Ambil SEMUA key yang ada di data secara dinamis
+    final allKeys = data.keys.toList();
+    
+    // Tentukan urutan prioritas agar tampilan tetap rapi
+    final priority = [
+      'Energi (kkal)', 'Protein (g)', 'Lemak (g)', 'Karbohidrat (g)', 
+      'Serat (g)', 'Air (ml)', 'Natrium (mg)', 'Kalium (mg)'
     ];
+
+    final keys = allKeys.where((k) {
+      final target = (data[k]?['target'] as num? ?? 0).toDouble();
+      return target > 0;
+    }).toList();
+
+    // Sort berdasarkan priority
+    keys.sort((a, b) {
+      int idxA = priority.indexOf(a);
+      int idxB = priority.indexOf(b);
+      if (idxA == -1) idxA = 99;
+      if (idxB == -1) idxB = 99;
+      return idxA.compareTo(idxB);
+    });
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -457,7 +482,10 @@ class _LaporanHarianScreenState extends State<LaporanHarianScreen> {
           child: Column(
             children: [
               _buildTableHeader(),
-              ...keys.map((k) => _buildTableRow(k, data[k])),
+              ...keys.map((k) {
+                final isLast = keys.indexOf(k) == keys.length - 1;
+                return _buildTableRow(k, data[k], isLast);
+              }),
             ],
           ),
         ),
@@ -483,7 +511,7 @@ class _LaporanHarianScreenState extends State<LaporanHarianScreen> {
     );
   }
 
-  Widget _buildTableRow(String label, dynamic values) {
+  Widget _buildTableRow(String label, dynamic values, bool isLast) {
     final target = (values?['target'] as num?)?.toDouble() ?? 0.0;
     final aktual = (values?['aktual'] as num?)?.toDouble() ?? 0.0;
     final pct = target > 0 ? (aktual / target * 100).toInt() : 0;
@@ -532,7 +560,7 @@ class _LaporanHarianScreenState extends State<LaporanHarianScreen> {
             ],
           ),
         ),
-        if (label != 'Kalium (mg)') const Divider(height: 1, indent: 16, endIndent: 16),
+        if (!isLast) const Divider(height: 1, indent: 16, endIndent: 16),
       ],
     );
   }

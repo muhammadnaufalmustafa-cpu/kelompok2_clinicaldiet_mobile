@@ -26,7 +26,8 @@ const List<String> kDaftarURT = [
 
 class CatatanScreen extends StatefulWidget {
   final VoidCallback? onSaved;
-  const CatatanScreen({super.key, this.onSaved});
+  final String? patientProgramId;
+  const CatatanScreen({super.key, this.onSaved, this.patientProgramId});
 
   @override
   State<CatatanScreen> createState() => _CatatanScreenState();
@@ -70,11 +71,12 @@ class _CatatanScreenState extends State<CatatanScreen> {
   Future<void> _loadInitialData() async {
     final user = await AuthService.getLoggedInUser();
     if (user != null && mounted) {
+      final rm = user['rm'] as String;
       setState(() {
         _targetDietText = user['target_diet'] as String? ?? '';
         _birthdate = user['birthdate'] as String? ?? '';
         _gender = user['gender'] as String? ?? '';
-        
+
         // Fetch diet list
         final raw = user['diet_types'];
         if (raw is List && raw.isNotEmpty) {
@@ -83,36 +85,7 @@ class _CatatanScreenState extends State<CatatanScreen> {
           final single = user['diet_type'] as String? ?? '';
           _dietList = single.isEmpty ? [] : [single];
         }
-        if (_dietList.isNotEmpty) {
-          _selectedDietType = _dietList.first;
-        }
-
-        final rm = user['rm'] as String;
-        _diagnosis = user['diagnosis'] ?? '-';
-        _catatanKlinis = user['catatan_klinis'] ?? '-';
-
-        // Load target nutrients (hanya baca, pasien tidak input angka gizi)
-        AuthService.getNutrisiPasienPerDiet(rm, _selectedDietType ?? '').then((nutrisi) {
-          if (nutrisi != null) {
-            if (mounted) {
-              setState(() {
-                _targetNutrients = nutrisi['target_nutrients'] ?? {};
-                // Lock jika belum ada target dari AG
-                _isLocked = _targetNutrients.values.every((v) => (v['target'] as num? ?? 0) == 0);
-              });
-            }
-          } else {
-            // Fallback check
-            AuthService.getNutrisiPasien(rm).then((fallback) {
-              if (mounted) {
-                setState(() {
-                  final kTarget = (fallback?['kalori_target'] as num?)?.toDouble() ?? 0;
-                  _isLocked = kTarget == 0;
-                });
-              }
-            });
-          }
-        });
+        if (_dietList.isNotEmpty) _selectedDietType = _dietList.first;
 
         // BB/TB dari histori terakhir
         final history = AuthService.getBBTBHistory(user);
@@ -129,8 +102,53 @@ class _CatatanScreenState extends State<CatatanScreen> {
           if (height > 0) _tbCtrl.text = height.toString();
         }
       });
+
+      // Ambil data diagnosis SEGAR dari Firestore (bukan hanya cache)
+      final freshUser = await AuthService.getPasienByRm(rm);
+      if (mounted && freshUser != null) {
+        setState(() {
+          _diagnosis = freshUser['diagnosis'] as String? ?? user['diagnosis'] as String? ?? '-';
+          _catatanKlinis = freshUser['catatan_klinis'] as String? ?? user['catatan_klinis'] as String? ?? '-';
+        });
+      } else if (mounted) {
+        setState(() {
+          _diagnosis = user['diagnosis'] as String? ?? '-';
+          _catatanKlinis = user['catatan_klinis'] as String? ?? '-';
+        });
+      }
+
+      // Load target nutrients
+      if (widget.patientProgramId != null) {
+        AuthService.getNutritionTarget(widget.patientProgramId!).then((target) {
+          if (target != null && mounted) {
+            setState(() {
+              _targetNutrients = (target['nutrientItems'] as Map?)?.cast<String, dynamic>() ?? {};
+              _isLocked = _targetNutrients.values.every((v) => (v['target'] as num? ?? 0) == 0);
+            });
+          }
+        });
+      } else {
+        AuthService.getNutrisiPasienPerDiet(rm, _selectedDietType ?? '').then((nutrisi) {
+          if (nutrisi != null && mounted) {
+            setState(() {
+              _targetNutrients = nutrisi['target_nutrients'] ?? {};
+              _isLocked = _targetNutrients.values.every((v) => (v['target'] as num? ?? 0) == 0);
+            });
+          } else {
+            AuthService.getNutrisiPasien(rm).then((fallback) {
+              if (mounted) {
+                setState(() {
+                  final kTarget = (fallback?['kalori_target'] as num?)?.toDouble() ?? 0;
+                  _isLocked = kTarget == 0;
+                });
+              }
+            });
+          }
+        });
+      }
     }
   }
+
 
   @override
   void dispose() {
@@ -331,6 +349,7 @@ class _CatatanScreenState extends State<CatatanScreen> {
         jamSiang: _jamSiang != null ? _timeOfDayToStr(_jamSiang!) : '',
         jamSelinganSore: _jamSelinganSore != null ? _timeOfDayToStr(_jamSelinganSore!) : '',
         jamMalam: _jamMalam != null ? _timeOfDayToStr(_jamMalam!) : '',
+        patientProgramId: widget.patientProgramId,
       );
 
       if (success) {

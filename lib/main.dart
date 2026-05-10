@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'firebase_options.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'theme/app_theme.dart';
@@ -27,7 +29,25 @@ void main() async {
     ),
   );
 
-  final user = await AuthService.getLoggedInUser();
+  // 1. Ambil sesi login dasar
+  Map<String, dynamic>? user = await AuthService.getLoggedInUser();
+  
+  // 2. Jika login, ambil data TERBARU dari Firestore agar status & ahli gizi sinkron
+  if (user != null) {
+    final firebaseUser = FirebaseAuth.instance.currentUser;
+    if (firebaseUser != null) {
+      try {
+        final doc = await FirebaseFirestore.instance.collection('users').doc(firebaseUser.uid).get()
+            .timeout(const Duration(seconds: 10));
+        if (doc.exists) {
+          user = doc.data();
+        }
+      } catch (e) {
+        print('DEBUG_MAIN_ERROR: Gagal mengambil data terbaru di main: $e');
+      }
+    }
+  }
+
   final role = user?['role'] as String?;
   final status = user?['status'] as String?;
 

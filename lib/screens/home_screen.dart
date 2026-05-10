@@ -5,7 +5,6 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../theme/app_theme.dart';
 import 'catatan_screen.dart';
-import 'pilih_jenis_diet_screen.dart';
 import 'edukasi_screen.dart';
 import 'laporan_harian_screen.dart';
 import '../services/auth_service.dart';
@@ -49,6 +48,11 @@ class _HomeScreenState extends State<HomeScreen> {
   // Item gizi yang dipilih pasien untuk ditampilkan di card utama (maks 4)
   List<String> _pinnedNutrients = [];
 
+  // ── Patient Therapy Programs ──
+  List<Map<String, dynamic>> _patientPrograms = [];
+  String? _selectedPatientProgramId;
+  Map<String, dynamic>? _selectedNutritionTarget; // nutritionTargets doc
+
   @override
   void initState() {
     super.initState();
@@ -69,11 +73,31 @@ class _HomeScreenState extends State<HomeScreen> {
     Map<String, dynamic>? lastMealLog;
     String ahliGiziName = '';
     Map<String, dynamic>? selectedAhliGizi;
+    List<Map<String, dynamic>> patientPrograms = [];
+    String? selectedProgramId;
+    Map<String, dynamic>? selectedNutritionTarget;
 
     if (user != null && user['rm'] != null) {
       final rm = user['rm'] as String;
+      final uid = user['uid'] as String? ?? '';
       nutrisi = await AuthService.getNutrisiPasien(rm);
       nutrisiPerDiet = await AuthService.getAllNutrisiPasien(rm);
+
+      // Load patient therapy programs
+      if (uid.isNotEmpty) {
+        patientPrograms = await AuthService.getPatientTherapyPrograms(uid);
+      }
+      if (patientPrograms.isEmpty) {
+        patientPrograms = await AuthService.getPatientTherapyProgramsByRm(rm);
+      }
+      // Auto-select first active program
+      final activePrograms = patientPrograms.where((p) => p['status'] == 'active').toList();
+      if (activePrograms.isNotEmpty) {
+        selectedProgramId = activePrograms.first['patientProgramId'] as String?;
+        if (selectedProgramId != null) {
+          selectedNutritionTarget = await AuthService.getNutritionTarget(selectedProgramId);
+        }
+      }
 
       // Load fresh user data for bb_history
       final freshUser = await AuthService.getPasienByRm(rm);
@@ -118,6 +142,9 @@ class _HomeScreenState extends State<HomeScreen> {
         _lastMealLog = lastMealLog;
         _ahliGiziName = ahliGiziName;
         _selectedAhliGizi = selectedAhliGizi;
+        _patientPrograms = patientPrograms;
+        _selectedPatientProgramId = selectedProgramId;
+        _selectedNutritionTarget = selectedNutritionTarget;
         _isLoading = false;
       });
     }
@@ -132,7 +159,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (mounted) setState(() => _pinnedNutrients = pinned);
   }
 
-  // ── Getters nutrisi (dari halaman diet aktif saat ini) ──
+  // ── Getters nutrisi (mengutamakan program baru jika ada) ──
   Map<String, dynamic>? get _currentDietNutrisi {
     if (_nutrisiPerDiet.isEmpty) return _nutrisi;
     if (_dietPageIndex >= _nutrisiPerDiet.length) return _nutrisiPerDiet.first;
@@ -140,6 +167,11 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Map<String, dynamic> get _targetNutrients {
+    // Prioritas: nutritionTargets (program baru) → legacy nutrition_plans
+    if (_selectedNutritionTarget != null) {
+      final items = (_selectedNutritionTarget!['nutrientItems'] as Map?)?.cast<String, dynamic>() ?? {};
+      return items;
+    }
     final diet = _currentDietNutrisi;
     if (diet != null && diet.containsKey('target_nutrients')) {
       return (diet['target_nutrients'] as Map?)?.cast<String, dynamic>() ?? {};
@@ -149,8 +181,12 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // Nutrient yang punya target > 0 (aktif dari AG)
   Map<String, dynamic> get _activeNutrients {
+    final targets = _targetNutrients;
     return Map.fromEntries(
-      _targetNutrients.entries.where((e) => (e.value['target'] as num? ?? 0) > 0),
+      targets.entries.where((e) {
+        final target = (e.value['target'] as num? ?? 0).toDouble();
+        return target > 0;
+      }),
     );
   }
 
@@ -270,11 +306,17 @@ class _HomeScreenState extends State<HomeScreen> {
                   _buildTopBar(context),
                   // ── BB/TB Harian ──
                   _buildBBTBCard(),
+                  // ── Program Terapi Diet Selector ──
+                  _buildProgramSelector(),
                   // ── Kartu Ahli Gizi Utama ──
                   if (_selectedAhliGizi != null) _buildAhliGiziCard(context),
                   // ── Evaluasi Ahli Gizi ──
                   if (_evaluasiAhliGizi.isNotEmpty) _buildEvaluasiCard(),
-                  if (_currentDietNutrisi != null && _kaloriTarget > 0)
+                  if (_kaloriTarget > 0)
+                    _buildNutritionSummary()
+                  else if (_patientPrograms.any((p) => p['status'] == 'active'))
+                    _buildNoDataState()
+                  else if (_currentDietNutrisi != null && _kaloriTarget > 0)
                     _buildNutritionSummary()
                   else if (_currentDietNutrisi != null && _kaloriTarget == 0)
                     _buildNoDataState(),
@@ -283,9 +325,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   _buildReminderCard(context),
                   _buildEdukasiCard(context),
                   const SizedBox(height: 16),
-                  // ── Quick Actions (Pilih/Ganti Diet & Ahli Gizi) ──
-                  _buildQuickActions(context),
-                  const SizedBox(height: 16),
+
                 ],
               ),
             ),
@@ -313,7 +353,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
                   await Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (_) => const CatatanScreen()),
+                    MaterialPageRoute(builder: (_) => CatatanScreen(patientProgramId: _selectedPatientProgramId)),
                   ).then((_) => _loadData()); // Refresh setelah kembali
                 },
                 backgroundColor: AppColors.primary,
@@ -383,61 +423,158 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // ── Quick Actions: Ganti Ahli Gizi / Diet ───────────────────────────
-  Widget _buildQuickActions(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-      child: GestureDetector(
-        onTap: () async {
-          await Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const PilihJenisDietScreen(isFromProfil: true)),
-          );
-          _loadData();
-        },
-        child: Container(
-          width: double.infinity,
+  // ── Program Selector (Pasien hanya bisa lihat, tidak tambah) ──────────────
+  Widget _buildProgramSelector() {
+    final activePrograms = _patientPrograms.where((p) => p['status'] == 'active').toList();
+
+    // Fallback: jika tidak ada program baru, tampilkan diet lama dari user profile
+    if (_patientPrograms.isEmpty) {
+      final raw = _user?['diet_types'];
+      List<String> legacyDiets = [];
+      if (raw is List && raw.isNotEmpty) {
+        legacyDiets = raw.cast<String>();
+      } else {
+        final single = _user?['diet_type'] as String? ?? '';
+        if (single.isNotEmpty) legacyDiets = [single];
+      }
+
+      if (legacyDiets.isEmpty) {
+        return Container(
+          margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: const Color(0xFFFEF3C7),
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: AppColors.divider),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.02),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              )
-            ]
+            border: Border.all(color: const Color(0xFFFCD34D)),
           ),
           child: Row(
             children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(color: AppColors.primaryLight, borderRadius: BorderRadius.circular(12)),
-                child: const Icon(Icons.add_circle_outline, color: AppColors.primary, size: 22),
-              ),
-              const SizedBox(width: 14),
+              const Icon(Icons.info_outline_rounded, color: Color(0xFFD97706), size: 20),
+              const SizedBox(width: 10),
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Program Diet Baru', style: GoogleFonts.manrope(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
-                    const SizedBox(height: 2),
-                    Text('Pilih diet & Ahli Gizi Anda', style: GoogleFonts.manrope(fontSize: 11, color: AppColors.textSecondary)),
-                  ],
+                child: Text(
+                  'Program terapi diet belum ditetapkan oleh ahli gizi.',
+                  style: GoogleFonts.manrope(fontSize: 13, color: const Color(0xFF92400E), fontWeight: FontWeight.w500, height: 1.4),
                 ),
               ),
-              const Icon(Icons.arrow_forward_ios_rounded, size: 16, color: AppColors.primary),
             ],
           ),
+        );
+      }
+
+      // Ada diet lama → tampilkan sebagai chip read-only
+      return Container(
+        margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Program Terapi Diet', style: GoogleFonts.manrope(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+            const SizedBox(height: 8),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: legacyDiets.map((diet) => Container(
+                  margin: const EdgeInsets.only(right: 10),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: AppColors.primary, width: 2),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.local_hospital_outlined, color: Colors.white, size: 14),
+                      const SizedBox(width: 6),
+                      Text(diet, style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w700, color: Colors.white)),
+                    ],
+                  ),
+                )).toList(),
+              ),
+            ),
+          ],
         ),
+      );
+    }
+
+    if (activePrograms.length <= 1 && _selectedPatientProgramId != null) {
+      final prog = _patientPrograms.firstWhere(
+        (p) => p['patientProgramId'] == _selectedPatientProgramId,
+        orElse: () => activePrograms.isNotEmpty ? activePrograms.first : _patientPrograms.first,
+      );
+      return Container(
+        margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: AppColors.primaryLight,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: AppColors.primary.withValues(alpha: 0.4)),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.local_hospital_outlined, color: AppColors.primary, size: 18),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(prog['therapyProgramName'] as String? ?? '-',
+                style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.primaryDark)),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(color: AppColors.primary, borderRadius: BorderRadius.circular(8)),
+              child: Text('Aktif', style: GoogleFonts.manrope(fontSize: 10, fontWeight: FontWeight.w700, color: Colors.white)),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Multiple programs — show horizontal chip selector
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Program Terapi Diet', style: GoogleFonts.manrope(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+          const SizedBox(height: 8),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: activePrograms.map((program) {
+                final programId = program['patientProgramId'] as String?;
+                final isSelected = programId == _selectedPatientProgramId;
+                final name = program['therapyProgramName'] as String? ?? '-';
+                return GestureDetector(
+                  onTap: () async {
+                    if (isSelected || programId == null) return;
+                    final target = await AuthService.getNutritionTarget(programId);
+                    setState(() {
+                      _selectedPatientProgramId = programId;
+                      _selectedNutritionTarget = target;
+                    });
+                  },
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    margin: const EdgeInsets.only(right: 10),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: isSelected ? AppColors.primary : Colors.white,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: isSelected ? AppColors.primary : AppColors.divider, width: isSelected ? 2 : 1),
+                    ),
+                    child: Text(name, style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w700,
+                      color: isSelected ? Colors.white : AppColors.textPrimary)),
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+        ],
       ),
     );
   }
 
-
   // ── BB/TB Card ──────────────────────────────────────────────────────────────
+
   Widget _buildBBTBCard() {
     final ageInfo = _computeAge(_user?['birthdate']?.toString() ?? '');
     final bmi = _tbTerakhir > 0 ? _bbTerakhir / ((_tbTerakhir / 100) * (_tbTerakhir / 100)) : 0.0;

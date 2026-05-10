@@ -158,8 +158,13 @@ class _AhliGiziProfilScreenState extends State<AhliGiziProfilScreen> {
   }
 
   void _showManageDietDialog() {
-    final titleCtrl = TextEditingController();
-    final urlCtrl = TextEditingController();
+    final programNameCtrl = TextEditingController();
+    final programDescCtrl = TextEditingController();
+    final programPurposeCtrl = TextEditingController();
+    final programNotesCtrl = TextEditingController();
+    final leafletTitleCtrl = TextEditingController();
+    final leafletContentCtrl = TextEditingController();
+    final leafletUrlCtrl = TextEditingController();
 
     showModalBottomSheet(
       context: context,
@@ -167,50 +172,126 @@ class _AhliGiziProfilScreenState extends State<AhliGiziProfilScreen> {
       backgroundColor: Colors.transparent,
       builder: (ctx) {
         return Container(
+          height: MediaQuery.of(ctx).size.height * 0.85,
           decoration: const BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
           ),
           padding: EdgeInsets.fromLTRB(24, 24, 24, MediaQuery.of(ctx).viewInsets.bottom + 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Tambah Program Diet Baru', style: GoogleFonts.manrope(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
-              const SizedBox(height: 16),
-              _buildTextField(titleCtrl, 'Nama Program Diet (Contoh: Diet Khusus XYZ)'),
-              _buildTextField(urlCtrl, 'URL Leaflet / PDF (Link Google Drive)'),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () async {
-                    if (titleCtrl.text.isEmpty || urlCtrl.text.isEmpty) return;
-                    final success = await AuthService.addDietType(
-                      title: titleCtrl.text,
-                      pdfUrl: urlCtrl.text,
-                    );
-                    if (mounted) {
-                      Navigator.pop(ctx);
-                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                        content: Text(success ? 'Program diet berhasil ditambahkan!' : 'Gagal menambahkan diet.'),
-                        backgroundColor: success ? Colors.green : Colors.red,
-                      ));
-                    }
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                  child: Text('Tambah Diet', style: GoogleFonts.manrope(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.white)),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('Tambah Program & Leaflet', style: GoogleFonts.manrope(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
+                    IconButton(onPressed: () => Navigator.pop(ctx), icon: const Icon(Icons.close, size: 20)),
+                  ],
                 ),
-              ),
-            ],
+                const SizedBox(height: 4),
+                Text('Satu form untuk program diet dan edukasi leaflet.', style: GoogleFonts.manrope(fontSize: 12, color: AppColors.textSecondary)),
+                const SizedBox(height: 20),
+                
+                _buildSectionHeader('1. DATA PROGRAM TERAPI DIET'),
+                _buildTextField(programNameCtrl, 'Nama Program (Wajib)'),
+                _buildTextField(programDescCtrl, 'Deskripsi Program'),
+                _buildTextField(programPurposeCtrl, 'Tujuan Diet'),
+                _buildTextField(programNotesCtrl, 'Catatan (Opsional)'),
+                
+                const SizedBox(height: 16),
+                _buildSectionHeader('2. DATA EDUKASI LEAFLET'),
+                _buildTextField(leafletTitleCtrl, 'Judul Leaflet (Wajib)'),
+                _buildTextField(leafletContentCtrl, 'Isi Materi Leaflet (Wajib)'),
+                _buildTextField(leafletUrlCtrl, 'Link Google Drive Gambar/File (Opsional)'),
+                
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () async {
+                      if (programNameCtrl.text.isEmpty || leafletTitleCtrl.text.isEmpty || leafletContentCtrl.text.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                          content: Text('Nama program, judul leaflet, dan isi leaflet wajib diisi.'),
+                          backgroundColor: Colors.orange,
+                        ));
+                        return;
+                      }
+                      
+                      final success = await AuthService.addTherapyProgramAndLeaflet(
+                        programName: programNameCtrl.text,
+                        programDesc: programDescCtrl.text,
+                        programPurpose: programPurposeCtrl.text,
+                        programNotes: programNotesCtrl.text,
+                        leafletTitle: leafletTitleCtrl.text,
+                        leafletContent: leafletContentCtrl.text,
+                        leafletUrl: leafletUrlCtrl.text,
+                      );
+                      
+                      if (mounted) {
+                        Navigator.pop(ctx);
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                          content: Text(success ? 'Program terapi diet dan leaflet berhasil disimpan.' : 'Gagal menyimpan program terapi diet dan leaflet. Silakan coba lagi.'),
+                          backgroundColor: success ? Colors.green : Colors.red,
+                        ));
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    child: Text('Simpan Program & Leaflet', style: GoogleFonts.manrope(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.white)),
+                  ),
+                ),
+              ],
+            ),
           ),
         );
       },
     );
+  }
+
+  Widget _buildSectionHeader(String title) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Text(title, style: GoogleFonts.manrope(fontSize: 11, fontWeight: FontWeight.w800, color: AppColors.primary, letterSpacing: 1)),
+    );
+  }
+
+  void _syncData() async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => Center(
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const CircularProgressIndicator(color: AppColors.primary),
+              const SizedBox(height: 16),
+              Text('Sinkronisasi data...', style: GoogleFonts.manrope(fontWeight: FontWeight.w600)),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    final error = await AuthService.forceUpdateAppData();
+    
+    if (mounted) {
+      Navigator.pop(context); // Close loading dialog
+      final success = error == null;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(success ? 'Sinkronisasi berhasil! 18 program diet telah diperbarui.' : 'Gagal: $error'),
+        backgroundColor: success ? Colors.green : Colors.red,
+        behavior: SnackBarBehavior.floating,
+        duration: Duration(seconds: success ? 3 : 10),
+      ));
+    }
   }
 
   void _showLogoutConfirmation() {
@@ -363,7 +444,36 @@ class _AhliGiziProfilScreenState extends State<AhliGiziProfilScreen> {
                       children: [
                         _buildActionItem(icon: Icons.person_outline, title: 'Edit Identitas & CV', onTap: _showEditProfileDialog),
                         _divider(),
-                        _buildActionItem(icon: Icons.post_add, title: 'Kelola Program Diet', onTap: _showManageDietDialog),
+                        _buildActionItem(icon: Icons.post_add, title: 'Tambah Program & Leaflet', onTap: _showManageDietDialog),
+                        _divider(),
+                        _buildActionItem(
+                          icon: Icons.sync, 
+                          title: 'Sinkronisasi Data Referensi', 
+                          onTap: () {
+                            showDialog(
+                              context: context,
+                              builder: (ctx) => AlertDialog(
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                                title: Text('Konfirmasi Sinkronisasi', style: GoogleFonts.manrope(fontWeight: FontWeight.w700)),
+                                content: Text(
+                                  'Tindakan ini akan mengunduh dan memperbarui 18 program diet standar ke database online Anda. Lanjutkan?',
+                                  style: GoogleFonts.manrope(fontSize: 14),
+                                ),
+                                actions: [
+                                  TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Batal', style: GoogleFonts.manrope(color: AppColors.textSecondary))),
+                                  ElevatedButton(
+                                    onPressed: () {
+                                      Navigator.pop(ctx);
+                                      _syncData();
+                                    },
+                                    style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+                                    child: Text('Ya, Sinkronkan', style: GoogleFonts.manrope(color: Colors.white)),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }
+                        ),
                       ],
                     ),
                   ),

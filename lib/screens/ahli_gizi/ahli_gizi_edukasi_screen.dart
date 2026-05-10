@@ -27,14 +27,13 @@ class _AhliGiziEdukasiScreenState extends State<AhliGiziEdukasiScreen>
 
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
-    await AuthService.initializeAppDataIfNeeded();
-    final leaflets = await AuthService.getLeaflets();
-    final diets = await AuthService.getDietTypes();
+    final leaflets = await AuthService.getNewLeaflets();
+    final programs = await AuthService.getTherapyPrograms();
     
     if (mounted) {
       setState(() {
         _leaflets = leaflets;
-        _dietTypes = diets;
+        _dietTypes = programs;
         _isLoading = false;
       });
     }
@@ -80,16 +79,16 @@ class _AhliGiziEdukasiScreenState extends State<AhliGiziEdukasiScreen>
               _buildArtikelTab(),
             ],
           ),
-      floatingActionButton: _tabController.index != 2 ? FloatingActionButton.extended(
+      floatingActionButton: FloatingActionButton.extended(
         backgroundColor: const Color(0xFF0284C7),
         onPressed: () {
-          if (_tabController.index == 0) _showAddLeafletDialog();
-          if (_tabController.index == 1) _showAddDietDialog();
+          // Both tabs now lead to the unified form
+          _showUnifiedAddDialog();
         },
         icon: const Icon(Icons.add, color: Colors.white),
-        label: Text(_tabController.index == 0 ? 'Leaflet' : 'Program',
+        label: Text('Program & Leaflet',
             style: GoogleFonts.manrope(color: Colors.white, fontWeight: FontWeight.w600)),
-      ) : null,
+      ),
     );
   }
 
@@ -177,11 +176,11 @@ class _AhliGiziEdukasiScreenState extends State<AhliGiziEdukasiScreen>
                 width: 48,
                 height: 48,
                 decoration: BoxDecoration(
-                  color: Color(d['colorValue'] as int? ?? 0xFFE0F2FE),
+                  color: Color(d['colorVal'] as int? ?? d['colorValue'] as int? ?? 0xFFE0F2FE),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
-                  IconData(d['iconCodePoint'] as int? ?? Icons.shield_outlined.codePoint, fontFamily: 'MaterialIcons'),
+                  IconData(d['iconCode'] as int? ?? d['iconCodePoint'] as int? ?? Icons.restaurant_menu_outlined.codePoint, fontFamily: 'MaterialIcons'),
                   color: const Color(0xFF0284C7),
                   size: 24,
                 ),
@@ -191,14 +190,14 @@ class _AhliGiziEdukasiScreenState extends State<AhliGiziEdukasiScreen>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(d['title'] ?? '-', style: GoogleFonts.manrope(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
-                    Text('PDF Program Terlampir', style: GoogleFonts.manrope(fontSize: 11, color: AppColors.textSecondary)),
+                    Text(d['name'] ?? d['title'] ?? '-', style: GoogleFonts.manrope(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
+                    Text('Program Terapi Diet Terdaftar', style: GoogleFonts.manrope(fontSize: 11, color: AppColors.textSecondary)),
                   ],
                 ),
               ),
               IconButton(
                 icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
-                onPressed: () => _confirmDeleteDiet(d['title']),
+                onPressed: () => _confirmDeleteDiet(d['name'] ?? d['title'] ?? '', d['id']),
               ),
             ],
           ),
@@ -245,27 +244,29 @@ class _AhliGiziEdukasiScreenState extends State<AhliGiziEdukasiScreen>
     );
   }
 
-  void _confirmDeleteDiet(String title) {
+  void _confirmDeleteDiet(String name, String? id) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text('Hapus Program Diet', style: GoogleFonts.manrope(fontWeight: FontWeight.bold)),
-        content: Text('Apakah Anda yakin ingin menghapus program "$title"? Data ini akan divalidasi apakah masih digunakan pasien.'),
+        content: Text('Apakah Anda yakin ingin menghapus program "$name"?'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
           TextButton(
             onPressed: () async {
               Navigator.pop(ctx);
-              final result = await AuthService.deleteDietType(title);
-              if (result['success'] == true) {
-                _loadData();
-              } else {
-                if (!mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                  content: Text(result['message'], style: GoogleFonts.manrope()),
-                  backgroundColor: Colors.red,
-                  behavior: SnackBarBehavior.floating,
-                ));
+              if (id != null) {
+                final success = await AuthService.deleteTherapyProgram(id);
+                if (success) {
+                  _loadData();
+                } else {
+                  if (!mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                    content: Text('Gagal menghapus program. Pastikan tidak sedang digunakan pasien.', style: GoogleFonts.manrope()),
+                    backgroundColor: Colors.red,
+                    behavior: SnackBarBehavior.floating,
+                  ));
+                }
               }
             },
             child: const Text('Hapus', style: TextStyle(color: Colors.red)),
@@ -283,31 +284,32 @@ class _AhliGiziEdukasiScreenState extends State<AhliGiziEdukasiScreen>
     }
   }
 
-  void _showAddLeafletDialog() {
-    final titleCtrl = TextEditingController();
-    final descCtrl = TextEditingController();
-    final urlCtrl = TextEditingController();
-    String category = 'Diet Khusus';
+  void _showUnifiedAddDialog() {
+    final programNameCtrl = TextEditingController();
+    final programDescCtrl = TextEditingController();
+    final programPurposeCtrl = TextEditingController();
+    final programNotesCtrl = TextEditingController();
+    final leafletTitleCtrl = TextEditingController();
+    final leafletContentCtrl = TextEditingController();
+    final leafletUrlCtrl = TextEditingController();
 
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('Tambah Leaflet Baru', style: GoogleFonts.manrope(fontWeight: FontWeight.bold)),
+        title: Text('Tambah Program & Leaflet', style: GoogleFonts.manrope(fontWeight: FontWeight.bold)),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              TextField(controller: titleCtrl, decoration: const InputDecoration(labelText: 'Judul Leaflet')),
-              TextField(controller: descCtrl, decoration: const InputDecoration(labelText: 'Deskripsi Singkat')),
-              TextField(controller: urlCtrl, decoration: const InputDecoration(labelText: 'URL Google Drive')),
-              const SizedBox(height: 10),
-              DropdownButtonFormField<String>(
-                value: category,
-                items: ['Ibu & Anak', 'Gizi Khusus', 'Penyakit Organ', 'Kardiovaskular', 'Metabolik', 'Diet Khusus']
-                    .map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
-                onChanged: (v) => category = v!,
-                decoration: const InputDecoration(labelText: 'Kategori'),
-              ),
+              Text('DATA PROGRAM', style: GoogleFonts.manrope(fontSize: 10, fontWeight: FontWeight.w800, color: AppColors.primary)),
+              TextField(controller: programNameCtrl, decoration: const InputDecoration(labelText: 'Nama Program')),
+              TextField(controller: programDescCtrl, decoration: const InputDecoration(labelText: 'Deskripsi')),
+              TextField(controller: programPurposeCtrl, decoration: const InputDecoration(labelText: 'Tujuan Diet')),
+              const SizedBox(height: 20),
+              Text('DATA LEAFLET', style: GoogleFonts.manrope(fontSize: 10, fontWeight: FontWeight.w800, color: AppColors.primary)),
+              TextField(controller: leafletTitleCtrl, decoration: const InputDecoration(labelText: 'Judul Leaflet')),
+              TextField(controller: leafletContentCtrl, decoration: const InputDecoration(labelText: 'Isi Materi')),
+              TextField(controller: leafletUrlCtrl, decoration: const InputDecoration(labelText: 'URL File (Drive)')),
             ],
           ),
         ),
@@ -315,48 +317,15 @@ class _AhliGiziEdukasiScreenState extends State<AhliGiziEdukasiScreen>
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
           ElevatedButton(
             onPressed: () async {
-              if (titleCtrl.text.isEmpty || urlCtrl.text.isEmpty) return;
-              await AuthService.addLeaflet({
-                'title': titleCtrl.text,
-                'desc': descCtrl.text,
-                'category': category,
-                'url': urlCtrl.text,
-                'iconCode': Icons.picture_as_pdf.codePoint,
-                'colorVal': 0xFFE0F2FE,
-              });
-              Navigator.pop(ctx);
-              _loadData();
-            },
-            child: const Text('Simpan'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showAddDietDialog() {
-    final titleCtrl = TextEditingController();
-    final urlCtrl = TextEditingController();
-
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text('Tambah Program Diet', style: GoogleFonts.manrope(fontWeight: FontWeight.bold)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(controller: titleCtrl, decoration: const InputDecoration(labelText: 'Nama Program Diet')),
-            TextField(controller: urlCtrl, decoration: const InputDecoration(labelText: 'URL PDF (Google Drive)')),
-          ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
-          ElevatedButton(
-            onPressed: () async {
-              if (titleCtrl.text.isEmpty || urlCtrl.text.isEmpty) return;
-              await AuthService.addDietType(
-                title: titleCtrl.text,
-                pdfUrl: urlCtrl.text,
+              if (programNameCtrl.text.isEmpty || leafletTitleCtrl.text.isEmpty || leafletContentCtrl.text.isEmpty) return;
+              await AuthService.addTherapyProgramAndLeaflet(
+                programName: programNameCtrl.text,
+                programDesc: programDescCtrl.text,
+                programPurpose: programPurposeCtrl.text,
+                programNotes: programNotesCtrl.text,
+                leafletTitle: leafletTitleCtrl.text,
+                leafletContent: leafletContentCtrl.text,
+                leafletUrl: leafletUrlCtrl.text,
               );
               Navigator.pop(ctx);
               _loadData();

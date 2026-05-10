@@ -140,19 +140,75 @@ class _EdukasiScreenState extends State<EdukasiScreen>
   // ─── Buka PDF via Google Drive ────────────────────────────────────────────
 
   Future<void> _openLeaflet(Map<String, dynamic> leaflet) async {
-    final uri = Uri.parse(leaflet['url'] as String);
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    } else {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(
-          'Tidak dapat membuka leaflet. Periksa koneksi internet Anda.',
-          style: GoogleFonts.manrope(),
+    final String url = leaflet['url'] as String? ?? '';
+    final String content = leaflet['content'] as String? ?? '';
+    
+    if (url.isNotEmpty && url.startsWith('http')) {
+      final uri = Uri.parse(url);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+        return;
+      }
+    }
+
+    // Jika tidak ada URL atau URL gagal dibuka, tampilkan dialog isi materi
+    if (mounted) {
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (ctx) => Container(
+          height: MediaQuery.of(ctx).size.height * 0.7,
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Text(
+                      leaflet['title'] ?? 'Materi Edukasi',
+                      style: GoogleFonts.manrope(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+                    ),
+                  ),
+                  IconButton(onPressed: () => Navigator.pop(ctx), icon: const Icon(Icons.close)),
+                ],
+              ),
+              const Divider(),
+              const SizedBox(height: 12),
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Text(
+                    content.isNotEmpty ? content : (leaflet['desc'] ?? 'Tidak ada detail materi.'),
+                    style: GoogleFonts.manrope(fontSize: 14, color: AppColors.textSecondary, height: 1.6),
+                  ),
+                ),
+              ),
+              if (url.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () => launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication),
+                    icon: const Icon(Icons.download, size: 18, color: Colors.white),
+                    label: Text('Download Lampiran', style: GoogleFonts.manrope(fontWeight: FontWeight.w600, color: Colors.white)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
         ),
-        backgroundColor: Colors.red,
-        behavior: SnackBarBehavior.floating,
-      ));
+      );
     }
   }
 

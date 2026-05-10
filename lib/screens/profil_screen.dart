@@ -7,6 +7,7 @@ import '../theme/app_theme.dart';
 import '../services/auth_service.dart';
 import 'login_screen.dart';
 import 'pilih_jenis_diet_screen.dart';
+import 'pilih_ahli_gizi_screen.dart';
 
 class ProfilScreen extends StatefulWidget {
   const ProfilScreen({super.key});
@@ -1322,13 +1323,13 @@ class _ProfilScreenState extends State<ProfilScreen> {
                         ),
                         _divider(),
                         _buildActionItem(
-                          icon: Icons.sync_alt,
-                          title: 'Ubah Program Diet & Ahli Gizi',
+                          icon: Icons.people_outline,
+                          title: 'Ganti Ahli Gizi Konsultasi',
                           onTap: () {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (_) => const PilihJenisDietScreen(isFromProfil: true),
+                                builder: (_) => PilihAhliGiziScreen(isFromProfil: true),
                               ),
                             ).then((_) => _loadUser());
                           },

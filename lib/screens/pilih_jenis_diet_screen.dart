@@ -27,7 +27,7 @@ class _PilihJenisDietScreenState extends State<PilihJenisDietScreen> {
   }
 
   Future<void> _loadDietTypes() async {
-    final diets = await AuthService.getDietTypes();
+    final diets = await AuthService.getTherapyPrograms();
     if (mounted) {
       setState(() {
         _dietTypes = diets;
@@ -57,7 +57,7 @@ class _PilihJenisDietScreenState extends State<PilihJenisDietScreen> {
 
     // Ambil diet pertama yang dipilih untuk ditampilkan leaflet-nya
     final firstDiet = _selectedDiets.first;
-    final firstDietMap = _dietTypes.firstWhere((d) => d['title'] == firstDiet, orElse: () => {});
+    final firstDietMap = _dietTypes.firstWhere((d) => (d['name'] ?? d['title']) == firstDiet, orElse: () => {});
     final pdfUrl = firstDietMap['pdfUrl'] ?? '';
 
     if (widget.isFromProfil) {
@@ -124,13 +124,27 @@ class _PilihJenisDietScreenState extends State<PilihJenisDietScreen> {
             child: _isInitLoading
                 ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
                 : _dietTypes.isEmpty
-                    ? const Center(child: Text('Belum ada data jenis diet.'))
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.info_outline, size: 48, color: AppColors.textMuted),
+                            const SizedBox(height: 16),
+                            Text('Belum ada data jenis diet.', style: GoogleFonts.manrope(color: AppColors.textSecondary)),
+                            const SizedBox(height: 8),
+                            TextButton(
+                              onPressed: _loadDietTypes,
+                              child: Text('Coba Muat Ulang', style: GoogleFonts.manrope(color: AppColors.primary, fontWeight: FontWeight.w700)),
+                            ),
+                          ],
+                        ),
+                      )
                     : ListView.builder(
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     itemCount: _dietTypes.length,
                     itemBuilder: (ctx, i) {
                       final diet = _dietTypes[i];
-                      final title = diet['title'] as String;
+                      final title = (diet['name'] ?? diet['title']) as String;
                       final isSelected = _selectedDiets.contains(title);
 
                       return GestureDetector(
@@ -161,10 +175,10 @@ class _PilihJenisDietScreenState extends State<PilihJenisDietScreen> {
                                 width: 48,
                                 height: 48,
                                 decoration: BoxDecoration(
-                                  color: isSelected ? AppColors.primary.withValues(alpha: 0.15) : Color(diet['colorValue'] as int? ?? 0xFFDBEAFE),
+                                  color: isSelected ? AppColors.primary.withValues(alpha: 0.15) : Color(diet['colorVal'] as int? ?? diet['colorValue'] as int? ?? 0xFFDBEAFE),
                                   borderRadius: BorderRadius.circular(12),
                                 ),
-                                child: Icon(IconData(diet['iconCodePoint'] as int? ?? Icons.article_outlined.codePoint, fontFamily: 'MaterialIcons'),
+                                child: Icon(IconData(diet['iconCode'] as int? ?? diet['iconCodePoint'] as int? ?? Icons.restaurant_menu_outlined.codePoint, fontFamily: 'MaterialIcons'),
                                     color: isSelected ? AppColors.primary : AppColors.textSecondary,
                                     size: 24),
                               ),

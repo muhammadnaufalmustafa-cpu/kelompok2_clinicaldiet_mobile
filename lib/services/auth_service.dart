@@ -195,16 +195,28 @@ class AuthService {
     required String password,
   }) async {
     try {
+      print('DEBUG_AUTH: Memulai login pasien untuk identifier: $identifier');
       final usersRef = FirebaseFirestore.instance.collection('users');
       String loginEmail = identifier;
 
       // 1. Jika bukan format email, cari emailnya di Firestore berdasarkan RM atau Username
       if (!identifier.contains('@')) {
-        final rmCheck = await usersRef.where('rm', isEqualTo: identifier).where('role', isEqualTo: 'pasien').get();
+        print('DEBUG_AUTH: Mencari email berdasarkan RM/Username...');
+        final rmCheck = await usersRef
+            .where('rm', isEqualTo: identifier)
+            .where('role', isEqualTo: 'pasien')
+            .get()
+            .timeout(const Duration(seconds: 15), onTimeout: () => throw 'Timeout saat mencari data RM.');
+            
         if (rmCheck.docs.isNotEmpty) {
           loginEmail = rmCheck.docs.first.data()['email'] ?? '';
         } else {
-          final usernameCheck = await usersRef.where('username', isEqualTo: identifier).where('role', isEqualTo: 'pasien').get();
+          final usernameCheck = await usersRef
+              .where('username', isEqualTo: identifier)
+              .where('role', isEqualTo: 'pasien')
+              .get()
+              .timeout(const Duration(seconds: 15), onTimeout: () => throw 'Timeout saat mencari data Username.');
+              
           if (usernameCheck.docs.isNotEmpty) {
             loginEmail = usernameCheck.docs.first.data()['email'] ?? '';
           } else {
@@ -213,14 +225,18 @@ class AuthService {
         }
       }
 
-      // 2. Login ke Firebase Auth
+      print('DEBUG_AUTH: Melakukan signInWithEmailAndPassword untuk: $loginEmail');
+      // 2. Login ke Firebase Auth (biarkan Firebase kelola timeout-nya sendiri)
       final userCredential = await FirebaseAuth.instance
           .signInWithEmailAndPassword(email: loginEmail, password: password);
           
       final uid = userCredential.user!.uid;
 
+      print('DEBUG_AUTH: Login Auth berhasil, mengambil profil Firestore untuk UID: $uid');
       // 3. Ambil profil lengkap dari Firestore
-      final userDoc = await usersRef.doc(uid).get();
+      final userDoc = await usersRef.doc(uid).get()
+          .timeout(const Duration(seconds: 15), onTimeout: () => throw 'Timeout saat mengambil profil pengguna.');
+          
       if (!userDoc.exists || userDoc.data()?['role'] != 'pasien') {
          await FirebaseAuth.instance.signOut();
          return {'success': false, 'message': 'Akun ini bukan pasien.'};
@@ -230,13 +246,16 @@ class AuthService {
       // Backup session ke SharedPreferences agar tidak merusak halaman lain (SANGAT AMAN)
       final prefs = await SharedPreferences.getInstance();
       userData['password'] = password; // Tetap simpan dummy password untuk backward compatibility jika ada fitur yang butuh
-      await prefs.setString(_loggedInUserKey, jsonEncode(userData));
+      await prefs.setString(_loggedInUserKey, jsonEncode(_makeEncodable(userData)));
 
+      print('DEBUG_AUTH: Login pasien BERHASIL.');
       return {'success': true, 'user': userData};
 
-    } on FirebaseAuthException catch (_) {
+    } on FirebaseAuthException catch (e) {
+      print('DEBUG_AUTH_ERROR (Auth): ${e.code} - ${e.message}');
       return {'success': false, 'message': 'Email/RM atau kata sandi salah.'};
     } catch (e) {
+      print('DEBUG_AUTH_ERROR (General): $e');
       return {'success': false, 'message': 'Terjadi kesalahan: $e'};
     }
   }
@@ -246,12 +265,19 @@ class AuthService {
     required String password,
   }) async {
     try {
+      print('DEBUG_AUTH: Memulai login ahli gizi untuk identifier: $identifier');
       final usersRef = FirebaseFirestore.instance.collection('users');
       String loginEmail = identifier;
 
       // 1. Jika bukan format email, cari emailnya berdasarkan NIP
       if (!identifier.contains('@')) {
-        final nipCheck = await usersRef.where('nip', isEqualTo: identifier).where('role', isEqualTo: 'ahli_gizi').get();
+        print('DEBUG_AUTH: Mencari email berdasarkan NIP...');
+        final nipCheck = await usersRef
+            .where('nip', isEqualTo: identifier)
+            .where('role', isEqualTo: 'ahli_gizi')
+            .get()
+            .timeout(const Duration(seconds: 15), onTimeout: () => throw 'Timeout saat mencari data NIP.');
+            
         if (nipCheck.docs.isNotEmpty) {
           loginEmail = nipCheck.docs.first.data()['email'] ?? '';
         } else {
@@ -259,14 +285,18 @@ class AuthService {
         }
       }
 
-      // 2. Login ke Firebase Auth
+      print('DEBUG_AUTH: Melakukan signInWithEmailAndPassword untuk ahli gizi: $loginEmail');
+      // 2. Login ke Firebase Auth (biarkan Firebase kelola timeout-nya sendiri)
       final userCredential = await FirebaseAuth.instance
           .signInWithEmailAndPassword(email: loginEmail, password: password);
           
       final uid = userCredential.user!.uid;
 
+      print('DEBUG_AUTH: Login Auth berhasil, mengambil profil Firestore untuk UID: $uid');
       // 3. Ambil profil dari Firestore
-      final userDoc = await usersRef.doc(uid).get();
+      final userDoc = await usersRef.doc(uid).get()
+          .timeout(const Duration(seconds: 15), onTimeout: () => throw 'Timeout saat mengambil profil ahli gizi.');
+          
       if (!userDoc.exists || userDoc.data()?['role'] != 'ahli_gizi') {
          await FirebaseAuth.instance.signOut();
          return {'success': false, 'message': 'Akun ini bukan ahli gizi.'};
@@ -277,13 +307,16 @@ class AuthService {
       // Backup session ke SharedPreferences
       final prefs = await SharedPreferences.getInstance();
       userData['password'] = password;
-      await prefs.setString(_loggedInUserKey, jsonEncode(userData));
+      await prefs.setString(_loggedInUserKey, jsonEncode(_makeEncodable(userData)));
 
+      print('DEBUG_AUTH: Login ahli gizi BERHASIL.');
       return {'success': true, 'user': userData};
 
-    } on FirebaseAuthException catch (_) {
+    } on FirebaseAuthException catch (e) {
+      print('DEBUG_AUTH_ERROR (Auth AG): ${e.code} - ${e.message}');
       return {'success': false, 'message': 'Email/NIP atau kata sandi salah.'};
     } catch (e) {
+      print('DEBUG_AUTH_ERROR (General AG): $e');
       return {'success': false, 'message': 'Terjadi kesalahan: $e'};
     }
   }
@@ -339,7 +372,7 @@ class AuthService {
       final prefs = await SharedPreferences.getInstance();
       final freshData = (await FirebaseFirestore.instance.collection('users').doc(user.uid).get()).data();
       if (freshData != null) {
-        await prefs.setString(_loggedInUserKey, jsonEncode(freshData));
+        await prefs.setString(_loggedInUserKey, jsonEncode(_makeEncodable(freshData)));
       }
       return true;
     } catch (e) {
@@ -407,7 +440,7 @@ class AuthService {
       final prefs = await SharedPreferences.getInstance();
       final freshData = (await FirebaseFirestore.instance.collection('users').doc(user.uid).get()).data();
       if (freshData != null) {
-        await prefs.setString(_loggedInUserKey, jsonEncode(freshData));
+        await prefs.setString(_loggedInUserKey, jsonEncode(_makeEncodable(freshData)));
       }
       
       return true;
@@ -440,12 +473,12 @@ class AuthService {
     if (email.isNotEmpty) users[idx]['email'] = email;
     if (password != null && password.isNotEmpty) users[idx]['password'] = password;
 
-    await prefs.setString(_usersKey, jsonEncode(users));
+    await prefs.setString(_usersKey, jsonEncode(_makeEncodable(users)));
 
     // Update session if it's the logged in user
     final loggedIn = await getLoggedInUser();
     if (loggedIn != null && loggedIn['rm'] == rm) {
-      await prefs.setString(_loggedInUserKey, jsonEncode(users[idx]));
+      await prefs.setString(_loggedInUserKey, jsonEncode(_makeEncodable(users[idx])));
     }
     return true;
   }
@@ -465,11 +498,11 @@ class AuthService {
     if (idx == -1) return false;
 
     users[idx]['profile_photo_path'] = photoPath;
-    await prefs.setString(key, jsonEncode(users));
+    await prefs.setString(key, jsonEncode(_makeEncodable(users)));
     
     final loggedIn = await getLoggedInUser();
     if (loggedIn != null && loggedIn[fieldId] == id) {
-      await prefs.setString(_loggedInUserKey, jsonEncode(users[idx]));
+      await prefs.setString(_loggedInUserKey, jsonEncode(_makeEncodable(users[idx])));
     }
     return true;
   }
@@ -486,12 +519,12 @@ class AuthService {
         (u) => u['rm'].toString().toLowerCase() == rm.toLowerCase());
     if (idx != -1) {
       users[idx]['status'] = status;
-      await prefs.setString(_usersKey, jsonEncode(users));
+      await prefs.setString(_usersKey, jsonEncode(_makeEncodable(users)));
 
       final loggedIn = await getLoggedInUser();
       if (loggedIn != null &&
           loggedIn['rm'].toString().toLowerCase() == rm.toLowerCase()) {
-        await prefs.setString(_loggedInUserKey, jsonEncode(users[idx]));
+        await prefs.setString(_loggedInUserKey, jsonEncode(_makeEncodable(users[idx])));
       }
     }
   }
@@ -548,7 +581,7 @@ class AuthService {
       final prefs = await SharedPreferences.getInstance();
       final freshData = (await FirebaseFirestore.instance.collection('users').doc(user.uid).get()).data();
       if (freshData != null) {
-        await prefs.setString(_loggedInUserKey, jsonEncode(freshData));
+        await prefs.setString(_loggedInUserKey, jsonEncode(_makeEncodable(freshData)));
       }
       
       return true;
@@ -560,55 +593,63 @@ class AuthService {
   // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ PILIH AHLI GIZI & DIET â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   static Future<bool> selectAhliGizi(String rmPasien, String nipAhliGizi) async {
-    final prefs = await SharedPreferences.getInstance();
-    final usersJson = prefs.getString(_usersKey);
-    if (usersJson == null) return false;
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .where('rm', isEqualTo: rmPasien)
+          .where('role', isEqualTo: 'pasien')
+          .get();
+          
+      if (snapshot.docs.isNotEmpty) {
+        await snapshot.docs.first.reference.update({
+          'ahli_gizi_nip': nipAhliGizi,
+          'selected_ahli_gizi_nip': nipAhliGizi,
+        });
 
-    final decoded = jsonDecode(usersJson) as List;
-    final users = decoded.cast<Map<String, dynamic>>();
-
-    final idx = users.indexWhere(
-      (u) => u['rm'].toString().toLowerCase() == rmPasien.toLowerCase(),
-    );
-    if (idx == -1) return false;
-
-    users[idx]['selected_ahli_gizi_nip'] = nipAhliGizi;
-
-    await prefs.setString(_usersKey, jsonEncode(users));
-
-    final loggedIn = await getLoggedInUser();
-    if (loggedIn != null &&
-        loggedIn['rm'].toString().toLowerCase() == rmPasien.toLowerCase()) {
-      await prefs.setString(_loggedInUserKey, jsonEncode(users[idx]));
+        // Update local session
+        final prefs = await SharedPreferences.getInstance();
+        final user = await getLoggedInUser();
+        if (user != null && user['rm'].toString().toLowerCase() == rmPasien.toLowerCase()) {
+          user['ahli_gizi_nip'] = nipAhliGizi;
+          user['selected_ahli_gizi_nip'] = nipAhliGizi;
+          await prefs.setString(_loggedInUserKey, jsonEncode(_makeEncodable(user)));
+        }
+        return true;
+      }
+      return false;
+    } catch (e) {
+      return false;
     }
-
-    return true;
   }
   
   static Future<bool> updateDietType(String rmPasien, String dietType) async {
-    final prefs = await SharedPreferences.getInstance();
-    final usersJson = prefs.getString(_usersKey);
-    if (usersJson == null) return false;
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .where('rm', isEqualTo: rmPasien)
+          .where('role', isEqualTo: 'pasien')
+          .get();
+          
+      if (snapshot.docs.isNotEmpty) {
+        await snapshot.docs.first.reference.update({
+          'diet_type': dietType,
+          'diet_types': [dietType],
+        });
 
-    final decoded = jsonDecode(usersJson) as List;
-    final users = decoded.cast<Map<String, dynamic>>();
-
-    final idx = users.indexWhere(
-      (u) => u['rm'].toString().toLowerCase() == rmPasien.toLowerCase(),
-    );
-    if (idx == -1) return false;
-
-    users[idx]['diet_type'] = dietType;
-
-    await prefs.setString(_usersKey, jsonEncode(users));
-
-    final loggedIn = await getLoggedInUser();
-    if (loggedIn != null &&
-        loggedIn['rm'].toString().toLowerCase() == rmPasien.toLowerCase()) {
-      await prefs.setString(_loggedInUserKey, jsonEncode(users[idx]));
+        // Update local session
+        final prefs = await SharedPreferences.getInstance();
+        final user = await getLoggedInUser();
+        if (user != null && user['rm'].toString().toLowerCase() == rmPasien.toLowerCase()) {
+          user['diet_type'] = dietType;
+          user['diet_types'] = [dietType];
+          await prefs.setString(_loggedInUserKey, jsonEncode(_makeEncodable(user)));
+        }
+        return true;
+      }
+      return false;
+    } catch (e) {
+      return false;
     }
-
-    return true;
   }
 
   static Future<Map<String, dynamic>?> getSelectedAhliGizi(String rmPasien) async {
@@ -656,28 +697,71 @@ class AuthService {
     int days = 30,
   }) async {
     try {
-      final cutoffDate = DateTime.now().subtract(Duration(days: days));
+      // Query HANYA by rm_pasien (single-field index, always available)
+      // Filter tanggal dilakukan di Dart untuk menghindari composite index
       final snapshot = await FirebaseFirestore.instance
           .collection('meal_logs')
           .where('rm_pasien', isEqualTo: rmPasien)
-          .where('date', isGreaterThanOrEqualTo: cutoffDate.toIso8601String())
-          .get();
-      
-      final result = snapshot.docs.map((doc) => doc.data()).toList();
-      result.sort((a, b) => (b['date'] as String).compareTo(a['date'] as String));
+          .limit(90) // ambil max 90 log terakhir
+          .get()
+          .timeout(const Duration(seconds: 10));
+
+      final cutoffDate = DateTime.now().subtract(Duration(days: days));
+      final result = snapshot.docs
+          .map((doc) => doc.data())
+          .where((log) {
+            final dateStr = log['date'] as String? ?? '';
+            if (dateStr.isEmpty) return true; // sertakan jika tidak ada tanggal
+            final logDate = DateTime.tryParse(dateStr);
+            return logDate != null && logDate.isAfter(cutoffDate);
+          })
+          .toList();
+
+      result.sort((a, b) => (b['date'] as String? ?? '').compareTo(a['date'] as String? ?? ''));
       return result;
     } catch (e) {
       return [];
     }
   }
 
+
   // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ SESSION â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   static Future<Map<String, dynamic>?> getLoggedInUser() async {
+    final firebaseUser = FirebaseAuth.instance.currentUser;
     final prefs = await SharedPreferences.getInstance();
+    
+    // Jika di Firebase tidak ada user, pastikan session lokal juga kosong
+    if (firebaseUser == null) {
+      await prefs.remove(_loggedInUserKey);
+      return null;
+    }
+
     final userJson = prefs.getString(_loggedInUserKey);
-    if (userJson == null) return null;
-    return jsonDecode(userJson) as Map<String, dynamic>;
+    if (userJson == null) {
+      // Jika di Firebase ada tapi di lokal kosong, ambil ulang dari Firestore
+      try {
+        final doc = await FirebaseFirestore.instance.collection('users').doc(firebaseUser.uid).get()
+            .timeout(const Duration(seconds: 10));
+        if (doc.exists) {
+          final userData = doc.data()!;
+          await prefs.setString(_loggedInUserKey, jsonEncode(_makeEncodable(userData)));
+          return userData;
+        }
+      } catch (e) {
+        print('DEBUG_AUTH_ERROR (getLoggedInUser): $e');
+      }
+      return null;
+    }
+    
+    final localUser = jsonDecode(userJson) as Map<String, dynamic>;
+    // Pastikan UID lokal sama dengan UID Firebase
+    if (localUser['uid'] != firebaseUser.uid) {
+      await prefs.remove(_loggedInUserKey);
+      return null;
+    }
+    
+    return localUser;
   }
 
   static Future<void> logout() async {
@@ -721,7 +805,7 @@ class AuthService {
             if (loggedIn['rm'].toString().toLowerCase() == rm.toLowerCase()) {
               loggedIn['target_diet'] = targetDiet;
               loggedIn['catatan_evaluasi'] = catatanEvaluasi;
-              await prefs.setString(_loggedInUserKey, jsonEncode(loggedIn));
+              await prefs.setString(_loggedInUserKey, jsonEncode(_makeEncodable(loggedIn)));
             }
           }
         }
@@ -754,7 +838,7 @@ class AuthService {
             if (loggedIn['rm'].toString().toLowerCase() == rmPasien.toLowerCase()) {
               loggedIn['diet_types'] = dietTypes;
               loggedIn['diet_type'] = dietTypeString;
-              await prefs.setString(_loggedInUserKey, jsonEncode(loggedIn));
+              await prefs.setString(_loggedInUserKey, jsonEncode(_makeEncodable(loggedIn)));
             }
           }
         }
@@ -807,7 +891,7 @@ class AuthService {
             final loggedIn = jsonDecode(loggedInJson);
             if (loggedIn['rm'].toString().toLowerCase() == rm.toLowerCase()) {
               loggedIn.addAll(updateData);
-              await prefs.setString(_loggedInUserKey, jsonEncode(loggedIn));
+              await prefs.setString(_loggedInUserKey, jsonEncode(_makeEncodable(loggedIn)));
             }
           }
         }
@@ -949,19 +1033,23 @@ class AuthService {
   static Future<List<Map<String, dynamic>>> getNutrisiHistoryForMonth(
       String rmPasien, int month, int year) async {
     try {
-      final prefix = '$year-${month.toString().padLeft(2, '0')}';
+      // Query hanya by rm_pasien, filter tanggal di Dart
       final snapshot = await FirebaseFirestore.instance
           .collection('nutrition_history')
           .where('rm_pasien', isEqualTo: rmPasien)
-          .where('date', isGreaterThanOrEqualTo: '$prefix-01')
-          .where('date', isLessThanOrEqualTo: '$prefix-31')
+          .limit(60)
           .get();
-      
-      return snapshot.docs.map((doc) => doc.data()).toList();
+
+      final prefix = '$year-${month.toString().padLeft(2, '0')}';
+      return snapshot.docs
+          .map((doc) => doc.data())
+          .where((d) => (d['date'] as String? ?? '').startsWith(prefix))
+          .toList();
     } catch (e) {
       return [];
     }
   }
+
   static Future<Map<String, dynamic>?> getLatestNutritionPlan(String rm) async {
     final all = await getAllNutrisiPasien(rm);
     if (all.isEmpty) return null;
@@ -1022,14 +1110,14 @@ class AuthService {
         list[idx]['diet_type'] = terapiDiet;
       }
       
-      await prefs.setString(_usersKey, jsonEncode(list));
+      await prefs.setString(_usersKey, jsonEncode(_makeEncodable(list)));
       
       final current = await getLoggedInUser();
       if (current != null && current['rm'] == rm) {
         current['diagnosis'] = diagnosis;
         current['catatan_klinis'] = catatanKlinis;
         if (terapiDiet != null) current['diet_type'] = terapiDiet;
-        await prefs.setString(_loggedInUserKey, jsonEncode(current));
+        await prefs.setString(_loggedInUserKey, jsonEncode(_makeEncodable(current)));
       }
       return true;
     }
@@ -1142,6 +1230,7 @@ class AuthService {
     String? jamSelinganSore,
     String? jamMalam,
     String? date,
+    String? patientProgramId,
   }) async {
     try {
       final today = date != null ? DateTime.parse(date) : DateTime.now();
@@ -1165,6 +1254,7 @@ class AuthService {
         'diet_type': dietType ?? '',
         'berat_badan': beratBadan,
         'tinggi_badan': tinggiBadan,
+        'patientProgramId': patientProgramId ?? '',
         'created_at': today.toIso8601String(),
         'updated_at': DateTime.now().toIso8601String(),
       };
@@ -1181,12 +1271,15 @@ class AuthService {
 
   static Future<List<Map<String, dynamic>>> getDietTypes() async {
     try {
+      print('DEBUG_DIET: Memulai ambil data diet...');
       final snapshot = await FirebaseFirestore.instance
           .collection('diet_reference')
-          .orderBy('title')
           .get();
+      
+      print('DEBUG_DIET: Berhasil ambil ${snapshot.docs.length} data.');
       return snapshot.docs.map((d) => {'id': d.id, ...d.data()}).toList();
     } catch (e) {
+      print('DEBUG_DIET_ERROR: $e');
       return [];
     }
   }
@@ -1250,7 +1343,7 @@ class AuthService {
   static Future<List<Map<String, dynamic>>> getLeaflets() async {
     try {
       final snapshot = await FirebaseFirestore.instance
-          .collection('leaflet_reference')
+          .collection('leaflets')
           .orderBy('title')
           .get();
       return snapshot.docs.map((d) => {'id': d.id, ...d.data()}).toList();
@@ -1261,7 +1354,7 @@ class AuthService {
 
   static Stream<List<Map<String, dynamic>>> streamLeaflets() {
     return FirebaseFirestore.instance
-        .collection('leaflet_reference')
+        .collection('leaflets')
         .orderBy('title')
         .snapshots()
         .map((s) => s.docs.map((d) => {'id': d.id, ...d.data()}).toList());
@@ -1296,7 +1389,233 @@ class AuthService {
     }
   }
 
+  // ─── KELOLA PROGRAM TERAPI DIET & LEAFLET (KYOKU) ───
+
+  static Future<List<Map<String, dynamic>>> getTherapyPrograms() async {
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('therapy_programs')
+          .orderBy('name')
+          .get();
+      return snapshot.docs.map((d) => {'id': d.id, ...d.data()}).toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  static Stream<List<Map<String, dynamic>>> streamTherapyPrograms() {
+    return FirebaseFirestore.instance
+        .collection('therapy_programs')
+        .orderBy('name')
+        .snapshots()
+        .map((s) => s.docs.map((d) => {'id': d.id, ...d.data()}).toList());
+  }
+
+  static Future<List<Map<String, dynamic>>> getNewLeaflets() async {
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('leaflets')
+          .orderBy('title')
+          .get();
+      return snapshot.docs.map((d) => {'id': d.id, ...d.data()}).toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  static Stream<List<Map<String, dynamic>>> streamNewLeaflets() {
+    return FirebaseFirestore.instance
+        .collection('leaflets')
+        .orderBy('title')
+        .snapshots()
+        .map((s) => s.docs.map((d) => {'id': d.id, ...d.data()}).toList());
+  }
+
+  static Future<bool> addTherapyProgramAndLeaflet({
+    required String programName,
+    required String programDesc,
+    required String programPurpose,
+    required String programNotes,
+    required String leafletTitle,
+    required String leafletContent,
+    String? leafletUrl,
+  }) async {
+    try {
+      final batch = FirebaseFirestore.instance.batch();
+      
+      // 1. Cek duplikasi nama program
+      final existing = await FirebaseFirestore.instance
+          .collection('therapy_programs')
+          .where('name', isEqualTo: programName)
+          .get();
+      if (existing.docs.isNotEmpty) return false;
+
+      final programId = programName.toLowerCase().replaceAll(' ', '_').replaceAll(RegExp(r'[^a-z0-9_]'), '');
+      final programRef = FirebaseFirestore.instance.collection('therapy_programs').doc(programId);
+      
+      batch.set(programRef, {
+        'name': programName,
+        'description': programDesc,
+        'purpose': programPurpose,
+        'notes': programNotes,
+        'pdfUrl': leafletUrl ?? '',
+        'iconCode': Icons.restaurant_menu_outlined.codePoint,
+        'colorVal': 0xFFDBEAFE,
+        'created_at': FieldValue.serverTimestamp(),
+      });
+
+      // 2. Simpan Leaflet
+      final leafletId = leafletTitle.toLowerCase().replaceAll(' ', '_').replaceAll(RegExp(r'[^a-z0-9_]'), '');
+      final leafletRef = FirebaseFirestore.instance.collection('leaflets').doc(leafletId);
+      
+      batch.set(leafletRef, {
+        'programId': programId,
+        'programName': programName,
+        'title': leafletTitle,
+        'content': leafletContent,
+        'url': leafletUrl ?? '',
+        'created_at': FieldValue.serverTimestamp(),
+        // Mapping compatibility for old views
+        'desc': leafletContent.length > 50 ? leafletContent.substring(0, 50) + '...' : leafletContent,
+        'category': 'Terapi Diet',
+        'iconCode': Icons.article_outlined.codePoint,
+        'colorVal': 0xFFDBEAFE,
+      });
+
+      await batch.commit();
+      return true;
+    } catch (e) {
+      print('KYOKU_SYNC_ERROR: $e');
+      return false;
+    }
+  }
+
+  static Future<bool> deleteTherapyProgram(String programId) async {
+    try {
+      // 1. Delete program
+      await FirebaseFirestore.instance.collection('therapy_programs').doc(programId).delete();
+      
+      // 2. Delete associated leaflets
+      final leaflets = await FirebaseFirestore.instance
+          .collection('leaflets')
+          .where('programId', isEqualTo: programId)
+          .get();
+      final batch = FirebaseFirestore.instance.batch();
+      for (final doc in leaflets.docs) {
+        batch.delete(doc.reference);
+      }
+      await batch.commit();
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+
   // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ INISIALISASI DATA AWAL â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+  static Future<String?> forceUpdateAppData() async {
+    try {
+      print('DEBUG_SYNC: Memulai proses sinkronisasi...');
+      final batch = FirebaseFirestore.instance.batch();
+      final dietRef = FirebaseFirestore.instance.collection('diet_reference');
+      final leafletRef = FirebaseFirestore.instance.collection('leaflet_reference');
+      
+      print('DEBUG_SYNC: Menyiapkan 18 data diet...');
+
+      final List<Map<String, dynamic>> initialDiets = [
+        {'title': 'Makanan Sehat Ibu Hamil', 'pdfUrl': 'https://drive.google.com/file/d/1DtEIRBLioGTeehUTETRn2dlWY8QjWNoO/view?usp=sharing', 'iconCodePoint': Icons.pregnant_woman_outlined.codePoint, 'colorValue': 0xFFFCE7F3},
+        {'title': 'Makanan Sehat Ibu Menyusui', 'pdfUrl': 'https://drive.google.com/file/d/16Uesv76NVgnZ5DPtjAJOkAFpFPxtgb8V/view?usp=sharing', 'iconCodePoint': Icons.favorite_border.codePoint, 'colorValue': 0xFFFCE7F3},
+        {'title': 'Makanan Sehat Bayi', 'pdfUrl': 'https://drive.google.com/file/d/1u1EYyFS-gOVI-aiHTcz8VWbgs-qzdheX/view?usp=sharing', 'iconCodePoint': Icons.child_care_outlined.codePoint, 'colorValue': 0xFFD1FAE5},
+        {'title': 'Makanan Sehat Anak Balita', 'pdfUrl': 'https://drive.google.com/file/d/1Fl9rdfVJFzf3G-kChGXHHVcx0XQ3Z67y/view?usp=sharing', 'iconCodePoint': Icons.child_friendly_outlined.codePoint, 'colorValue': 0xFFD1FAE5},
+        {'title': 'Makanan Sehat Lansia', 'pdfUrl': 'https://drive.google.com/file/d/13yRFdbNbAT6X-e6cvG1xdmGzFqej1BQo/view?usp=sharing', 'iconCodePoint': Icons.elderly_outlined.codePoint, 'colorValue': 0xFFFEF3C7},
+        {'title': 'Makanan Sehat Jemaah Haji', 'pdfUrl': 'https://drive.google.com/file/d/1SdpV1JQwBQw58c2WyUIPzcbqCtgKRX5X/view?usp=sharing', 'iconCodePoint': Icons.mosque_outlined.codePoint, 'colorValue': 0xFFFEF3C7},
+        {'title': 'Diet Hati', 'pdfUrl': 'https://drive.google.com/file/d/1AWJyvHUsXiTSaXB4vJWRV8DuVueeg-11/view?usp=sharing', 'iconCodePoint': Icons.monitor_heart_outlined.codePoint, 'colorValue': 0xFFDBEAFE},
+        {'title': 'Diet Lambung', 'pdfUrl': 'https://drive.google.com/file/d/1gTHCfYnHRpMWlzDg2Fpn174_amfBPB78/view?usp=sharing', 'iconCodePoint': Icons.medical_services_outlined.codePoint, 'colorValue': 0xFFDBEAFE},
+        {'title': 'Diet Jantung', 'pdfUrl': 'https://drive.google.com/file/d/1AMmx0UVPXAi-rWn5MdANHgVCz3AjnfE9/view?usp=sharing', 'iconCodePoint': Icons.favorite_outlined.codePoint, 'colorValue': 0xFFFCE7F3},
+        {'title': 'Diet Penyakit Ginjal Kronik', 'pdfUrl': 'https://drive.google.com/file/d/1ULJ2xjXQVqhIL-uwzgyYMbPxGXSJdVbg/view?usp=sharing', 'iconCodePoint': Icons.water_drop_outlined.codePoint, 'colorValue': 0xFFDBEAFE},
+        {'title': 'Diet Garam Rendah', 'pdfUrl': 'https://drive.google.com/file/d/1ILDn0y04uS0pbgugZyKKGiQ5pXUQY6ET/view?usp=sharing', 'iconCodePoint': Icons.no_meals_outlined.codePoint, 'colorValue': 0xFFDBEAFE},
+        {'title': 'Diet Diabetes Melitus', 'pdfUrl': 'https://drive.google.com/file/d/1rPTX_FR46-CaYOZN-lT-2GwE-ExiKpxY/view?usp=sharing', 'iconCodePoint': Icons.bloodtype_outlined.codePoint, 'colorValue': 0xFFFEF3C7},
+        {'title': 'Diet Diabetes Melitus Saat Puasa', 'pdfUrl': 'https://drive.google.com/file/d/1WU8gTXow_V4wuPQEjSFZhZ95BA5A4m0h/view?usp=sharing', 'iconCodePoint': Icons.no_food_outlined.codePoint, 'colorValue': 0xFFFEF3C7},
+        {'title': 'Diet Energi Rendah', 'pdfUrl': 'https://drive.google.com/file/d/16aiV08zXHsS_275djT5MXlo6n8aopqVy/view?usp=sharing', 'iconCodePoint': Icons.local_fire_department_outlined.codePoint, 'colorValue': 0xFFFEF3C7},
+        {'title': 'Diet Purin Rendah', 'pdfUrl': 'https://drive.google.com/file/d/1D_dhoFxw8ZoK8sYBcCaKrMZsr_k0R2ZL/view?usp=sharing', 'iconCodePoint': Icons.science_outlined.codePoint, 'colorValue': 0xFFFEF3C7},
+        {'title': 'Diet Protein Rendah', 'pdfUrl': 'https://drive.google.com/file/d/1pUfHw-KGuJGi64ujMwzAHwtZyBi-WXUK/view?usp=sharing', 'iconCodePoint': Icons.egg_outlined.codePoint, 'colorValue': 0xFFEDE9FE},
+        {'title': 'Diet Lemak Rendah', 'pdfUrl': 'https://drive.google.com/file/d/1QREic6oki2pyC2xFQ5Qvulx0-UvTXCm-/view?usp=sharing', 'iconCodePoint': Icons.oil_barrel_outlined.codePoint, 'colorValue': 0xFFEDE9FE},
+        {'title': 'Diet Kekebalan Tubuh Menurun', 'pdfUrl': 'https://drive.google.com/file/d/1oDCEedQNVE-FRyhAXIvky7cHmIWuTnhZ/view?usp=sharing', 'iconCodePoint': Icons.shield_outlined.codePoint, 'colorValue': 0xFFEDE9FE},
+      ];
+
+      final List<Map<String, dynamic>> initialLeaflets = [
+        {'title': 'Makanan Sehat Ibu Hamil', 'desc': 'Panduan nutrisi lengkap untuk ibu hamil demi kesehatan ibu dan janin', 'category': 'Ibu & Anak', 'url': 'https://drive.google.com/file/d/1DtEIRBLioGTeehUTETRn2dlWY8QjWNoO/view?usp=sharing', 'iconCode': Icons.pregnant_woman_outlined.codePoint, 'colorVal': 0xFFFCE7F3},
+        {'title': 'Makanan Sehat Ibu Menyusui', 'desc': 'Kebutuhan gizi ibu menyusui untuk mendukung produksi ASI berkualitas', 'category': 'Ibu & Anak', 'url': 'https://drive.google.com/file/d/16Uesv76NVgnZ5DPtjAJOkAFpFPxtgb8V/view?usp=sharing', 'iconCode': Icons.favorite_border.codePoint, 'colorVal': 0xFFFCE7F3},
+        {'title': 'Makanan Sehat Bayi', 'desc': 'Pemberian MPASI yang tepat untuk tumbuh kembang bayi optimal', 'category': 'Ibu & Anak', 'url': 'https://drive.google.com/file/d/1u1EYyFS-gOVI-aiHTcz8VWbgs-qzdheX/view?usp=sharing', 'iconCode': Icons.child_care_outlined.codePoint, 'colorVal': 0xFFD1FAE5},
+        {'title': 'Makanan Sehat Anak Balita', 'desc': 'Panduan gizi untuk anak usia 1-5 tahun agar tumbuh sehat dan cerdas', 'category': 'Ibu & Anak', 'url': 'https://drive.google.com/file/d/1Fl9rdfVJFzf3G-kChGXHHVcx0XQ3Z67y/view?usp=sharing', 'iconCode': Icons.child_friendly_outlined.codePoint, 'colorVal': 0xFFD1FAE5},
+        {'title': 'Makanan Sehat Lansia', 'desc': 'Kebutuhan nutrisi khusus untuk menjaga kualitas hidup di usia lanjut', 'category': 'Gizi Khusus', 'url': 'https://drive.google.com/file/d/13yRFdbNbAT6X-e6cvG1xdmGzFqej1BQo/view?usp=sharing', 'iconCode': Icons.elderly_outlined.codePoint, 'colorVal': 0xFFFEF3C7},
+        {'title': 'Makanan Sehat Jemaah Haji', 'desc': 'Panduan menjaga asupan gizi selama menjalankan ibadah haji', 'category': 'Gizi Khusus', 'url': 'https://drive.google.com/file/d/1SdpV1JQwBQw58c2WyUIPzcbqCtgKRX5X/view?usp=sharing', 'iconCode': Icons.mosque_outlined.codePoint, 'colorVal': 0xFFFEF3C7},
+        {'title': 'Diet Hati', 'desc': 'Pengaturan makan untuk pasien dengan gangguan fungsi hati / liver', 'category': 'Penyakit Organ', 'url': 'https://drive.google.com/file/d/1AWJyvHUsXiTSaXB4vJWRV8DuVueeg-11/view?usp=sharing', 'iconCode': Icons.monitor_heart_outlined.codePoint, 'colorVal': 0xFFDBEAFE},
+        {'title': 'Diet Lambung', 'desc': 'Diet khusus untuk penderita gastritis dan gangguan lambung', 'category': 'Penyakit Organ', 'url': 'https://drive.google.com/file/d/1gTHCfYnHRpMWlzDg2Fpn174_amfBPB78/view?usp=sharing', 'iconCode': Icons.medical_services_outlined.codePoint, 'colorVal': 0xFFDBEAFE},
+        {'title': 'Diet Jantung', 'desc': 'Panduan diet rendah lemak jenuh untuk pasien kardiovaskular', 'category': 'Kardiovaskular', 'url': 'https://drive.google.com/file/d/1AMmx0UVPXAi-rWn5MdANHgVCz3AjnfE9/view?usp=sharing', 'iconCode': Icons.favorite_outlined.codePoint, 'colorVal': 0xFFFCE7F3},
+        {'title': 'Diet Penyakit Ginjal Kronik', 'desc': 'Pembatasan protein dan mineral untuk pasien gagal ginjal kronik', 'category': 'Kardiovaskular', 'url': 'https://drive.google.com/file/d/1ULJ2xjXQVqhIL-uwzgyYMbPxGXSJdVbg/view?usp=sharing', 'iconCode': Icons.water_drop_outlined.codePoint, 'colorVal': 0xFFDBEAFE},
+        {'title': 'Diet Garam Rendah', 'desc': 'Pembatasan natrium untuk pasien hipertensi dan retensi cairan', 'category': 'Kardiovaskular', 'url': 'https://drive.google.com/file/d/1ILDn0y04uS0pbgugZyKKGiQ5pXUQY6ET/view?usp=sharing', 'iconCode': Icons.no_meals_outlined.codePoint, 'colorVal': 0xFFDBEAFE},
+        {'title': 'Diet Diabetes Melitus', 'desc': 'Pengaturan karbohidrat dan indeks glikemik untuk pasien DM tipe 1 & 2', 'category': 'Metabolik', 'url': 'https://drive.google.com/file/d/1rPTX_FR46-CaYOZN-lT-2GwE-ExiKpxY/view?usp=sharing', 'iconCode': Icons.bloodtype_outlined.codePoint, 'colorVal': 0xFFFEF3C7},
+        {'title': 'Diet Diabetes Melitus Saat Puasa', 'desc': 'Panduan khusus pengaturan makan bagi penderita DM yang berpuasa', 'category': 'Metabolik', 'url': 'https://drive.google.com/file/d/1WU8gTXow_V4wuPQEjSFZhZ95BA5A4m0h/view?usp=sharing', 'iconCode': Icons.no_food_outlined.codePoint, 'colorVal': 0xFFFEF3C7},
+        {'title': 'Diet Energi Rendah', 'desc': 'Program diet kalori terkontrol untuk manajemen berat badan', 'category': 'Metabolik', 'url': 'https://drive.google.com/file/d/16aiV08zXHsS_275djT5MXlo6n8aopqVy/view?usp=sharing', 'iconCode': Icons.local_fire_department_outlined.codePoint, 'colorVal': 0xFFFEF3C7},
+        {'title': 'Diet Purin Rendah', 'desc': 'Pembatasan purin untuk mencegah dan menangani penyakit asam urat', 'category': 'Metabolik', 'url': 'https://drive.google.com/file/d/1D_dhoFxw8ZoK8sYBcCaKrMZsr_k0R2ZL/view?usp=sharing', 'iconCode': Icons.science_outlined.codePoint, 'colorVal': 0xFFFEF3C7},
+        {'title': 'Diet Protein Rendah', 'desc': 'Pengurangan asupan protein untuk perlindungan fungsi ginjal dan hati', 'category': 'Diet Khusus', 'url': 'https://drive.google.com/file/d/1pUfHw-KGuJGi64ujMwzAHwtZyBi-WXUK/view?usp=sharing', 'iconCode': Icons.egg_outlined.codePoint, 'colorVal': 0xFFEDE9FE},
+        {'title': 'Diet Lemak Rendah', 'desc': 'Pembatasan lemak total dan lemak jenuh untuk kesehatan kardiovaskular', 'category': 'Diet Khusus', 'url': 'https://drive.google.com/file/d/1QREic6oki2pyC2xFQ5Qvulx0-UvTXCm-/view?usp=sharing', 'iconCode': Icons.oil_barrel_outlined.codePoint, 'colorVal': 0xFFEDE9FE},
+        {'title': 'Diet Kekebalan Tubuh Menurun', 'desc': 'Panduan gizi untuk pasien dengan kondisi imunokompromais / daya tahan tubuh rendah', 'category': 'Diet Khusus', 'url': 'https://drive.google.com/file/d/1oDCEedQNVE-FRyhAXIvky7cHmIWuTnhZ/view?usp=sharing', 'iconCode': Icons.shield_outlined.codePoint, 'colorVal': 0xFFEDE9FE},
+      ];
+
+      print('DEBUG_SYNC: Menambahkan data ke batch...');
+      
+      // 1. Koleksi Lama (Backwards Compatibility)
+      for (final diet in initialDiets) {
+        final docId = (diet['title'] as String).toLowerCase().replaceAll(' ', '_').replaceAll(RegExp(r'[^a-z0-9_]'), '');
+        batch.set(dietRef.doc(docId), diet, SetOptions(merge: true));
+      }
+      for (final leaflet in initialLeaflets) {
+        final docId = (leaflet['title'] as String).toLowerCase().replaceAll(' ', '_').replaceAll(RegExp(r'[^a-z0-9_]'), '');
+        batch.set(leafletRef.doc(docId), leaflet, SetOptions(merge: true));
+      }
+
+      // 2. Koleksi Baru (KYOKU Unified)
+      final therapyRef = FirebaseFirestore.instance.collection('therapy_programs');
+      final newLeafletRef = FirebaseFirestore.instance.collection('leaflets');
+
+      for (final diet in initialDiets) {
+        final name = diet['title'] as String;
+        final docId = name.toLowerCase().replaceAll(' ', '_').replaceAll(RegExp(r'[^a-z0-9_]'), '');
+        batch.set(therapyRef.doc(docId), {
+          'name': name,
+          'description': 'Program diet standar untuk $name',
+          'purpose': 'Membantu pengaturan pola makan yang tepat.',
+          'notes': '-',
+          'pdfUrl': diet['pdfUrl'] ?? '',
+          'iconCode': diet['iconCodePoint'] ?? Icons.restaurant_menu_outlined.codePoint,
+          'colorVal': diet['colorValue'] ?? 0xFFDBEAFE,
+          'created_at': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+      }
+
+      for (final leaflet in initialLeaflets) {
+        final title = leaflet['title'] as String;
+        final docId = title.toLowerCase().replaceAll(' ', '_').replaceAll(RegExp(r'[^a-z0-9_]'), '');
+        batch.set(newLeafletRef.doc(docId), {
+          ...leaflet,
+          'programId': docId, // Link to the therapy program
+          'programName': title,
+          'content': leaflet['desc'] ?? '', // Initial content from desc
+          'created_at': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+      }
+      
+      print('DEBUG_SYNC: Mengirim data ke Firebase (Commit)...');
+      await batch.commit();
+      print('DEBUG_SYNC: Sinkronisasi SELESAI dan BERHASIL.');
+      return null;
+    } catch (e) {
+      return e.toString();
+    }
+  }
 
   static Future<void> initializeAppDataIfNeeded() async {
     try {
@@ -1304,68 +1623,242 @@ class AuthService {
       final dietCheck = await FirebaseFirestore.instance
           .collection('diet_reference')
           .limit(1)
-          .get();
+          .get()
+          .timeout(const Duration(seconds: 7)); // Timeout singkat untuk init data
 
       if (dietCheck.docs.isEmpty) {
-        // Seed diet types ke Firestore
-        final batch = FirebaseFirestore.instance.batch();
-        final dietRef = FirebaseFirestore.instance.collection('diet_reference');
-        final leafletRef = FirebaseFirestore.instance.collection('leaflet_reference');
-
-        final List<Map<String, dynamic>> initialDiets = [
-          {'title': 'Makanan Sehat Ibu Hamil', 'pdfUrl': 'https://drive.google.com/file/d/1DtEIRBLioGTeehUTETRn2dlWY8QjWNoO/view?usp=sharing', 'iconCodePoint': Icons.pregnant_woman_outlined.codePoint, 'colorValue': 0xFFFCE7F3},
-          {'title': 'Makanan Sehat Ibu Menyusui', 'pdfUrl': 'https://drive.google.com/file/d/16Uesv76NVgnZ5DPtjAJOkAFpFPxtgb8V/view?usp=sharing', 'iconCodePoint': Icons.favorite_border.codePoint, 'colorValue': 0xFFFCE7F3},
-          {'title': 'Makanan Sehat Bayi', 'pdfUrl': 'https://drive.google.com/file/d/1u1EYyFS-gOVI-aiHTcz8VWbgs-qzdheX/view?usp=sharing', 'iconCodePoint': Icons.child_care_outlined.codePoint, 'colorValue': 0xFFD1FAE5},
-          {'title': 'Makanan Sehat Anak Balita', 'pdfUrl': 'https://drive.google.com/file/d/1Fl9rdfVJFzf3G-kChGXHHVcx0XQ3Z67y/view?usp=sharing', 'iconCodePoint': Icons.child_friendly_outlined.codePoint, 'colorValue': 0xFFD1FAE5},
-          {'title': 'Makanan Sehat Lansia', 'pdfUrl': 'https://drive.google.com/file/d/13yRFdbNbAT6X-e6cvG1xdmGzFqej1BQo/view?usp=sharing', 'iconCodePoint': Icons.elderly_outlined.codePoint, 'colorValue': 0xFFFEF3C7},
-          {'title': 'Makanan Sehat Jemaah Haji', 'pdfUrl': 'https://drive.google.com/file/d/1SdpV1JQwBQw58c2WyUIPzcbqCtgKRX5X/view?usp=sharing', 'iconCodePoint': Icons.mosque_outlined.codePoint, 'colorValue': 0xFFFEF3C7},
-          {'title': 'Diet Hati', 'pdfUrl': 'https://drive.google.com/file/d/1AWJyvHUsXiTSaXB4vJWRV8DuVueeg-11/view?usp=sharing', 'iconCodePoint': Icons.monitor_heart_outlined.codePoint, 'colorValue': 0xFFDBEAFE},
-          {'title': 'Diet Lambung', 'pdfUrl': 'https://drive.google.com/file/d/1gTHCfYnHRpMWlzDg2Fpn174_amfBPB78/view?usp=sharing', 'iconCodePoint': Icons.medical_services_outlined.codePoint, 'colorValue': 0xFFDBEAFE},
-          {'title': 'Diet Jantung', 'pdfUrl': 'https://drive.google.com/file/d/1AMmx0UVPXAi-rWn5MdANHgVCz3AjnfE9/view?usp=sharing', 'iconCodePoint': Icons.favorite_outlined.codePoint, 'colorValue': 0xFFFCE7F3},
-          {'title': 'Diet Penyakit Ginjal Kronik', 'pdfUrl': 'https://drive.google.com/file/d/1ULJ2xjXQVqhIL-uwzgyYMbPxGXSJdVbg/view?usp=sharing', 'iconCodePoint': Icons.water_drop_outlined.codePoint, 'colorValue': 0xFFDBEAFE},
-          {'title': 'Diet Garam Rendah', 'pdfUrl': 'https://drive.google.com/file/d/1ILDn0y04uS0pbgugZyKKGiQ5pXUQY6ET/view?usp=sharing', 'iconCodePoint': Icons.no_meals_outlined.codePoint, 'colorValue': 0xFFDBEAFE},
-          {'title': 'Diet Diabetes Melitus', 'pdfUrl': 'https://drive.google.com/file/d/1rPTX_FR46-CaYOZN-lT-2GwE-ExiKpxY/view?usp=sharing', 'iconCodePoint': Icons.bloodtype_outlined.codePoint, 'colorValue': 0xFFFEF3C7},
-          {'title': 'Diet Diabetes Melitus Saat Puasa', 'pdfUrl': 'https://drive.google.com/file/d/1WU8gTXow_V4wuPQEjSFZhZ95BA5A4m0h/view?usp=sharing', 'iconCodePoint': Icons.no_food_outlined.codePoint, 'colorValue': 0xFFFEF3C7},
-          {'title': 'Diet Energi Rendah', 'pdfUrl': 'https://drive.google.com/file/d/16aiV08zXHsS_275djT5MXlo6n8aopqVy/view?usp=sharing', 'iconCodePoint': Icons.local_fire_department_outlined.codePoint, 'colorValue': 0xFFFEF3C7},
-          {'title': 'Diet Purin Rendah', 'pdfUrl': 'https://drive.google.com/file/d/1D_dhoFxw8ZoK8sYBcCaKrMZsr_k0R2ZL/view?usp=sharing', 'iconCodePoint': Icons.science_outlined.codePoint, 'colorValue': 0xFFFEF3C7},
-          {'title': 'Diet Protein Rendah', 'pdfUrl': 'https://drive.google.com/file/d/1pUfHw-KGuJGi64ujMwzAHwtZyBi-WXUK/view?usp=sharing', 'iconCodePoint': Icons.egg_outlined.codePoint, 'colorValue': 0xFFEDE9FE},
-          {'title': 'Diet Lemak Rendah', 'pdfUrl': 'https://drive.google.com/file/d/1QREic6oki2pyC2xFQ5Qvulx0-UvTXCm-/view?usp=sharing', 'iconCodePoint': Icons.oil_barrel_outlined.codePoint, 'colorValue': 0xFFEDE9FE},
-          {'title': 'Diet Kekebalan Tubuh Menurun', 'pdfUrl': 'https://drive.google.com/file/d/1oDCEedQNVE-FRyhAXIvky7cHmIWuTnhZ/view?usp=sharing', 'iconCodePoint': Icons.shield_outlined.codePoint, 'colorValue': 0xFFEDE9FE},
-        ];
-
-        final List<Map<String, dynamic>> initialLeaflets = [
-          {'title': 'Makanan Sehat Ibu Hamil', 'desc': 'Panduan nutrisi lengkap untuk ibu hamil demi kesehatan ibu dan janin', 'category': 'Ibu & Anak', 'url': 'https://drive.google.com/file/d/1DtEIRBLioGTeehUTETRn2dlWY8QjWNoO/view?usp=sharing', 'iconCode': Icons.pregnant_woman_outlined.codePoint, 'colorVal': 0xFFFCE7F3},
-          {'title': 'Makanan Sehat Ibu Menyusui', 'desc': 'Kebutuhan gizi ibu menyusui untuk mendukung produksi ASI berkualitas', 'category': 'Ibu & Anak', 'url': 'https://drive.google.com/file/d/16Uesv76NVgnZ5DPtjAJOkAFpFPxtgb8V/view?usp=sharing', 'iconCode': Icons.favorite_border.codePoint, 'colorVal': 0xFFFCE7F3},
-          {'title': 'Makanan Sehat Bayi', 'desc': 'Pemberian MPASI yang tepat untuk tumbuh kembang bayi optimal', 'category': 'Ibu & Anak', 'url': 'https://drive.google.com/file/d/1u1EYyFS-gOVI-aiHTcz8VWbgs-qzdheX/view?usp=sharing', 'iconCode': Icons.child_care_outlined.codePoint, 'colorVal': 0xFFD1FAE5},
-          {'title': 'Makanan Sehat Anak Balita', 'desc': 'Panduan gizi untuk anak usia 1-5 tahun agar tumbuh sehat dan cerdas', 'category': 'Ibu & Anak', 'url': 'https://drive.google.com/file/d/1Fl9rdfVJFzf3G-kChGXHHVcx0XQ3Z67y/view?usp=sharing', 'iconCode': Icons.child_friendly_outlined.codePoint, 'colorVal': 0xFFD1FAE5},
-          {'title': 'Makanan Sehat Lansia', 'desc': 'Kebutuhan nutrisi khusus untuk menjaga kualitas hidup di usia lanjut', 'category': 'Gizi Khusus', 'url': 'https://drive.google.com/file/d/13yRFdbNbAT6X-e6cvG1xdmGzFqej1BQo/view?usp=sharing', 'iconCode': Icons.elderly_outlined.codePoint, 'colorVal': 0xFFFEF3C7},
-          {'title': 'Makanan Sehat Jemaah Haji', 'desc': 'Panduan menjaga asupan gizi selama menjalankan ibadah haji', 'category': 'Gizi Khusus', 'url': 'https://drive.google.com/file/d/1SdpV1JQwBQw58c2WyUIPzcbqCtgKRX5X/view?usp=sharing', 'iconCode': Icons.mosque_outlined.codePoint, 'colorVal': 0xFFFEF3C7},
-          {'title': 'Diet Hati', 'desc': 'Pengaturan makan untuk pasien dengan gangguan fungsi hati / liver', 'category': 'Penyakit Organ', 'url': 'https://drive.google.com/file/d/1AWJyvHUsXiTSaXB4vJWRV8DuVueeg-11/view?usp=sharing', 'iconCode': Icons.monitor_heart_outlined.codePoint, 'colorVal': 0xFFDBEAFE},
-          {'title': 'Diet Lambung', 'desc': 'Diet khusus untuk penderita gastritis dan gangguan lambung', 'category': 'Penyakit Organ', 'url': 'https://drive.google.com/file/d/1gTHCfYnHRpMWlzDg2Fpn174_amfBPB78/view?usp=sharing', 'iconCode': Icons.medical_services_outlined.codePoint, 'colorVal': 0xFFDBEAFE},
-          {'title': 'Diet Jantung', 'desc': 'Panduan diet rendah lemak jenuh untuk pasien kardiovaskular', 'category': 'Kardiovaskular', 'url': 'https://drive.google.com/file/d/1AMmx0UVPXAi-rWn5MdANHgVCz3AjnfE9/view?usp=sharing', 'iconCode': Icons.favorite_outlined.codePoint, 'colorVal': 0xFFFCE7F3},
-          {'title': 'Diet Penyakit Ginjal Kronik', 'desc': 'Pembatasan protein dan mineral untuk pasien gagal ginjal kronik', 'category': 'Kardiovaskular', 'url': 'https://drive.google.com/file/d/1ULJ2xjXQVqhIL-uwzgyYMbPxGXSJdVbg/view?usp=sharing', 'iconCode': Icons.water_drop_outlined.codePoint, 'colorVal': 0xFFDBEAFE},
-          {'title': 'Diet Garam Rendah', 'desc': 'Pembatasan natrium untuk pasien hipertensi dan retensi cairan', 'category': 'Kardiovaskular', 'url': 'https://drive.google.com/file/d/1ILDn0y04uS0pbgugZyKKGiQ5pXUQY6ET/view?usp=sharing', 'iconCode': Icons.no_meals_outlined.codePoint, 'colorVal': 0xFFDBEAFE},
-          {'title': 'Diet Diabetes Melitus', 'desc': 'Pengaturan karbohidrat dan indeks glikemik untuk pasien DM tipe 1 & 2', 'category': 'Metabolik', 'url': 'https://drive.google.com/file/d/1rPTX_FR46-CaYOZN-lT-2GwE-ExiKpxY/view?usp=sharing', 'iconCode': Icons.bloodtype_outlined.codePoint, 'colorVal': 0xFFFEF3C7},
-          {'title': 'Diet Diabetes Melitus Saat Puasa', 'desc': 'Panduan khusus pengaturan makan bagi penderita DM yang berpuasa', 'category': 'Metabolik', 'url': 'https://drive.google.com/file/d/1WU8gTXow_V4wuPQEjSFZhZ95BA5A4m0h/view?usp=sharing', 'iconCode': Icons.no_food_outlined.codePoint, 'colorVal': 0xFFFEF3C7},
-          {'title': 'Diet Energi Rendah', 'desc': 'Program diet kalori terkontrol untuk manajemen berat badan', 'category': 'Metabolik', 'url': 'https://drive.google.com/file/d/16aiV08zXHsS_275djT5MXlo6n8aopqVy/view?usp=sharing', 'iconCode': Icons.local_fire_department_outlined.codePoint, 'colorVal': 0xFFFEF3C7},
-          {'title': 'Diet Purin Rendah', 'desc': 'Pembatasan purin untuk mencegah dan menangani penyakit asam urat', 'category': 'Metabolik', 'url': 'https://drive.google.com/file/d/1D_dhoFxw8ZoK8sYBcCaKrMZsr_k0R2ZL/view?usp=sharing', 'iconCode': Icons.science_outlined.codePoint, 'colorVal': 0xFFFEF3C7},
-          {'title': 'Diet Protein Rendah', 'desc': 'Pengurangan asupan protein untuk perlindungan fungsi ginjal dan hati', 'category': 'Diet Khusus', 'url': 'https://drive.google.com/file/d/1pUfHw-KGuJGi64ujMwzAHwtZyBi-WXUK/view?usp=sharing', 'iconCode': Icons.egg_outlined.codePoint, 'colorVal': 0xFFEDE9FE},
-          {'title': 'Diet Lemak Rendah', 'desc': 'Pembatasan lemak total dan lemak jenuh untuk kesehatan kardiovaskular', 'category': 'Diet Khusus', 'url': 'https://drive.google.com/file/d/1QREic6oki2pyC2xFQ5Qvulx0-UvTXCm-/view?usp=sharing', 'iconCode': Icons.oil_barrel_outlined.codePoint, 'colorVal': 0xFFEDE9FE},
-          {'title': 'Diet Kekebalan Tubuh Menurun', 'desc': 'Panduan gizi untuk pasien dengan kondisi imunokompromais / daya tahan tubuh rendah', 'category': 'Diet Khusus', 'url': 'https://drive.google.com/file/d/1oDCEedQNVE-FRyhAXIvky7cHmIWuTnhZ/view?usp=sharing', 'iconCode': Icons.shield_outlined.codePoint, 'colorVal': 0xFFEDE9FE},
-        ];
-
-        for (final diet in initialDiets) {
-          final docId = (diet['title'] as String).toLowerCase().replaceAll(' ', '_').replaceAll(RegExp(r'[^a-z0-9_]'), '');
-          batch.set(dietRef.doc(docId), diet);
-        }
-        for (final leaflet in initialLeaflets) {
-          final docId = (leaflet['title'] as String).toLowerCase().replaceAll(' ', '_').replaceAll(RegExp(r'[^a-z0-9_]'), '');
-          batch.set(leafletRef.doc(docId), leaflet);
-        }
-        await batch.commit();
+        await forceUpdateAppData();
       }
     } catch (e) {
+      print('DEBUG_INIT_ERROR: Inisialisasi data referensi dilewati karena: $e');
       // Tidak gagal aplikasi jika seed gagal
     }
   }
+
+  // ─── PATIENT THERAPY PROGRAMS ─────────────────────────────────────────────
+
+  static Future<Map<String, dynamic>> addPatientTherapyProgram({
+    required String patientId,
+    required String patientRm,
+    required String therapyProgramId,
+    required String therapyProgramName,
+    required String createdBy,
+    String notes = '',
+    String? startDate,
+  }) async {
+    try {
+      // Cek duplikat program aktif
+      final existing = await FirebaseFirestore.instance
+          .collection('patientTherapyPrograms')
+          .where('patientRm', isEqualTo: patientRm)
+          .where('therapyProgramName', isEqualTo: therapyProgramName)
+          .where('status', isEqualTo: 'active')
+          .get()
+          .timeout(const Duration(seconds: 10));
+
+      if (existing.docs.isNotEmpty) {
+        return {'success': false, 'message': 'Program "$therapyProgramName" sudah aktif untuk pasien ini.'};
+      }
+
+      final now = DateTime.now();
+      final patientProgramId = '${patientRm}_${therapyProgramId}_${now.millisecondsSinceEpoch}';
+
+      await FirebaseFirestore.instance.collection('patientTherapyPrograms').doc(patientProgramId).set({
+        'patientProgramId': patientProgramId,
+        'patientId': patientId,
+        'patientRm': patientRm,
+        'therapyProgramId': therapyProgramId,
+        'therapyProgramName': therapyProgramName,
+        'status': 'active',
+        'startDate': startDate ?? now.toIso8601String(),
+        'endDate': null,
+        'notes': notes,
+        'createdAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+        'createdBy': createdBy,
+      });
+
+      return {'success': true, 'patientProgramId': patientProgramId};
+    } catch (e) {
+      return {'success': false, 'message': 'Error: $e'};
+    }
+  }
+
+  static Future<List<Map<String, dynamic>>> getPatientTherapyPrograms(String patientId) async {
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('patientTherapyPrograms')
+          .where('patientId', isEqualTo: patientId)
+          .orderBy('createdAt', descending: true)
+          .get()
+          .timeout(const Duration(seconds: 10));
+      return snapshot.docs.map((d) => {'patientProgramId': d.id, ...d.data()}).toList();
+    } catch (e) {
+      return [];
+    }
+  }
+
+  static Future<List<Map<String, dynamic>>> getPatientTherapyProgramsByRm(String patientRm) async {
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('patientTherapyPrograms')
+          .where('patientRm', isEqualTo: patientRm)
+          .orderBy('createdAt', descending: true)
+          .get()
+          .timeout(const Duration(seconds: 10));
+      return snapshot.docs.map((d) => {'patientProgramId': d.id, ...d.data()}).toList();
+    } catch (e) {
+      return [];
+    }
+  }
+
+  static Future<bool> updatePatientProgramStatus(String patientProgramId, String status) async {
+    try {
+      final updateData = <String, dynamic>{
+        'status': status,
+        'updatedAt': FieldValue.serverTimestamp(),
+      };
+      if (status == 'completed' || status == 'inactive') {
+        updateData['endDate'] = DateTime.now().toIso8601String();
+      }
+      await FirebaseFirestore.instance
+          .collection('patientTherapyPrograms')
+          .doc(patientProgramId)
+          .update(updateData);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // ─── NUTRITION TARGETS (per patientProgram) ───────────────────────────────
+
+  static Future<bool> saveNutritionTarget({
+    required String patientProgramId,
+    required String patientId,
+    required String patientRm,
+    required String therapyProgramId,
+    required Map<String, dynamic> nutrientItems,
+    String catatan = '',
+    String createdBy = '',
+  }) async {
+    try {
+      await FirebaseFirestore.instance
+          .collection('nutritionTargets')
+          .doc(patientProgramId)
+          .set({
+            'patientProgramId': patientProgramId,
+            'patientId': patientId,
+            'patientRm': patientRm,
+            'therapyProgramId': therapyProgramId,
+            'nutrientItems': nutrientItems,
+            'catatan': catatan,
+            'updatedAt': FieldValue.serverTimestamp(),
+            'createdAt': FieldValue.serverTimestamp(),
+            'createdBy': createdBy,
+          }, SetOptions(merge: true));
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  static Future<Map<String, dynamic>?> getNutritionTarget(String patientProgramId) async {
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('nutritionTargets')
+          .doc(patientProgramId)
+          .get()
+          .timeout(const Duration(seconds: 10));
+      if (doc.exists) return doc.data();
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  // ─── NUTRITION ACTUALIZATIONS (per patientProgram per date) ──────────────
+
+  static Future<bool> saveNutritionActualization({
+    required String patientProgramId,
+    required String patientId,
+    required String date,
+    required Map<String, dynamic> nutrientItems,
+    String createdBy = '',
+  }) async {
+    try {
+      final actualizationId = '${patientProgramId}_$date';
+      await FirebaseFirestore.instance
+          .collection('nutritionActualizations')
+          .doc(actualizationId)
+          .set({
+            'actualizationId': actualizationId,
+            'patientProgramId': patientProgramId,
+            'patientId': patientId,
+            'date': date,
+            'nutrientItems': nutrientItems,
+            'updatedAt': FieldValue.serverTimestamp(),
+            'createdAt': FieldValue.serverTimestamp(),
+            'createdBy': createdBy,
+          }, SetOptions(merge: true));
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  static Future<Map<String, dynamic>?> getNutritionActualization(
+      String patientProgramId, String date) async {
+    try {
+      final actualizationId = '${patientProgramId}_$date';
+      final doc = await FirebaseFirestore.instance
+          .collection('nutritionActualizations')
+          .doc(actualizationId)
+          .get()
+          .timeout(const Duration(seconds: 10));
+      if (doc.exists) return doc.data();
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  static Future<List<Map<String, dynamic>>> getMealLogsForProgram(
+      String patientProgramId, {int days = 30}) async {
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('meal_logs')
+          .where('patientProgramId', isEqualTo: patientProgramId)
+          .limit(90)
+          .get()
+          .timeout(const Duration(seconds: 10));
+      final since = DateTime.now().subtract(Duration(days: days));
+      final result = snapshot.docs
+          .map((d) => d.data())
+          .where((log) {
+            final dateStr = log['date'] as String? ?? '';
+            if (dateStr.isEmpty) return true;
+            final logDate = DateTime.tryParse(dateStr);
+            return logDate != null && logDate.isAfter(since);
+          })
+          .toList();
+      result.sort((a, b) => (b['date'] as String? ?? '').compareTo(a['date'] as String? ?? ''));
+      return result;
+    } catch (e) {
+      return [];
+    }
+  }
+
+
+  static dynamic _makeEncodable(dynamic data) {
+    if (data is Timestamp) {
+      return data.toDate().toIso8601String();
+    } else if (data is Map) {
+      return data.map((key, value) => MapEntry(key, _makeEncodable(value)));
+    } else if (data is List) {
+      return data.map(_makeEncodable).toList();
+    }
+    return data;
+  }
 }
+
