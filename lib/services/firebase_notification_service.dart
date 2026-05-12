@@ -30,12 +30,13 @@ class FirebaseNotificationService {
   }
 
   // ── Ambil Stream Notifikasi (Realtime) ──
+  // Catatan: tidak pakai .orderBy() agar tidak perlu composite index Firestore.
+  // Sorting dilakukan di sisi client (NotifikasiScreen).
   static Stream<QuerySnapshot> getUserNotifications(String userId, String role) {
     return _db
         .collection('notifications')
         .where('userId', isEqualTo: userId)
         .where('role', isEqualTo: role)
-        .orderBy('createdAt', descending: true)
         .snapshots();
   }
 

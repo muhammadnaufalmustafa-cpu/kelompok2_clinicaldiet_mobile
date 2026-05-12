@@ -135,16 +135,25 @@ class _AhliGiziDetailPasienScreenState
       patientPrograms = await AuthService.getPatientTherapyProgramsByRm(rm);
     }
 
-    // [BARU] Jika program masih kosong, cek apakah pasien punya diet dari onboarding
+    // [FIX Bug 1] Jika program kosong, baca diet_types (array) dari onboarding
+    // Buat SATU virtual program PER item agar tampil terpisah di UI
     if (patientPrograms.isEmpty) {
-      final initialDiet = widget.pasien['diet_type'] as String? ?? '';
-      if (initialDiet.isNotEmpty && initialDiet != '(Belum ada diet)') {
-        // Buat program virtual agar muncul di UI
+      final raw = widget.pasien['diet_types'];
+      List<String> dietList = [];
+      if (raw is List && raw.isNotEmpty) {
+        dietList = raw.cast<String>();
+      } else {
+        final single = widget.pasien['diet_type'] as String? ?? '';
+        if (single.isNotEmpty && single != '(Belum ada diet)') {
+          dietList = [single];
+        }
+      }
+      for (int i = 0; i < dietList.length; i++) {
         patientPrograms.add({
-          'patientProgramId': 'initial_onboarding',
-          'therapyProgramName': initialDiet,
+          'patientProgramId': 'initial_onboarding_$i',
+          'therapyProgramName': dietList[i],
           'status': 'active',
-          'isInitial': true, // Flag untuk menandai ini data onboarding
+          'isInitial': true,
         });
       }
     }
@@ -435,7 +444,21 @@ class _AhliGiziDetailPasienScreenState
         catatanEvaluasi: _catatanNutrisiCtrl.text,
       );
 
-      if (!mounted) return;
+      // 4. Kirim notifikasi ke pasien: target nutrisi diperbarui
+      if (patientId.isNotEmpty && _selectedPatientProgram != null) {
+        final agName = (await AuthService.getLoggedInUser())?['name'] ?? 'Ahli Gizi';
+        final progName = _selectedPatientProgram!['therapyProgramName'] as String? ?? effectiveDiet;
+        await FirebaseNotificationService.createNotification(
+          userId: patientId,
+          role: 'pasien',
+          title: '📋 Target Nutrisi Diperbarui',
+          message: 'Ahli Gizi $agName telah memperbarui target nutrisi untuk program "$progName". '
+              'Silakan cek tab Catatan Makan untuk melihat target terbaru Anda.',
+          type: 'target',
+          relatedId: _selectedPatientProgram!['patientProgramId'] as String? ?? '',
+        );
+      }
+
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text('Data pasien berhasil disimpan! ✓',
             style: GoogleFonts.manrope(fontWeight: FontWeight.w600)),
@@ -2373,7 +2396,36 @@ class _AhliGiziDetailPasienScreenState
                   notes: notesCtrl.text,
                 );
                 if (result['success'] == true) {
+                  final newProgramId = result['patientProgramId'] as String?;
+
+                  // Kirim notifikasi ke pasien: program baru ditambahkan
+                  if (patientId.isNotEmpty) {
+                    final agName = loggedIn?['name'] as String? ?? 'Ahli Gizi';
+                    final pName = selectedTherapyName ?? selectedTherapyId ?? 'Program Baru';
+                    await FirebaseNotificationService.createNotification(
+                      userId: patientId,
+                      role: 'pasien',
+                      title: '🌿 Program Diet Baru Ditambahkan',
+                      message: 'Ahli Gizi $agName telah menambahkan program diet baru "$pName" untuk Anda. '
+                          'Buka beranda untuk melihat detail program.',
+                      type: 'info',
+                      relatedId: newProgramId ?? '',
+                    );
+                  }
+
                   await _loadInitialData();
+                  // [FIX Bug 2] Auto-select ke program BARU yang ditambahkan,
+                  // bukan ke active.first (yang menyebabkan program lama seolah hilang)
+                  if (newProgramId != null && mounted) {
+                    final newProg = _patientPrograms.firstWhere(
+                      (p) => p['patientProgramId'] == newProgramId,
+                      orElse: () => _patientPrograms.isNotEmpty ? _patientPrograms.first : <String, dynamic>{},
+                    );
+                    if (newProg.isNotEmpty) {
+                      setState(() => _selectedPatientProgram = newProg);
+                      await _loadNutrisiForProgram(newProg);
+                    }
+                  }
                 } else {
                   if (mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(SnackBar(

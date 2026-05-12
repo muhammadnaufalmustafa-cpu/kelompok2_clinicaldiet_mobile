@@ -1,8 +1,11 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_theme.dart';
 import '../services/auth_service.dart';
+import '../services/firebase_notification_service.dart';
 import '../utils/age_calculator.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 // ─── Daftar lengkap URT sesuai referensi ahli gizi ───────────────────────────
 const List<String> kDaftarURT = [
@@ -40,6 +43,7 @@ class _CatatanScreenState extends State<CatatanScreen> {
   String? _selectedDietType;
   String? _selectedPatientProgramId; // program aktif yang dipilih
   List<Map<String, dynamic>> _patientPrograms = [];
+  StreamSubscription<QuerySnapshot>? _programsStreamSub; // realtime stream
   String _targetDietText = '';
   String _birthdate = '';
   String _gender = '';
@@ -68,6 +72,7 @@ class _CatatanScreenState extends State<CatatanScreen> {
   void initState() {
     super.initState();
     _loadInitialData();
+    _startProgramsStream(); // Bug 3: realtime listener
     _bbCtrl.addListener(() => setState(() {}));
     _tbCtrl.addListener(() => setState(() {}));
   }
@@ -195,10 +200,63 @@ class _CatatanScreenState extends State<CatatanScreen> {
 
   @override
   void dispose() {
+    _programsStreamSub?.cancel();
     _bbCtrl.dispose(); _tbCtrl.dispose();
     _pagiCtrl.dispose(); _selinganPagiCtrl.dispose();
     _siangCtrl.dispose(); _selinganSoreCtrl.dispose(); _malamCtrl.dispose();
     super.dispose();
+  }
+
+  /// Realtime listener: update daftar program + dropdown saat ada perubahan
+  /// dari sisi ahli gizi, tanpa perlu reload manual.
+  Future<void> _startProgramsStream() async {
+    final user = await AuthService.getLoggedInUser();
+    if (user == null) return;
+    final uid = user['uid'] as String? ?? '';
+    final rm = user['rm'] as String? ?? '';
+    if (uid.isEmpty && rm.isEmpty) return;
+
+    Query<Map<String, dynamic>> query;
+    if (uid.isNotEmpty) {
+      query = FirebaseFirestore.instance
+          .collection('patientTherapyPrograms')
+          .where('patientId', isEqualTo: uid);
+    } else {
+      query = FirebaseFirestore.instance
+          .collection('patientTherapyPrograms')
+          .where('patientRm', isEqualTo: rm);
+    }
+
+    _programsStreamSub = query.snapshots().listen((snapshot) {
+      if (!mounted) return;
+      final programs = snapshot.docs
+          .map((d) => {'patientProgramId': d.id, ...d.data()})
+          .toList();
+      programs.sort((a, b) {
+        final dA = (a['createdAt'] as Timestamp?)?.toDate() ?? DateTime(2000);
+        final dB = (b['createdAt'] as Timestamp?)?.toDate() ?? DateTime(2000);
+        return dB.compareTo(dA);
+      });
+      final active = programs.where((p) => p['status'] == 'active').toList();
+      // Bangun daftar nama untuk dropdown
+      final newDietList = active
+          .map((p) => p['therapyProgramName'] as String? ?? '')
+          .where((n) => n.isNotEmpty)
+          .toList();
+      setState(() {
+        _patientPrograms = active;
+        // Jika program yang sedang dipilih sudah tidak ada, reset ke program pertama
+        final stillExists = active.any(
+          (p) => p['patientProgramId'] == _selectedPatientProgramId,
+        );
+        if (!stillExists && active.isNotEmpty) {
+          _selectedPatientProgramId = active.first['patientProgramId'] as String?;
+          _selectedDietType = active.first['therapyProgramName'] as String?;
+        }
+        // Update daftar dropdown jika ada program baru
+        if (newDietList.isNotEmpty) _dietList = newDietList;
+      });
+    });
   }
 
   final List<String> _hariNames = ['', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
@@ -421,6 +479,29 @@ class _CatatanScreenState extends State<CatatanScreen> {
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
         );
+
+        // Kirim notifikasi ke Ahli Gizi bahwa pasien sudah isi catatan makan
+        final agNip = user['ahli_gizi_nip'] ?? user['selected_ahli_gizi_nip'] as String? ?? '';
+        if (agNip.isNotEmpty) {
+          final allAG = await AuthService.getAllAhliGizi();
+          final agData = allAG.where((a) => a['nip'] == agNip).firstOrNull;
+          final agUid = agData?['uid'] as String? ?? '';
+          if (agUid.isNotEmpty) {
+            final patientName = user['name'] as String? ?? 'Pasien';
+            final dietName = _selectedDietType ?? 'Program Diet';
+            final now = DateTime.now();
+            final tgl = '${now.day.toString().padLeft(2,'0')}/${now.month.toString().padLeft(2,'0')}/${now.year}';
+            await FirebaseNotificationService.createNotification(
+              userId: agUid,
+              role: 'ahli_gizi',
+              title: '🗒️ Catatan Makan Baru',
+              message: '$patientName telah mengisi catatan makan harian ($dietName) pada $tgl. '
+                  'Silakan buka riwayat pasien untuk melihat detailnya.',
+              type: 'log',
+              relatedId: rm,
+            );
+          }
+        }
 
         // Pindah ke tab Beranda (bukan pop)
         await Future.delayed(const Duration(milliseconds: 600));
@@ -843,7 +924,6 @@ class _CatatanScreenState extends State<CatatanScreen> {
             ],
           ),
           const SizedBox(height: 12),
-          _clinicalRow('Diagnosis', _diagnosisProgram.isNotEmpty ? _diagnosisProgram : _diagnosis),
           _clinicalRow('Terapi Diet', _selectedDietType ?? '-'),
           if (_catatanProgram.isNotEmpty)
             _clinicalRow('Catatan Ahli Gizi', _catatanProgram)

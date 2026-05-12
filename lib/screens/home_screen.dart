@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -56,16 +57,78 @@ class _HomeScreenState extends State<HomeScreen> {
   String? _selectedPatientProgramId;
   Map<String, dynamic>? _selectedNutritionTarget; // nutritionTargets doc
 
+  // ── Realtime stream ──
+  StreamSubscription<QuerySnapshot>? _programsStreamSub;
+
   @override
   void initState() {
     super.initState();
     _loadData();
+    _startProgramsStream(); // Bug 3: realtime listener
   }
 
   @override
   void dispose() {
+    _programsStreamSub?.cancel();
     _dietPageCtrl.dispose();
     super.dispose();
+  }
+
+  /// Realtime listener: update daftar program pasien otomatis
+  /// tanpa perlu pull-to-refresh ketika ahli gizi menambah program baru.
+  Future<void> _startProgramsStream() async {
+    final user = await AuthService.getLoggedInUser();
+    if (user == null) return;
+    final uid = user['uid'] as String? ?? '';
+    final rm = user['rm'] as String? ?? '';
+    if (uid.isEmpty && rm.isEmpty) return;
+
+    Query<Map<String, dynamic>> query;
+    if (uid.isNotEmpty) {
+      query = FirebaseFirestore.instance
+          .collection('patientTherapyPrograms')
+          .where('patientId', isEqualTo: uid);
+    } else {
+      query = FirebaseFirestore.instance
+          .collection('patientTherapyPrograms')
+          .where('patientRm', isEqualTo: rm);
+    }
+
+    _programsStreamSub = query.snapshots().listen((snapshot) {
+      if (!mounted) return;
+      final programs = snapshot.docs
+          .map((d) => {'patientProgramId': d.id, ...d.data()})
+          .toList();
+      // Sort descending by createdAt
+      programs.sort((a, b) {
+        final dA = (a['createdAt'] as Timestamp?)?.toDate() ?? DateTime(2000);
+        final dB = (b['createdAt'] as Timestamp?)?.toDate() ?? DateTime(2000);
+        return dB.compareTo(dA);
+      });
+      final active = programs.where((p) => p['status'] == 'active').toList();
+      setState(() {
+        _patientPrograms = programs;
+        // Jika belum ada yang dipilih, pilih program aktif pertama
+        if (_selectedPatientProgramId == null && active.isNotEmpty) {
+          _selectedPatientProgramId = active.first['patientProgramId'] as String?;
+        }
+        // Jika program yang dipilih sudah tidak ada (misal dihapus), reset
+        final stillExists = programs.any(
+          (p) => p['patientProgramId'] == _selectedPatientProgramId,
+        );
+        if (!stillExists && active.isNotEmpty) {
+          _selectedPatientProgramId = active.first['patientProgramId'] as String?;
+        }
+      });
+      // Reload nutrition target untuk program yang aktif
+      if (_selectedPatientProgramId != null) {
+        AuthService.getNutritionTarget(_selectedPatientProgramId!).then((target) {
+          if (mounted && target != null) {
+            setState(() => _selectedNutritionTarget = target);
+          }
+        });
+      }
+    });
   }
 
   Future<void> _loadData() async {

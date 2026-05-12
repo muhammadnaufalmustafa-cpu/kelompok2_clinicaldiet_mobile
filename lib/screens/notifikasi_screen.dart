@@ -92,7 +92,15 @@ class NotifikasiScreen extends StatelessWidget {
           }
 
           final docs = snapshot.data?.docs ?? [];
-          if (docs.isEmpty) {
+          // Sort client-side: terbaru di atas (tidak pakai .orderBy Firestore
+          // agar tidak butuh composite index)
+          final sorted = [...docs]..sort((a, b) {
+              final tA = (a['createdAt'] as Timestamp?)?.millisecondsSinceEpoch ?? 0;
+              final tB = (b['createdAt'] as Timestamp?)?.millisecondsSinceEpoch ?? 0;
+              return tB.compareTo(tA);
+            });
+
+          if (sorted.isEmpty) {
             return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -107,9 +115,9 @@ class NotifikasiScreen extends StatelessWidget {
 
           return ListView.builder(
             padding: const EdgeInsets.all(16),
-            itemCount: docs.length,
+            itemCount: sorted.length,
             itemBuilder: (context, index) {
-              final doc = docs[index];
+              final doc = sorted[index];
               final data = doc.data() as Map<String, dynamic>;
               final isRead = data['isRead'] ?? true;
               final type = data['type'] ?? 'info';
