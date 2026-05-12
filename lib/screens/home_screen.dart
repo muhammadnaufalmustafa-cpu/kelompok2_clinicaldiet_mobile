@@ -230,13 +230,17 @@ class _HomeScreenState extends State<HomeScreen> {
     return double.tryParse(_user?['height']?.toString() ?? '') ?? 0.0;
   }
 
-  // ── Evaluasi ahli gizi dari nutrisi per diet (diet pertama/aktif) ──
-  String get _evaluasiAhliGizi {
-    if (_nutrisiPerDiet.isNotEmpty) {
-      return _currentDietNutrisi?['evaluasi_ahli_gizi'] ?? '';
+  String get _currentDietName {
+    if (_patientPrograms.isNotEmpty && _selectedPatientProgramId != null) {
+      final prog = _patientPrograms.firstWhere((p) => p['patientProgramId'] == _selectedPatientProgramId, orElse: () => <String, dynamic>{});
+      if (prog.isNotEmpty) {
+        return prog['therapyProgramName'] as String? ?? 'Diet Khusus';
+      }
     }
-    return _user?['catatan_evaluasi'] ?? '';
+    return _currentDietNutrisi?['diet_type'] as String? ?? 'Diet Normal';
   }
+
+
 
   String _fmt(double val) =>
       val == val.truncateToDouble() ? val.toInt().toString() : val.toStringAsFixed(1);
@@ -320,8 +324,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   _buildProgramPeriod(),
                   // ── Kartu Ahli Gizi Utama ──
                   if (_selectedAhliGizi != null) _buildAhliGiziCard(context),
-                  // ── Evaluasi Ahli Gizi ──
-                  if (_evaluasiAhliGizi.isNotEmpty) _buildEvaluasiCard(),
                   if (_kaloriTarget > 0)
                     _buildNutritionSummary()
                   else if (_patientPrograms.any((p) => p['status'] == 'active'))
@@ -869,69 +871,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // ── Diet Swipeable Section ─────────────────────────────────────────
 
-  // ── Evaluasi Ahli Gizi Card ────────────────────────────────────────
-  Widget _buildEvaluasiCard() {
-    final dietType = _currentDietNutrisi?['diet_type'] as String? ?? '';
-    final ahliGizi = _ahliGiziName.isNotEmpty ? _ahliGiziName : 'Ahli Gizi';
-    return Container(
-      margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF0FDF4),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.primary.withValues(alpha: 0.35)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header
-          Container(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-            decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: 0.08),
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(15)),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(7),
-                  decoration: BoxDecoration(color: AppColors.primaryLight, borderRadius: BorderRadius.circular(9)),
-                  child: const Icon(Icons.assignment_turned_in_outlined, color: AppColors.primary, size: 18),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Evaluasi Ahli Gizi', style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.primaryDark)),
-                      if (dietType.isNotEmpty)
-                        Text(dietType, style: GoogleFonts.manrope(fontSize: 11, color: AppColors.primary, fontWeight: FontWeight.w600)),
-                    ],
-                  ),
-                ),
-                // Badge nama AG
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(8)),
-                  child: Text(
-                    ahliGizi.split(',').first.split(' ').first,
-                    style: GoogleFonts.manrope(fontSize: 10, fontWeight: FontWeight.w700, color: AppColors.primaryDark),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          // Body teks evaluasi
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Text(
-              _evaluasiAhliGizi,
-              style: GoogleFonts.manrope(fontSize: 13, color: AppColors.textPrimary, height: 1.7),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+
 
   // ── Catatan Makan Terakhir ──────────────────────────────────────────
   Widget _buildLastMealCard() {
@@ -980,7 +920,25 @@ class _HomeScreenState extends State<HomeScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text('Catatan Makan Terakhir', style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.textPrimary)),
-                      Text(dateStr, style: GoogleFonts.manrope(fontSize: 11, color: AppColors.textSecondary)),
+                      Row(
+                        children: [
+                          Text(dateStr, style: GoogleFonts.manrope(fontSize: 11, color: AppColors.textSecondary)),
+                          if (log['diet_type'] != null && (log['diet_type'] as String).isNotEmpty) ...[
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                              decoration: BoxDecoration(
+                                color: AppColors.primary.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                log['diet_type'],
+                                style: GoogleFonts.manrope(fontSize: 9, fontWeight: FontWeight.w700, color: AppColors.primary),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
                     ],
                   ),
                 ),
@@ -1155,9 +1113,7 @@ class _HomeScreenState extends State<HomeScreen> {
     
     final displayed = _displayedNutrients;
     final hasMore = active.length > 4;
-    final diet = _currentDietNutrisi;
-    final dietType = diet?['diet_type'] as String? ?? 'Diet Normal';
-    final evaluasi = diet?['evaluasi_ahli_gizi'] as String? ?? '';
+    final dietType = _currentDietName;
     
     // Ambil data Energi sebagai capaian utama jika ada
     final energyData = active['Energi (kkal)'];
@@ -1423,35 +1379,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
           ],
-          
-          // Catatan Ahli Gizi
-          if (evaluasi.isNotEmpty) ...[
-            const SizedBox(height: 20),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Icon(Icons.info_outline_rounded, color: Colors.white, size: 14),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Catatan: $evaluasi',
-                      style: GoogleFonts.manrope(
-                        fontSize: 11,
-                        fontStyle: FontStyle.italic,
-                        color: Colors.white.withValues(alpha: 0.9),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
+
         ],
       ),
     );

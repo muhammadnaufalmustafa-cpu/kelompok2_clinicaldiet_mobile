@@ -38,6 +38,8 @@ class _CatatanScreenState extends State<CatatanScreen> {
   bool _isLocked = false;
   List<String> _dietList = [];
   String? _selectedDietType;
+  String? _selectedPatientProgramId; // program aktif yang dipilih
+  List<Map<String, dynamic>> _patientPrograms = [];
   String _targetDietText = '';
   String _birthdate = '';
   String _gender = '';
@@ -51,8 +53,10 @@ class _CatatanScreenState extends State<CatatanScreen> {
   final _malamCtrl = TextEditingController();
 
   Map<String, dynamic> _targetNutrients = {};
-  String _diagnosis = '';
-  String _catatanKlinis = '';
+  String _diagnosis = '';           // dari profil pasien (fallback)
+  String _diagnosisProgram = '';    // dari program yang dipilih (dinamis)
+  String _catatanKlinis = '';       // dari profil pasien (fallback)
+  String _catatanProgram = '';      // dari program yang dipilih (dinamis)
 
   TimeOfDay? _jamPagi;
   TimeOfDay? _jamSelinganPagi;
@@ -77,16 +81,6 @@ class _CatatanScreenState extends State<CatatanScreen> {
         _birthdate = user['birthdate'] as String? ?? '';
         _gender = user['gender'] as String? ?? '';
 
-        // Fetch diet list
-        final raw = user['diet_types'];
-        if (raw is List && raw.isNotEmpty) {
-          _dietList = raw.cast<String>();
-        } else {
-          final single = user['diet_type'] as String? ?? '';
-          _dietList = single.isEmpty ? [] : [single];
-        }
-        if (_dietList.isNotEmpty) _selectedDietType = _dietList.first;
-
         // BB/TB dari histori terakhir
         final history = AuthService.getBBTBHistory(user);
         if (history.isNotEmpty) {
@@ -103,6 +97,56 @@ class _CatatanScreenState extends State<CatatanScreen> {
         }
       });
 
+      // Load patient therapy programs (dinamis dari Firestore)
+      final uid = user['uid'] as String? ?? '';
+      List<Map<String, dynamic>> programs = [];
+      if (uid.isNotEmpty) {
+        programs = await AuthService.getPatientTherapyPrograms(uid);
+      }
+      if (programs.isEmpty) {
+        programs = await AuthService.getPatientTherapyProgramsByRm(rm);
+      }
+      final activePrograms = programs.where((p) => p['status'] == 'active').toList();
+
+      if (activePrograms.isNotEmpty && mounted) {
+        // Cari program yang sesuai dengan patientProgramId dari Beranda (jika ada)
+        final initialProgram = widget.patientProgramId != null
+            ? activePrograms.firstWhere(
+                (p) => p['patientProgramId'] == widget.patientProgramId,
+                orElse: () => activePrograms.first,
+              )
+            : activePrograms.first;
+        final programId = initialProgram['patientProgramId'] as String?;
+        final programName = initialProgram['therapyProgramName'] as String? ?? '';
+        final programNotes = initialProgram['notes'] as String? ?? '';
+        final programDiagnosis = initialProgram['diagnosis'] as String? ?? '';
+        setState(() {
+          _patientPrograms = activePrograms;
+          _selectedPatientProgramId = programId;
+          _selectedDietType = programName;
+          _catatanProgram = programNotes;
+          _diagnosisProgram = programDiagnosis;
+          _dietList = activePrograms
+              .map((p) => p['therapyProgramName'] as String? ?? '')
+              .where((n) => n.isNotEmpty)
+              .toList();
+        });
+        // Load nutrients untuk program yang dipilih
+        if (programId != null) await _loadNutrientsForProgram(programId);
+      } else {
+        // Fallback ke legacy diet_types jika belum ada program
+        setState(() {
+          final raw = user['diet_types'];
+          if (raw is List && raw.isNotEmpty) {
+            _dietList = raw.cast<String>();
+          } else {
+            final single = user['diet_type'] as String? ?? '';
+            _dietList = single.isEmpty ? [] : [single];
+          }
+          if (_dietList.isNotEmpty) _selectedDietType = _dietList.first;
+        });
+      }
+
       // Ambil data diagnosis SEGAR dari Firestore (bukan hanya cache)
       final freshUser = await AuthService.getPasienByRm(rm);
       if (mounted && freshUser != null) {
@@ -116,36 +160,35 @@ class _CatatanScreenState extends State<CatatanScreen> {
           _catatanKlinis = user['catatan_klinis'] as String? ?? '-';
         });
       }
+    }
+  }
 
-      // Load target nutrients
-      if (widget.patientProgramId != null) {
-        AuthService.getNutritionTarget(widget.patientProgramId!).then((target) {
-          if (target != null && mounted) {
-            setState(() {
-              _targetNutrients = (target['nutrientItems'] as Map?)?.cast<String, dynamic>() ?? {};
-              _isLocked = _targetNutrients.values.every((v) => (v['target'] as num? ?? 0) == 0);
-            });
-          }
-        });
-      } else {
-        AuthService.getNutrisiPasienPerDiet(rm, _selectedDietType ?? '').then((nutrisi) {
-          if (nutrisi != null && mounted) {
-            setState(() {
-              _targetNutrients = nutrisi['target_nutrients'] ?? {};
-              _isLocked = _targetNutrients.values.every((v) => (v['target'] as num? ?? 0) == 0);
-            });
-          } else {
-            AuthService.getNutrisiPasien(rm).then((fallback) {
-              if (mounted) {
-                setState(() {
-                  final kTarget = (fallback?['kalori_target'] as num?)?.toDouble() ?? 0;
-                  _isLocked = kTarget == 0;
-                });
-              }
-            });
-          }
-        });
-      }
+  /// Hanya me-refresh target nutrisi + catatan program — tidak mengubah state lainnya
+  Future<void> _loadNutrientsForProgram(String programId) async {
+    // Ambil target nutrisi
+    final target = await AuthService.getNutritionTarget(programId);
+    if (target != null && mounted) {
+      setState(() {
+        _targetNutrients = (target['nutrientItems'] as Map?)?.cast<String, dynamic>() ?? {};
+        _isLocked = _targetNutrients.values.every((v) => (v['target'] as num? ?? 0) == 0);
+      });
+    } else if (mounted) {
+      setState(() {
+        _targetNutrients = {};
+        _isLocked = true;
+      });
+    }
+
+    // Ambil catatan/notes + diagnosis dari data program yang sudah di-load
+    final prog = _patientPrograms.firstWhere(
+      (p) => p['patientProgramId'] == programId,
+      orElse: () => <String, dynamic>{},
+    );
+    if (mounted) {
+      setState(() {
+        _catatanProgram = prog['notes'] as String? ?? '';
+        _diagnosisProgram = prog['diagnosis'] as String? ?? '';
+      });
     }
   }
 
@@ -349,7 +392,7 @@ class _CatatanScreenState extends State<CatatanScreen> {
         jamSiang: _jamSiang != null ? _timeOfDayToStr(_jamSiang!) : '',
         jamSelinganSore: _jamSelinganSore != null ? _timeOfDayToStr(_jamSelinganSore!) : '',
         jamMalam: _jamMalam != null ? _timeOfDayToStr(_jamMalam!) : '',
-        patientProgramId: widget.patientProgramId,
+        patientProgramId: _selectedPatientProgramId ?? widget.patientProgramId,
       );
 
       if (success) {
@@ -468,7 +511,26 @@ class _CatatanScreenState extends State<CatatanScreen> {
                         style: GoogleFonts.manrope(fontSize: 14, fontWeight: FontWeight.w600, color: const Color(0xFF4F46E5)),
                         dropdownColor: const Color(0xFFEEF2FF),
                         items: _dietList.map((d) => DropdownMenuItem(value: d, child: Text(d))).toList(),
-                        onChanged: _isLocked ? null : (v) => setState(() { _selectedDietType = v; _loadInitialData(); }),
+                        onChanged: _isLocked ? null : (v) async {
+                          if (v == null) return;
+                          // Cari program yang cocok dengan nama yang dipilih
+                          final matched = _patientPrograms.firstWhere(
+                            (p) => p['therapyProgramName'] == v,
+                            orElse: () => <String, dynamic>{},
+                          );
+                          final newProgramId = matched.isNotEmpty
+                              ? matched['patientProgramId'] as String?
+                              : null;
+                          // Update state pilihan dulu
+                          setState(() {
+                            _selectedDietType = v;
+                            _selectedPatientProgramId = newProgramId;
+                          });
+                          // Baru load nutrients untuk program yang dipilih
+                          if (newProgramId != null) {
+                            await _loadNutrientsForProgram(newProgramId);
+                          }
+                        },
                       ),
                     const SizedBox(height: 24),
                   ],
@@ -781,9 +843,11 @@ class _CatatanScreenState extends State<CatatanScreen> {
             ],
           ),
           const SizedBox(height: 12),
-          _clinicalRow('Diagnosis', _diagnosis),
+          _clinicalRow('Diagnosis', _diagnosisProgram.isNotEmpty ? _diagnosisProgram : _diagnosis),
           _clinicalRow('Terapi Diet', _selectedDietType ?? '-'),
-          if (_catatanKlinis.isNotEmpty && _catatanKlinis != '-')
+          if (_catatanProgram.isNotEmpty)
+            _clinicalRow('Catatan Ahli Gizi', _catatanProgram)
+          else if (_catatanKlinis.isNotEmpty && _catatanKlinis != '-')
             _clinicalRow('Catatan Ahli Gizi', _catatanKlinis),
           const Divider(height: 16, color: Color(0xFF86EFAC)),
           Row(

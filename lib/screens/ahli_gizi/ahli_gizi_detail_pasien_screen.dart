@@ -407,6 +407,27 @@ class _AhliGiziDetailPasienScreenState
         terapiDiet: effectiveDiet,
       );
 
+      // 2b. Simpan diagnosis ke program yang aktif (per-program)
+      if (_selectedPatientProgram != null) {
+        final pid = _selectedPatientProgram!['patientProgramId'] as String?;
+        if (pid != null && pid != 'initial_onboarding') {
+          await AuthService.updateProgramDiagnosis(
+            patientProgramId: pid,
+            diagnosis: _diagnosisCtrl.text,
+          );
+          // Update local state agar langsung sinkron
+          if (mounted) {
+            setState(() {
+              final idx = _patientPrograms.indexWhere((p) => p['patientProgramId'] == pid);
+              if (idx != -1) {
+                _patientPrograms[idx] = {..._patientPrograms[idx], 'diagnosis': _diagnosisCtrl.text};
+                _selectedPatientProgram = _patientPrograms[idx];
+              }
+            });
+          }
+        }
+      }
+
       // 3. Simpan target diet (text summary legacy)
       await AuthService.saveTargetDietPasien(
         rm: rm,
@@ -1543,7 +1564,25 @@ class _AhliGiziDetailPasienScreenState
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('Tanggal: $displayDate', style: GoogleFonts.manrope(fontWeight: FontWeight.w700, fontSize: 13, color: AppColors.primary)),
+                      Row(
+                        children: [
+                          Text('Tanggal: $displayDate', style: GoogleFonts.manrope(fontWeight: FontWeight.w700, fontSize: 13, color: AppColors.primary)),
+                          if (log['diet_type'] != null && (log['diet_type'] as String).isNotEmpty) ...[
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: AppColors.primary.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                log['diet_type'],
+                                style: GoogleFonts.manrope(fontSize: 10, fontWeight: FontWeight.w700, color: AppColors.primary),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
                       if (log['berat_badan'] != null)
                         Text('BB: ${log['berat_badan']} kg', style: GoogleFonts.manrope(fontSize: 11, color: AppColors.textSecondary)),
                     ],

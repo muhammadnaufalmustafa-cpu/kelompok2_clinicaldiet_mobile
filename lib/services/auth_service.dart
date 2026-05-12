@@ -1709,16 +1709,42 @@ class AuthService {
     }
   }
 
+  /// Menyimpan diagnosis ke dokumen patientTherapyPrograms (per program)
+  static Future<void> updateProgramDiagnosis({
+    required String patientProgramId,
+    required String diagnosis,
+  }) async {
+    try {
+      await FirebaseFirestore.instance
+          .collection('patientTherapyPrograms')
+          .doc(patientProgramId)
+          .update({
+        'diagnosis': diagnosis,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      print('Error updateProgramDiagnosis: $e');
+    }
+  }
+
   static Future<List<Map<String, dynamic>>> getPatientTherapyPrograms(String patientId) async {
     try {
       final snapshot = await FirebaseFirestore.instance
           .collection('patientTherapyPrograms')
           .where('patientId', isEqualTo: patientId)
-          .orderBy('createdAt', descending: true)
           .get()
           .timeout(const Duration(seconds: 10));
-      return snapshot.docs.map((d) => {'patientProgramId': d.id, ...d.data()}).toList();
+          
+      final docs = snapshot.docs.map((d) => {'patientProgramId': d.id, ...d.data()}).toList();
+      // Sort locally to avoid Firebase composite index requirement
+      docs.sort((a, b) {
+        final dateA = (a['createdAt'] as Timestamp?)?.toDate() ?? DateTime(2000);
+        final dateB = (b['createdAt'] as Timestamp?)?.toDate() ?? DateTime(2000);
+        return dateB.compareTo(dateA); // Descending
+      });
+      return docs;
     } catch (e) {
+      print('Error in getPatientTherapyPrograms: $e');
       return [];
     }
   }
@@ -1728,11 +1754,19 @@ class AuthService {
       final snapshot = await FirebaseFirestore.instance
           .collection('patientTherapyPrograms')
           .where('patientRm', isEqualTo: patientRm)
-          .orderBy('createdAt', descending: true)
           .get()
           .timeout(const Duration(seconds: 10));
-      return snapshot.docs.map((d) => {'patientProgramId': d.id, ...d.data()}).toList();
+          
+      final docs = snapshot.docs.map((d) => {'patientProgramId': d.id, ...d.data()}).toList();
+      // Sort locally to avoid Firebase composite index requirement
+      docs.sort((a, b) {
+        final dateA = (a['createdAt'] as Timestamp?)?.toDate() ?? DateTime(2000);
+        final dateB = (b['createdAt'] as Timestamp?)?.toDate() ?? DateTime(2000);
+        return dateB.compareTo(dateA); // Descending
+      });
+      return docs;
     } catch (e) {
+      print('Error in getPatientTherapyProgramsByRm: $e');
       return [];
     }
   }
