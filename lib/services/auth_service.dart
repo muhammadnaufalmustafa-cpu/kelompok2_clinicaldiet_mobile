@@ -1095,22 +1095,45 @@ class AuthService {
     required String catatanKlinis,
     String? terapiDiet,
   }) async {
-    final prefs = await SharedPreferences.getInstance();
-    final json = prefs.getString(_usersKey);
-    if (json == null) return false;
-    
-    final decoded = jsonDecode(json) as List;
-    final list = decoded.cast<Map<String, dynamic>>();
-    final idx = list.indexWhere((u) => u['role'] == 'pasien' && u['rm'] == rm);
-    
-    if (idx != -1) {
-      list[idx]['diagnosis'] = diagnosis;
-      list[idx]['catatan_klinis'] = catatanKlinis;
-      if (terapiDiet != null) {
-        list[idx]['diet_type'] = terapiDiet;
+    try {
+      // 1. Update in Firestore
+      final snapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .where('rm', isEqualTo: rm)
+          .where('role', isEqualTo: 'pasien')
+          .limit(1)
+          .get();
+          
+      if (snapshot.docs.isNotEmpty) {
+        final docRef = snapshot.docs.first.reference;
+        final Map<String, dynamic> updateData = {
+          'diagnosis': diagnosis,
+          'catatan_klinis': catatanKlinis,
+          'updated_at': FieldValue.serverTimestamp(),
+        };
+        if (terapiDiet != null) {
+          updateData['diet_type'] = terapiDiet;
+        }
+        await docRef.update(updateData);
       }
-      
-      await prefs.setString(_usersKey, jsonEncode(_makeEncodable(list)));
+
+      // 2. Update locally in SharedPreferences
+      final prefs = await SharedPreferences.getInstance();
+      final json = prefs.getString(_usersKey);
+      if (json != null) {
+        final decoded = jsonDecode(json) as List;
+        final list = decoded.cast<Map<String, dynamic>>();
+        final idx = list.indexWhere((u) => u['role'] == 'pasien' && u['rm'] == rm);
+        
+        if (idx != -1) {
+          list[idx]['diagnosis'] = diagnosis;
+          list[idx]['catatan_klinis'] = catatanKlinis;
+          if (terapiDiet != null) {
+            list[idx]['diet_type'] = terapiDiet;
+          }
+          await prefs.setString(_usersKey, jsonEncode(_makeEncodable(list)));
+        }
+      }
       
       final current = await getLoggedInUser();
       if (current != null && current['rm'] == rm) {
@@ -1120,8 +1143,10 @@ class AuthService {
         await prefs.setString(_loggedInUserKey, jsonEncode(_makeEncodable(current)));
       }
       return true;
+    } catch (e) {
+      print('Error updateClinicalData: $e');
+      return false;
     }
-    return false;
   }
 
   static Future<Map<String, dynamic>?> getNutrisiPasien(String rmPasien) async {
@@ -1731,6 +1756,34 @@ class AuthService {
     }
   }
 
+  static Future<bool> updatePatientProgramPeriod({
+    required String patientProgramId,
+    required String startDate,
+    String? endDate,
+    String? notes,
+  }) async {
+    try {
+      final updateData = <String, dynamic>{
+        'startDate': startDate,
+        'updatedAt': FieldValue.serverTimestamp(),
+      };
+      if (endDate != null) {
+        updateData['endDate'] = endDate;
+      }
+      if (notes != null) {
+        updateData['notes'] = notes;
+      }
+      
+      await FirebaseFirestore.instance
+          .collection('patientTherapyPrograms')
+          .doc(patientProgramId)
+          .update(updateData);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
   // ─── NUTRITION TARGETS (per patientProgram) ───────────────────────────────
 
   static Future<bool> saveNutritionTarget({
@@ -1859,6 +1912,56 @@ class AuthService {
       return data.map(_makeEncodable).toList();
     }
     return data;
+  }
+
+  // ─── REVIEWS ────────────────────────────────────────────────────────────────
+  
+  static Future<bool> saveReview({
+    required String patientProgramId,
+    required String patientId,
+    required String patientName,
+    required String ahliGiziNip,
+    required double rating,
+    required String ulasan,
+  }) async {
+    try {
+      // Simpan review di koleksi reviews
+      await FirebaseFirestore.instance.collection('reviews').add({
+        'patientProgramId': patientProgramId,
+        'patientId': patientId,
+        'patientName': patientName,
+        'ahliGiziNip': ahliGiziNip,
+        'rating': rating,
+        'ulasan': ulasan,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  static Future<List<Map<String, dynamic>>> getReviewsByAhliGizi(String nip) async {
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('reviews')
+          .where('ahliGiziNip', isEqualTo: nip)
+          .orderBy('createdAt', descending: true)
+          .get()
+          .timeout(const Duration(seconds: 10));
+
+      return snapshot.docs.map((doc) {
+        final data = doc.data();
+        data['id'] = doc.id;
+        final rawTs = data['createdAt'];
+        if (rawTs is Timestamp) {
+          data['createdAt'] = rawTs.toDate().toIso8601String();
+        }
+        return data;
+      }).toList();
+    } catch (e) {
+      return [];
+    }
   }
 }
 

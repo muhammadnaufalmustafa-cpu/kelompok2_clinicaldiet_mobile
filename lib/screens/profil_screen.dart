@@ -8,6 +8,7 @@ import '../services/auth_service.dart';
 import 'login_screen.dart';
 import 'pilih_jenis_diet_screen.dart';
 import 'pilih_ahli_gizi_screen.dart';
+import 'review_program_screen.dart';
 
 class ProfilScreen extends StatefulWidget {
   const ProfilScreen({super.key});
@@ -20,6 +21,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
   Map<String, dynamic>? _user;
   Map<String, dynamic>? _selectedAhliGizi;
   List<Map<String, dynamic>> _nutrisiList = [];
+  List<Map<String, dynamic>> _patientPrograms = [];
   final ImagePicker _picker = ImagePicker();
 
   @override
@@ -37,10 +39,15 @@ class _ProfilScreenState extends State<ProfilScreen> {
       if (user != null && user['rm'] != null) {
         final ag = await AuthService.getSelectedAhliGizi(user['rm'] as String);
         final nutrisi = await AuthService.getAllNutrisiPasien(user['rm'] as String);
+        List<Map<String, dynamic>> programs = [];
+        if (user['uid'] != null) {
+          programs = await AuthService.getPatientTherapyPrograms(user['uid']);
+        }
         if (mounted) {
           setState(() {
             _selectedAhliGizi = ag;
             _nutrisiList = nutrisi;
+            _patientPrograms = programs;
           });
         }
       }
@@ -1340,6 +1347,14 @@ class _ProfilScreenState extends State<ProfilScreen> {
                           title: 'Target Gizi Harian',
                           onTap: _showTargetGiziDialog,
                         ),
+                        _divider(),
+                        _buildActionItem(
+                          icon: Icons.history,
+                          title: 'Riwayat Program Diet',
+                          onTap: () {
+                            _showRiwayatProgramDialog();
+                          },
+                        ),
                       ],
                     ),
                   ),
@@ -1472,6 +1487,124 @@ class _ProfilScreenState extends State<ProfilScreen> {
       trailing:
           const Icon(Icons.chevron_right, color: AppColors.textMuted, size: 20),
       onTap: onTap,
+    );
+  }
+
+  void _showRiwayatProgramDialog() {
+    final completedPrograms = _patientPrograms.where((p) => p['status'] == 'completed').toList();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => DraggableScrollableSheet(
+        initialChildSize: 0.6,
+        maxChildSize: 0.9,
+        minChildSize: 0.4,
+        builder: (_, scrollCtrl) => Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: Column(
+            children: [
+              Center(
+                child: Container(
+                  margin: const EdgeInsets.only(top: 12, bottom: 8),
+                  width: 40, height: 4,
+                  decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2)),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+                child: Row(children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(color: AppColors.primaryLight, borderRadius: BorderRadius.circular(10)),
+                    child: const Icon(Icons.history, color: AppColors.primary, size: 20),
+                  ),
+                  const SizedBox(width: 12),
+                  Text('Riwayat Program', style: GoogleFonts.manrope(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
+                ]),
+              ),
+              const Divider(height: 1),
+              Expanded(
+                child: completedPrograms.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.history_toggle_off, size: 48, color: Colors.grey[300]),
+                            const SizedBox(height: 12),
+                            Text('Belum ada program diet yang diselesaikan.',
+                              style: GoogleFonts.manrope(fontSize: 14, color: AppColors.textSecondary)),
+                          ],
+                        ),
+                      )
+                    : ListView.builder(
+                        controller: scrollCtrl,
+                        padding: const EdgeInsets.all(16),
+                        itemCount: completedPrograms.length,
+                        itemBuilder: (context, index) {
+                          final prog = completedPrograms[index];
+                          final name = prog['therapyProgramName'] ?? 'Program Diet';
+                          final start = prog['startDate'] ?? '';
+                          final end = prog['endDate'] ?? '';
+                          
+                          String dateRange = '';
+                          if (start.isNotEmpty && end.isNotEmpty) {
+                            try {
+                              final d1 = DateTime.parse(start);
+                              final d2 = DateTime.parse(end);
+                              dateRange = '${d1.day}/${d1.month}/${d1.year} - ${d2.day}/${d2.month}/${d2.year}';
+                            } catch (_) {}
+                          }
+
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: 12),
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: AppColors.background,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: AppColors.divider),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(name, style: GoogleFonts.manrope(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
+                                if (dateRange.isNotEmpty) ...[
+                                  const SizedBox(height: 4),
+                                  Text(dateRange, style: GoogleFonts.manrope(fontSize: 12, color: AppColors.textSecondary)),
+                                ],
+                                const SizedBox(height: 12),
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: OutlinedButton.icon(
+                                    onPressed: () {
+                                      Navigator.pop(ctx);
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(builder: (_) => ReviewProgramScreen(program: prog, user: _user!)),
+                                      );
+                                    },
+                                    icon: const Icon(Icons.rate_review_outlined, size: 16, color: Color(0xFFD97706)),
+                                    label: Text('Beri Ulasan', style: GoogleFonts.manrope(fontWeight: FontWeight.w600, fontSize: 13, color: const Color(0xFFD97706))),
+                                    style: OutlinedButton.styleFrom(
+                                      side: const BorderSide(color: Color(0xFFFDE68A)),
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

@@ -11,6 +11,7 @@ import '../../services/web_download.dart';
 import '../../utils/age_calculator.dart';
 import 'laporan_pasien_screen.dart';
 import 'laporan_harian_ag_screen.dart';
+import '../../services/firebase_notification_service.dart';
 
 class AhliGiziDetailPasienScreen extends StatefulWidget {
   final Map<String, dynamic> pasien;
@@ -56,6 +57,28 @@ class _AhliGiziDetailPasienScreenState
     'Diet Rendah Purin',
     'Diet Tinggi Kalori Tinggi Protein',
     'Diet Khusus/Lainnya'
+  ];
+
+  static const List<String> _icd10List = [
+    'E11.9 - Diabetes Mellitus Tipe 2 tanpa Komplikasi',
+    'I10 - Hipertensi Esensial (Primer)',
+    'E66.9 - Obesitas, tidak Spesifik',
+    'E44.0 - Malnutrisi Energi-Protein Sedang',
+    'N18.9 - Penyakit Ginjal Kronis, tidak Spesifik',
+    'K74.6 - Sirosis Hati lainnya dan tidak Spesifik',
+    'E78.5 - Hiperlipidemia, tidak Spesifik',
+    'Z71.3 - Konseling dan Pengawasan Diet',
+    'K21.9 - Penyakit Refluks Gastroesofagus (GERD) tanpa Esofagitis',
+    'M10.9 - Gout, tidak Spesifik',
+    'E10.9 - Diabetes Mellitus Tipe 1 tanpa Komplikasi',
+    'I25.1 - Penyakit Jantung Aterosklerotik',
+    'K52.9 - Gastroenteritis dan Kolitis Non-infeksi, tidak Spesifik',
+    'R63.4 - Penurunan Berat Badan yang Tidak Diinginkan',
+    'D64.9 - Anemia, tidak Spesifik',
+    'K29.7 - Gastritis, tidak Spesifik',
+    'E11.65 - Diabetes Mellitus Tipe 2 dengan Hiperglikemia',
+    'I20.9 - Angina Pektoris, tidak Spesifik',
+    'K58.9 - Irritable Bowel Syndrome (IBS) tanpa Diare',
   ];
 
   // ── Dynamic Nutrition Target controllers & state ──
@@ -465,9 +488,7 @@ class _AhliGiziDetailPasienScreenState
               decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14)),
               child: Column(
                 children: [
-                  _buildNutrisiField(
-                      'Diagnosis (ICD 10)', _diagnosisCtrl, 'Ketik diagnosis...', '',
-                      keyboardType: TextInputType.text),
+                  _buildDiagnosisAutocompleteField(),
                   const SizedBox(height: 12),
                   _buildNutrisiField('Catatan / Evaluasi Klinis',
                       _catatanNutrisiCtrl, 'Ketik catatan...', '',
@@ -541,6 +562,52 @@ class _AhliGiziDetailPasienScreenState
             
             // ── RIWAYAT CATATAN MAKANAN ──
             _buildRiwayatMakanSection(),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () async {
+                  final patientId = widget.pasien['uid'] as String?;
+                  if (patientId == null || patientId.isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('ID Pasien tidak ditemukan.')));
+                    return;
+                  }
+                  
+                  // Tampilkan indikator loading
+                  showDialog(
+                    context: context,
+                    barrierDismissible: false,
+                    builder: (_) => const Center(child: CircularProgressIndicator(color: AppColors.primary)),
+                  );
+                  
+                  await FirebaseNotificationService.createNotification(
+                    userId: patientId,
+                    role: 'pasien',
+                    title: 'Pengingat dari Ahli Gizi',
+                    message: 'Halo! Ahli gizi Anda mengingatkan untuk segera mengisi catatan makan hari ini. Yuk, isi sekarang agar perkembangan Anda dapat dipantau.',
+                    type: 'alert_log',
+                  );
+                  
+                  if (context.mounted) {
+                    Navigator.pop(context); // Tutup loading
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Pengingat berhasil dikirim ke pasien.', style: GoogleFonts.manrope()),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                  }
+                },
+                icon: const Icon(Icons.notifications_active_outlined, size: 18, color: Colors.white),
+                label: Text('Kirim Pengingat Catatan Makan', style: GoogleFonts.manrope(fontWeight: FontWeight.w700, fontSize: 13, color: Colors.white)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.orange,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  elevation: 0,
+                ),
+              ),
+            ),
             const SizedBox(height: 12),
             Row(
               children: [
@@ -1515,6 +1582,96 @@ class _AhliGiziDetailPasienScreenState
     );
   }
 
+  Widget _buildDiagnosisAutocompleteField() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Diagnosis (ICD 10)',
+            style: GoogleFonts.manrope(
+                fontSize: 11,
+                color: AppColors.textSecondary,
+                fontWeight: FontWeight.w600)),
+        const SizedBox(height: 6),
+        Autocomplete<String>(
+          initialValue: TextEditingValue(text: _diagnosisCtrl.text),
+          optionsBuilder: (TextEditingValue textEditingValue) {
+            if (textEditingValue.text.isEmpty) {
+              return const Iterable<String>.empty();
+            }
+            return _icd10List.where((String option) {
+              return option.toLowerCase().contains(textEditingValue.text.toLowerCase());
+            });
+          },
+          onSelected: (String selection) {
+            _diagnosisCtrl.text = selection;
+          },
+          fieldViewBuilder: (context, textEditingController, focusNode, onFieldSubmitted) {
+            // Sinkronisasi controller utama dengan controller Autocomplete
+            textEditingController.text = _diagnosisCtrl.text;
+            textEditingController.addListener(() {
+              _diagnosisCtrl.text = textEditingController.text;
+            });
+
+            return TextField(
+              controller: textEditingController,
+              focusNode: focusNode,
+              style: GoogleFonts.manrope(
+                  fontSize: 14,
+                  color: AppColors.textPrimary,
+                  fontWeight: FontWeight.w600),
+              decoration: InputDecoration(
+                hintText: 'Ketik kode atau nama diagnosa...',
+                hintStyle: GoogleFonts.manrope(color: AppColors.textMuted, fontSize: 13),
+                filled: true,
+                fillColor: AppColors.background,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide.none,
+                ),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                suffixIcon: const Icon(Icons.search, size: 18, color: AppColors.textMuted),
+              ),
+              onSubmitted: (value) {
+                onFieldSubmitted();
+              },
+            );
+          },
+          optionsViewBuilder: (context, onSelected, options) {
+            return Align(
+              alignment: Alignment.topLeft,
+              child: Material(
+                elevation: 4.0,
+                borderRadius: BorderRadius.circular(10),
+                child: Container(
+                  width: MediaQuery.of(context).size.width - 64,
+                  constraints: const BoxConstraints(maxHeight: 200),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: ListView.builder(
+                    padding: EdgeInsets.zero,
+                    shrinkWrap: true,
+                    itemCount: options.length,
+                    itemBuilder: (BuildContext context, int index) {
+                      final String option = options.elementAt(index);
+                      return ListTile(
+                        title: Text(option, style: GoogleFonts.manrope(fontSize: 13)),
+                        onTap: () {
+                          onSelected(option);
+                        },
+                      );
+                    },
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+      ],
+    );
+  }
+
   Widget _buildNutrisiField(String label, TextEditingController ctrl,
       String hint, String suffix,
       {TextInputType keyboardType =
@@ -1836,6 +1993,8 @@ class _AhliGiziDetailPasienScreenState
               if (_selectedPatientProgram != null) ...[
                 const SizedBox(height: 12),
                 _buildProgramStatusButtons(),
+                const SizedBox(height: 8),
+                _buildProgramPeriodInfo(),
               ],
             ],
           ),
@@ -1888,6 +2047,214 @@ class _AhliGiziDetailPasienScreenState
           ].last) const SizedBox(width: 8),
         ],
       ],
+    );
+  }
+
+  Widget _buildProgramPeriodInfo() {
+    final prog = _selectedPatientProgram;
+    if (prog == null) return const SizedBox.shrink();
+
+    final startDateStr = prog['startDate'] as String? ?? '';
+    final endDateStr = prog['endDate'] as String? ?? '';
+    final notes = prog['notes'] as String? ?? '';
+
+    String fmtDate(String d) {
+      if (d.isEmpty) return '-';
+      try {
+        final dt = DateTime.parse(d).toLocal();
+        return '${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')}/${dt.year}';
+      } catch (_) {
+        return d;
+      }
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.background,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.divider),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Periode Program', style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
+              TextButton.icon(
+                onPressed: () => _showEditPeriodDialog(prog),
+                icon: const Icon(Icons.edit_calendar, size: 16, color: AppColors.primary),
+                label: Text('Atur Periode', style: GoogleFonts.manrope(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primary)),
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(child: _buildInfoRow('Mulai', fmtDate(startDateStr))),
+              Expanded(child: _buildInfoRow('Selesai', fmtDate(endDateStr))),
+            ],
+          ),
+          if (notes.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Text('Catatan Periode:', style: GoogleFonts.manrope(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+            const SizedBox(height: 2),
+            Text(notes, style: GoogleFonts.manrope(fontSize: 13, color: AppColors.textPrimary)),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showEditPeriodDialog(Map<String, dynamic> program) async {
+    DateTime? selectedStartDate;
+    DateTime? selectedEndDate;
+    final notesCtrl = TextEditingController(text: program['notes'] as String? ?? '');
+
+    if (program['startDate'] != null) {
+      try { selectedStartDate = DateTime.parse(program['startDate'] as String).toLocal(); } catch (_) {}
+    } else {
+      selectedStartDate = DateTime.now();
+    }
+    if (program['endDate'] != null) {
+      try { selectedEndDate = DateTime.parse(program['endDate'] as String).toLocal(); } catch (_) {}
+    }
+
+    await showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDlgState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Text('Atur Periode Diet', style: GoogleFonts.manrope(fontWeight: FontWeight.w700, fontSize: 16, color: AppColors.textPrimary)),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Tanggal Mulai', style: GoogleFonts.manrope(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                const SizedBox(height: 6),
+                InkWell(
+                  onTap: () async {
+                    final dt = await showDatePicker(
+                      context: ctx,
+                      initialDate: selectedStartDate ?? DateTime.now(),
+                      firstDate: DateTime(2020),
+                      lastDate: DateTime(2030),
+                    );
+                    if (dt != null) setDlgState(() => selectedStartDate = dt);
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(color: AppColors.background, borderRadius: BorderRadius.circular(10), border: Border.all(color: AppColors.divider)),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(selectedStartDate != null ? '${selectedStartDate!.day}/${selectedStartDate!.month}/${selectedStartDate!.year}' : 'Pilih Tanggal', style: GoogleFonts.manrope(fontSize: 13, color: AppColors.textPrimary)),
+                        const Icon(Icons.calendar_today, size: 16, color: AppColors.textSecondary),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text('Tanggal Selesai (Opsional)', style: GoogleFonts.manrope(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                const SizedBox(height: 6),
+                InkWell(
+                  onTap: () async {
+                    final dt = await showDatePicker(
+                      context: ctx,
+                      initialDate: selectedEndDate ?? selectedStartDate ?? DateTime.now(),
+                      firstDate: DateTime(2020),
+                      lastDate: DateTime(2030),
+                    );
+                    if (dt != null) setDlgState(() => selectedEndDate = dt);
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(color: AppColors.background, borderRadius: BorderRadius.circular(10), border: Border.all(color: AppColors.divider)),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(selectedEndDate != null ? '${selectedEndDate!.day}/${selectedEndDate!.month}/${selectedEndDate!.year}' : 'Pilih Tanggal', style: GoogleFonts.manrope(fontSize: 13, color: AppColors.textPrimary)),
+                        if (selectedEndDate != null)
+                          GestureDetector(
+                            onTap: () => setDlgState(() => selectedEndDate = null),
+                            child: const Icon(Icons.close, size: 16, color: Colors.red),
+                          )
+                        else
+                          const Icon(Icons.calendar_today, size: 16, color: AppColors.textSecondary),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text('Catatan Periode', style: GoogleFonts.manrope(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                const SizedBox(height: 6),
+                TextField(
+                  controller: notesCtrl,
+                  maxLines: 2,
+                  style: GoogleFonts.manrope(fontSize: 13),
+                  decoration: InputDecoration(
+                    hintText: 'Misal: Target turun 2kg dalam 2 minggu...',
+                    hintStyle: GoogleFonts.manrope(fontSize: 12, color: AppColors.textMuted),
+                    filled: true, fillColor: AppColors.background,
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+                    contentPadding: const EdgeInsets.all(10),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Batal', style: GoogleFonts.manrope(color: AppColors.textSecondary))),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)), elevation: 0),
+              onPressed: selectedStartDate == null ? null : () async {
+                Navigator.pop(ctx);
+                final patientProgramId = program['patientProgramId'] as String;
+                if (patientProgramId == 'initial_onboarding') {
+                   // Cannot edit virtual program period
+                   ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Silakan simpan data terlebih dahulu sebelum mengatur periode.')));
+                   return;
+                }
+                
+                final success = await AuthService.updatePatientProgramPeriod(
+                  patientProgramId: patientProgramId,
+                  startDate: selectedStartDate!.toIso8601String(),
+                  endDate: selectedEndDate?.toIso8601String(),
+                  notes: notesCtrl.text,
+                );
+                
+                if (success && mounted) {
+                  // Update local state
+                  setState(() {
+                    final idx = _patientPrograms.indexWhere((p) => p['patientProgramId'] == patientProgramId);
+                    if (idx != -1) {
+                      _patientPrograms[idx] = {
+                        ..._patientPrograms[idx],
+                        'startDate': selectedStartDate!.toIso8601String(),
+                        'endDate': selectedEndDate?.toIso8601String(),
+                        'notes': notesCtrl.text,
+                      };
+                      _selectedPatientProgram = _patientPrograms[idx];
+                    }
+                  });
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                    content: Text('Periode diet berhasil diperbarui.', style: GoogleFonts.manrope()),
+                    backgroundColor: AppColors.primary, behavior: SnackBarBehavior.floating,
+                  ));
+                }
+              },
+              child: Text('Simpan', style: GoogleFonts.manrope(fontWeight: FontWeight.w700, color: Colors.white)),
+            ),
+          ],
+        ),
+      ),
     );
   }
 

@@ -8,6 +8,9 @@ import 'catatan_screen.dart';
 import 'edukasi_screen.dart';
 import 'laporan_harian_screen.dart';
 import '../services/auth_service.dart';
+import '../services/firebase_notification_service.dart';
+import 'notifikasi_screen.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 enum AgeCategory { balita, anakRemaja, dewasa }
 
@@ -131,6 +134,11 @@ class _HomeScreenState extends State<HomeScreen> {
           selectedAhliGizi = ag;
           ahliGiziName = ag['name'] as String? ?? '';
         } catch (_) {}
+      }
+
+      // Check daily alert
+      if (uid.isNotEmpty) {
+        FirebaseNotificationService.checkAndCreateDailyAlert(rm, uid);
       }
     }
     if (mounted) {
@@ -308,6 +316,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   _buildBBTBCard(),
                   // ── Program Terapi Diet Selector ──
                   _buildProgramSelector(),
+                  // ── Periode Program Terapi Diet ──
+                  _buildProgramPeriod(),
                   // ── Kartu Ahli Gizi Utama ──
                   if (_selectedAhliGizi != null) _buildAhliGiziCard(context),
                   // ── Evaluasi Ahli Gizi ──
@@ -568,6 +578,119 @@ class _HomeScreenState extends State<HomeScreen> {
               }).toList(),
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProgramPeriod() {
+    if (_patientPrograms.isEmpty || _selectedPatientProgramId == null) return const SizedBox.shrink();
+    
+    final prog = _patientPrograms.firstWhere((p) => p['patientProgramId'] == _selectedPatientProgramId, orElse: () => {});
+    if (prog.isEmpty) return const SizedBox.shrink();
+
+    final startDateStr = prog['startDate'] as String? ?? '';
+    final endDateStr = prog['endDate'] as String? ?? '';
+    final notes = prog['notes'] as String? ?? '';
+
+    if (startDateStr.isEmpty && endDateStr.isEmpty) return const SizedBox.shrink();
+
+    String fmtDate(String d) {
+      if (d.isEmpty) return '-';
+      try {
+        final dt = DateTime.parse(d).toLocal();
+        return '${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')}/${dt.year}';
+      } catch (_) {
+        return d;
+      }
+    }
+
+    int? remainingDays;
+    if (endDateStr.isNotEmpty) {
+      try {
+        final endDt = DateTime.parse(endDateStr).toLocal();
+        final now = DateTime.now();
+        final diff = endDt.difference(DateTime(now.year, now.month, now.day)).inDays;
+        remainingDays = diff >= 0 ? diff : 0;
+      } catch (_) {}
+    }
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.divider),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.date_range, color: AppColors.primary, size: 18),
+                  const SizedBox(width: 8),
+                  Text('Periode Diet', style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
+                ],
+              ),
+              if (remainingDays != null)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: remainingDays <= 3 ? Colors.orange.withValues(alpha: 0.15) : AppColors.primary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    remainingDays == 0 ? 'Hari Terakhir' : 'Sisa $remainingDays hari',
+                    style: GoogleFonts.manrope(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: remainingDays <= 3 ? Colors.orange[800] : AppColors.primary,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Mulai', style: GoogleFonts.manrope(fontSize: 11, color: AppColors.textSecondary)),
+                    const SizedBox(height: 2),
+                    Text(fmtDate(startDateStr), style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+                  ],
+                ),
+              ),
+              Container(width: 1, height: 30, color: AppColors.divider),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.only(left: 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Selesai', style: GoogleFonts.manrope(fontSize: 11, color: AppColors.textSecondary)),
+                      const SizedBox(height: 2),
+                      Text(fmtDate(endDateStr), style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (notes.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            const Divider(),
+            const SizedBox(height: 6),
+            Text('Catatan:', style: GoogleFonts.manrope(fontSize: 11, color: AppColors.textSecondary)),
+            const SizedBox(height: 2),
+            Text(notes, style: GoogleFonts.manrope(fontSize: 12, color: AppColors.textPrimary, height: 1.4)),
+          ],
         ],
       ),
     );
@@ -978,19 +1101,45 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
               const SizedBox(width: 8),
-              IconButton(
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Tidak ada notifikasi baru.', style: GoogleFonts.manrope()),
-                      backgroundColor: AppColors.primary,
-                      behavior: SnackBarBehavior.floating,
-                    ),
+              StreamBuilder<QuerySnapshot>(
+                stream: _user != null && _user!['uid'] != null ? FirebaseNotificationService.getUserNotifications(_user!['uid'], 'pasien') : null,
+                builder: (context, snapshot) {
+                  int unreadCount = 0;
+                  if (snapshot.hasData) {
+                    unreadCount = snapshot.data!.docs.where((doc) => doc['isRead'] == false).length;
+                  }
+                  
+                  return Stack(
+                    children: [
+                      IconButton(
+                        onPressed: () {
+                          if (_user != null && _user!['uid'] != null) {
+                            Navigator.push(context, MaterialPageRoute(builder: (_) => NotifikasiScreen(userId: _user!['uid'], role: 'pasien')));
+                          }
+                        },
+                        icon: const Icon(Icons.notifications_outlined, color: AppColors.textSecondary),
+                        constraints: const BoxConstraints(),
+                        padding: EdgeInsets.zero,
+                      ),
+                      if (unreadCount > 0)
+                        Positioned(
+                          right: 0,
+                          top: 0,
+                          child: Container(
+                            padding: const EdgeInsets.all(2),
+                            decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
+                            constraints: const BoxConstraints(minWidth: 14, minHeight: 14),
+                            child: Center(
+                              child: Text(
+                                unreadCount > 9 ? '9+' : '$unreadCount',
+                                style: GoogleFonts.manrope(color: Colors.white, fontSize: 8, fontWeight: FontWeight.w700),
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
                   );
                 },
-                icon: const Icon(Icons.notifications_outlined, color: AppColors.textSecondary),
-                constraints: const BoxConstraints(),
-                padding: EdgeInsets.zero,
               ),
             ],
           ),

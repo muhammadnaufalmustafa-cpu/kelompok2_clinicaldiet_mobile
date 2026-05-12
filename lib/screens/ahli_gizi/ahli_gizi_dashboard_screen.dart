@@ -5,6 +5,9 @@ import '../../theme/app_theme.dart';
 import '../../services/auth_service.dart';
 import '../../utils/age_calculator.dart';
 import 'ahli_gizi_detail_pasien_screen.dart';
+import '../../services/firebase_notification_service.dart';
+import '../notifikasi_screen.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class AhliGiziDashboardScreen extends StatefulWidget {
   const AhliGiziDashboardScreen({super.key});
@@ -17,6 +20,7 @@ class AhliGiziDashboardScreen extends StatefulWidget {
 class _AhliGiziDashboardScreenState extends State<AhliGiziDashboardScreen> {
   Map<String, dynamic>? _user;
   List<Map<String, dynamic>> _allPasien = [];
+  List<Map<String, dynamic>> _reviewsList = [];
   bool _isLoading = true;
 
   @override
@@ -35,10 +39,16 @@ class _AhliGiziDashboardScreenState extends State<AhliGiziDashboardScreen> {
       p['selected_ahli_gizi_nip'] == user?['nip']
     ).toList();
 
+    List<Map<String, dynamic>> reviews = [];
+    if (user != null && user['nip'] != null) {
+      reviews = await AuthService.getReviewsByAhliGizi(user['nip']);
+    }
+
     if (mounted) {
       setState(() {
         _user = user;
         _allPasien = myPasien;
+        _reviewsList = reviews;
         _isLoading = false;
       });
     }
@@ -87,6 +97,47 @@ class _AhliGiziDashboardScreenState extends State<AhliGiziDashboardScreen> {
                           color: AppColors.textPrimary)),
                 ],
               ),
+              actions: [
+                StreamBuilder<QuerySnapshot>(
+                  stream: _user != null && _user!['uid'] != null ? FirebaseNotificationService.getUserNotifications(_user!['uid'], 'ahli_gizi') : null,
+                  builder: (context, snapshot) {
+                    int unreadCount = 0;
+                    if (snapshot.hasData) {
+                      unreadCount = snapshot.data!.docs.where((doc) => doc['isRead'] == false).length;
+                    }
+                    
+                    return Stack(
+                      children: [
+                        IconButton(
+                          onPressed: () {
+                            if (_user != null && _user!['uid'] != null) {
+                              Navigator.push(context, MaterialPageRoute(builder: (_) => NotifikasiScreen(userId: _user!['uid'], role: 'ahli_gizi')));
+                            }
+                          },
+                          icon: const Icon(Icons.notifications_outlined, color: AppColors.textPrimary),
+                        ),
+                        if (unreadCount > 0)
+                          Positioned(
+                            right: 8,
+                            top: 8,
+                            child: Container(
+                              padding: const EdgeInsets.all(2),
+                              decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
+                              constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                              child: Center(
+                                child: Text(
+                                  unreadCount > 9 ? '9+' : '$unreadCount',
+                                  style: GoogleFonts.manrope(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w700),
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    );
+                  },
+                ),
+                const SizedBox(width: 8),
+              ],
             ),
 
             SliverToBoxAdapter(
@@ -430,8 +481,7 @@ class _AhliGiziDashboardScreenState extends State<AhliGiziDashboardScreen> {
   }
 
   Widget _buildUlasanSection() {
-    List reviews = _user?['reviews'] ?? [];
-    if (reviews.isEmpty) return const SizedBox.shrink();
+    if (_reviewsList.isEmpty) return const SizedBox.shrink();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -442,9 +492,9 @@ class _AhliGiziDashboardScreenState extends State<AhliGiziDashboardScreen> {
                 fontWeight: FontWeight.w600,
                 color: AppColors.textPrimary)),
         const SizedBox(height: 12),
-        ...reviews.take(3).map((r) {
+        ..._reviewsList.take(3).map((r) {
           final rating = (r['rating'] as num?)?.toDouble() ?? 5.0;
-          final dtStr = r['tanggal'] as String? ?? '';
+          final dtStr = r['createdAt'] as String? ?? '';
           String dtShow = '';
           if (dtStr.isNotEmpty) {
             try {
@@ -465,7 +515,7 @@ class _AhliGiziDashboardScreenState extends State<AhliGiziDashboardScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(r['pasienName'] ?? 'Pasien', style: GoogleFonts.manrope(fontWeight: FontWeight.w600, fontSize: 13)),
+                    Text(r['patientName'] ?? 'Pasien', style: GoogleFonts.manrope(fontWeight: FontWeight.w600, fontSize: 13)),
                     Row(
                       children: [
                         const Icon(Icons.star, color: Color(0xFFF59E0B), size: 14),
