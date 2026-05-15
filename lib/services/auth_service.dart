@@ -124,12 +124,33 @@ class AuthService {
         'rating': 0.0,
         'rating_count': 0,
         'reviews': [],
+        'status_akun': 'pending', // Menunggu verifikasi admin
         'created_at': FieldValue.serverTimestamp(),
       };
       
       await usersRef.doc(uid).set(newAhliGizi);
-      
-      return {'success': true, 'message': 'Registrasi ahli gizi berhasil!'};
+
+      // Kirim notifikasi ke admin bahwa ada pendaftar baru
+      try {
+        final adminSnap = await usersRef.where('role', isEqualTo: 'admin').limit(1).get();
+        if (adminSnap.docs.isNotEmpty) {
+          final adminUid = adminSnap.docs.first.data()['uid'] as String? ?? '';
+          if (adminUid.isNotEmpty) {
+            await FirebaseFirestore.instance.collection('notifications').add({
+              'userId': adminUid,
+              'role': 'admin',
+              'title': '👤 Pendaftaran Ahli Gizi Baru',
+              'message': '$name (NIP: $nip) mendaftar dan menunggu verifikasi Anda.',
+              'type': 'new_ahligizi_request',
+              'isRead': false,
+              'relatedId': uid,
+              'createdAt': FieldValue.serverTimestamp(),
+            });
+          }
+        }
+      } catch (_) {}
+
+      return {'success': true, 'message': 'Pendaftaran berhasil! Akun Anda sedang menunggu verifikasi dari Admin.'};
     } on FirebaseAuthException catch (e) {
       String msg = 'Terjadi kesalahan saat registrasi.';
       if (e.code == 'weak-password') msg = 'Kata sandi minimal 6 karakter.';
@@ -312,18 +333,42 @@ class AuthService {
       final userDoc = await usersRef.doc(uid).get()
           .timeout(const Duration(seconds: 15), onTimeout: () => throw 'Timeout saat mengambil profil ahli gizi.');
           
-      if (!userDoc.exists || userDoc.data()?['role'] != 'ahli_gizi') {
-         await FirebaseAuth.instance.signOut();
-         return {'success': false, 'message': 'Akun ini bukan ahli gizi.'};
+      if (!userDoc.exists) {
+        await FirebaseAuth.instance.signOut();
+        return {'success': false, 'message': 'Data akun tidak ditemukan.'};
       }
 
       final userData = userDoc.data()!;
-      
-      // Backup session ke SharedPreferences
+      final userRole = userData['role'] as String? ?? '';
+
+      // Jika admin, langsung lolos tanpa cek status_akun
+      if (userRole == 'admin') {
+        final prefs = await SharedPreferences.getInstance();
+        userData['password'] = password;
+        await prefs.setString(_loggedInUserKey, jsonEncode(_makeEncodable(userData)));
+        return {'success': true, 'user': userData, 'role': 'admin'};
+      }
+
+      if (userRole != 'ahli_gizi') {
+        await FirebaseAuth.instance.signOut();
+        return {'success': false, 'message': 'Akun ini bukan ahli gizi.'};
+      }
+
+      // Cek status verifikasi
+      final statusAkun = userData['status_akun'] as String? ?? 'approved';
+      if (statusAkun == 'pending') {
+        await FirebaseAuth.instance.signOut();
+        return {'success': false, 'message': 'PENDING', 'user': userData};
+      }
+      if (statusAkun == 'rejected') {
+        await FirebaseAuth.instance.signOut();
+        final reason = userData['rejection_reason'] as String? ?? 'Tidak ada keterangan.';
+        return {'success': false, 'message': 'REJECTED', 'rejection_reason': reason, 'user': userData};
+      }
+      // Backup session ke SharedPreferences (Ahli Gizi approved)
       final prefs = await SharedPreferences.getInstance();
       userData['password'] = password;
       await prefs.setString(_loggedInUserKey, jsonEncode(_makeEncodable(userData)));
-
       print('DEBUG_AUTH: Login ahli gizi BERHASIL.');
       return {'success': true, 'user': userData};
 
@@ -335,8 +380,57 @@ class AuthService {
       return {'success': false, 'message': 'Terjadi kesalahan: $e'};
     }
   }
-  
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ LUPA KATA SANDI â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+  // ════════════════════════════════════════════════════
+  // ── ADMIN: Ambil semua Ahli Gizi untuk verifikasi ──
+  // ════════════════════════════════════════════════════
+  static Future<List<Map<String, dynamic>>> getAllAhliGiziForAdmin({String filter = 'all'}) async {
+    try {
+      Query query = FirebaseFirestore.instance.collection('users').where('role', isEqualTo: 'ahli_gizi');
+      if (filter == 'pending') query = query.where('status_akun', isEqualTo: 'pending');
+      else if (filter == 'approved') query = query.where('status_akun', isEqualTo: 'approved');
+      else if (filter == 'rejected') query = query.where('status_akun', isEqualTo: 'rejected');
+      final snap = await query.get();
+      return snap.docs.map((d) => d.data() as Map<String, dynamic>).toList();
+    } catch (e) { return []; }
+  }
+
+  static Future<bool> approveAhliGizi(String uid) async {
+    try {
+      await FirebaseFirestore.instance.collection('users').doc(uid).update({
+        'status_akun': 'approved', 'rejection_reason': '',
+        'approved_at': FieldValue.serverTimestamp(),
+      });
+      await FirebaseFirestore.instance.collection('notifications').add({
+        'userId': uid, 'role': 'ahli_gizi',
+        'title': '✅ Akun Anda Disetujui!',
+        'message': 'Selamat! Akun Anda telah diverifikasi. Anda sekarang bisa login.',
+        'type': 'account_approved', 'isRead': false, 'relatedId': '',
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+      return true;
+    } catch (e) { return false; }
+  }
+
+  static Future<bool> rejectAhliGizi(String uid, {required String reason}) async {
+    try {
+      await FirebaseFirestore.instance.collection('users').doc(uid).update({
+        'status_akun': 'rejected', 'rejection_reason': reason,
+      });
+      await FirebaseFirestore.instance.collection('notifications').add({
+        'userId': uid, 'role': 'ahli_gizi',
+        'title': '❌ Pendaftaran Ditolak',
+        'message': 'Maaf, pendaftaran Anda ditolak. Alasan: $reason',
+        'type': 'account_rejected', 'isRead': false, 'relatedId': '',
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+      return true;
+    } catch (e) { return false; }
+  }
+
+
+
+  // ─────────────────────────────────────────────────────────────
   
   static Future<Map<String, dynamic>> resetPassword({required String email, required String newPassword}) async {
     try {

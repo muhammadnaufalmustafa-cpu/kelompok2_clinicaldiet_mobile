@@ -202,7 +202,6 @@ class _AhliGiziDetailPasienScreenState
     _diagnosisCtrl.dispose();
     _catatanNutrisiCtrl.dispose();
     for (var c in _targetCtrls.values) { c.dispose(); }
-    for (var c in _targetCtrls.values) { c.dispose(); }
     for (var c in _aktualCtrls.values) { c.dispose(); }
     super.dispose();
   }

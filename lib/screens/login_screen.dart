@@ -7,6 +7,8 @@ import 'register_screen.dart';
 import 'ahli_gizi/ahli_gizi_main_screen.dart';
 import 'ahli_gizi/register_ahli_gizi_screen.dart';
 import 'lupa_kata_sandi_screen.dart';
+import 'admin/admin_main_screen.dart';
+import 'admin/pending_approval_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -86,8 +88,26 @@ class _LoginScreenState extends State<LoginScreen>
     setState(() => _isLoadingAG = false);
 
     if (result['success'] == true) {
+      final role = result['role'] as String? ?? 'ahli_gizi';
+      if (role == 'admin') {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const AdminMainScreen()),
+        );
+      } else {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const AhliGiziMainScreen()),
+        );
+      }
+    } else if (result['message'] == 'PENDING') {
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const AhliGiziMainScreen()),
+        MaterialPageRoute(builder: (_) => PendingApprovalScreen(user: result['user'] as Map<String, dynamic>)),
+      );
+    } else if (result['message'] == 'REJECTED') {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => RejectedScreen(
+          user: result['user'] as Map<String, dynamic>,
+          reason: result['rejection_reason'] as String? ?? 'Tidak ada keterangan.',
+        )),
       );
     } else {
       _showError(result['message'] ?? 'Login gagal.');
