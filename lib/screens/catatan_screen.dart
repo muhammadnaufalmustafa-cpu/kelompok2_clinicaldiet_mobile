@@ -5,6 +5,7 @@ import '../theme/app_theme.dart';
 import '../services/auth_service.dart';
 import '../services/firebase_notification_service.dart';
 import '../utils/age_calculator.dart';
+import '../widgets/notification_bell.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 // ─── Daftar lengkap URT sesuai referensi ahli gizi ───────────────────────────
@@ -30,7 +31,14 @@ const List<String> kDaftarURT = [
 class CatatanScreen extends StatefulWidget {
   final VoidCallback? onSaved;
   final String? patientProgramId;
-  const CatatanScreen({super.key, this.onSaved, this.patientProgramId});
+  final ValueChanged<String?>? onProgramChanged;
+
+  const CatatanScreen({
+    super.key,
+    this.onSaved,
+    this.patientProgramId,
+    this.onProgramChanged,
+  });
 
   @override
   State<CatatanScreen> createState() => _CatatanScreenState();
@@ -47,6 +55,7 @@ class _CatatanScreenState extends State<CatatanScreen> {
   String _targetDietText = '';
   String _birthdate = '';
   String _gender = '';
+  String? _userId;
 
   final _bbCtrl = TextEditingController();
   final _tbCtrl = TextEditingController();
@@ -85,6 +94,7 @@ class _CatatanScreenState extends State<CatatanScreen> {
         _targetDietText = user['target_diet'] as String? ?? '';
         _birthdate = user['birthdate'] as String? ?? '';
         _gender = user['gender'] as String? ?? '';
+        _userId = user['uid'] as String?;
 
         // BB/TB dari histori terakhir
         final history = AuthService.getBBTBHistory(user);
@@ -138,6 +148,7 @@ class _CatatanScreenState extends State<CatatanScreen> {
         });
         // Load nutrients untuk program yang dipilih
         if (programId != null) await _loadNutrientsForProgram(programId);
+        if (programId != null) widget.onProgramChanged?.call(programId);
       } else {
         // Fallback ke legacy diet_types jika belum ada program
         setState(() {
@@ -197,6 +208,33 @@ class _CatatanScreenState extends State<CatatanScreen> {
     }
   }
 
+  @override
+  void didUpdateWidget(covariant CatatanScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final incoming = widget.patientProgramId;
+    if (incoming != oldWidget.patientProgramId &&
+        incoming != null &&
+        incoming != _selectedPatientProgramId) {
+      _selectProgram(incoming, notifyParent: false);
+    }
+  }
+
+  Future<void> _selectProgram(String programId, {bool notifyParent = true}) async {
+    final matched = _patientPrograms.firstWhere(
+      (p) => p['patientProgramId'] == programId,
+      orElse: () => <String, dynamic>{},
+    );
+    if (!mounted) return;
+    setState(() {
+      _selectedPatientProgramId = programId;
+      if (matched.isNotEmpty) {
+        _selectedDietType = matched['therapyProgramName'] as String?;
+      }
+    });
+    await _loadNutrientsForProgram(programId);
+    if (notifyParent) widget.onProgramChanged?.call(programId);
+  }
+
 
   @override
   void dispose() {
@@ -243,8 +281,18 @@ class _CatatanScreenState extends State<CatatanScreen> {
           .map((p) => p['therapyProgramName'] as String? ?? '')
           .where((n) => n.isNotEmpty)
           .toList();
+      final requestedProgramId = widget.patientProgramId;
+      final requestedExists = requestedProgramId != null &&
+          active.any((p) => p['patientProgramId'] == requestedProgramId);
+      String? programToLoad;
       setState(() {
         _patientPrograms = active;
+        if (requestedExists) {
+          _selectedPatientProgramId = requestedProgramId;
+          final requested = active.firstWhere((p) => p['patientProgramId'] == requestedProgramId);
+          _selectedDietType = requested['therapyProgramName'] as String?;
+          programToLoad = requestedProgramId;
+        }
         // Jika program yang sedang dipilih sudah tidak ada, reset ke program pertama
         final stillExists = active.any(
           (p) => p['patientProgramId'] == _selectedPatientProgramId,
@@ -252,10 +300,15 @@ class _CatatanScreenState extends State<CatatanScreen> {
         if (!stillExists && active.isNotEmpty) {
           _selectedPatientProgramId = active.first['patientProgramId'] as String?;
           _selectedDietType = active.first['therapyProgramName'] as String?;
+          programToLoad = _selectedPatientProgramId;
+          widget.onProgramChanged?.call(_selectedPatientProgramId);
         }
         // Update daftar dropdown jika ada program baru
         if (newDietList.isNotEmpty) _dietList = newDietList;
       });
+      if (programToLoad != null) {
+        _loadNutrientsForProgram(programToLoad!);
+      }
     });
   }
 
@@ -592,7 +645,7 @@ class _CatatanScreenState extends State<CatatanScreen> {
                         style: GoogleFonts.manrope(fontSize: 14, fontWeight: FontWeight.w600, color: const Color(0xFF4F46E5)),
                         dropdownColor: const Color(0xFFEEF2FF),
                         items: _dietList.map((d) => DropdownMenuItem(value: d, child: Text(d))).toList(),
-                        onChanged: _isLocked ? null : (v) async {
+                        onChanged: (v) async {
                           if (v == null) return;
                           // Cari program yang cocok dengan nama yang dipilih
                           final matched = _patientPrograms.firstWhere(
@@ -602,14 +655,14 @@ class _CatatanScreenState extends State<CatatanScreen> {
                           final newProgramId = matched.isNotEmpty
                               ? matched['patientProgramId'] as String?
                               : null;
-                          // Update state pilihan dulu
-                          setState(() {
-                            _selectedDietType = v;
-                            _selectedPatientProgramId = newProgramId;
-                          });
-                          // Baru load nutrients untuk program yang dipilih
                           if (newProgramId != null) {
-                            await _loadNutrientsForProgram(newProgramId);
+                            await _selectProgram(newProgramId);
+                          } else {
+                            setState(() {
+                              _selectedDietType = v;
+                              _selectedPatientProgramId = null;
+                            });
+                            widget.onProgramChanged?.call(null);
                           }
                         },
                       ),
@@ -742,7 +795,11 @@ class _CatatanScreenState extends State<CatatanScreen> {
               else
                 const SizedBox(width: 34),
               Text('Clinical Diet', style: GoogleFonts.manrope(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.primary)),
-              const Icon(Icons.notifications_outlined, color: AppColors.textSecondary),
+              NotificationBell(
+                userId: _userId,
+                role: 'pasien',
+                constraints: const BoxConstraints(),
+              ),
             ],
           ),
           const SizedBox(height: 16),

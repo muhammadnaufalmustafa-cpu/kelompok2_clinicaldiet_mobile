@@ -6,11 +6,10 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../theme/app_theme.dart';
 import 'catatan_screen.dart';
-import 'edukasi_screen.dart';
 import 'laporan_harian_screen.dart';
 import '../services/auth_service.dart';
 import '../services/firebase_notification_service.dart';
-import 'notifikasi_screen.dart';
+import '../widgets/notification_bell.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 enum AgeCategory { balita, anakRemaja, dewasa }
@@ -32,7 +31,14 @@ class AgeInfo {
 }
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  final String? selectedPatientProgramId;
+  final ValueChanged<String?>? onProgramChanged;
+
+  const HomeScreen({
+    super.key,
+    this.selectedPatientProgramId,
+    this.onProgramChanged,
+  });
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -74,6 +80,27 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
+  @override
+  void didUpdateWidget(covariant HomeScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final incoming = widget.selectedPatientProgramId;
+    if (incoming != oldWidget.selectedPatientProgramId &&
+        incoming != null &&
+        incoming != _selectedPatientProgramId) {
+      _selectProgram(incoming, notifyParent: false);
+    }
+  }
+
+  Future<void> _selectProgram(String programId, {bool notifyParent = true}) async {
+    final target = await AuthService.getNutritionTarget(programId);
+    if (!mounted) return;
+    setState(() {
+      _selectedPatientProgramId = programId;
+      _selectedNutritionTarget = target;
+    });
+    if (notifyParent) widget.onProgramChanged?.call(programId);
+  }
+
   /// Realtime listener: update daftar program pasien otomatis
   /// tanpa perlu pull-to-refresh ketika ahli gizi menambah program baru.
   Future<void> _startProgramsStream() async {
@@ -106,11 +133,17 @@ class _HomeScreenState extends State<HomeScreen> {
         return dB.compareTo(dA);
       });
       final active = programs.where((p) => p['status'] == 'active').toList();
+      final requestedProgramId = widget.selectedPatientProgramId;
+      final requestedExists = requestedProgramId != null &&
+          active.any((p) => p['patientProgramId'] == requestedProgramId);
       setState(() {
         _patientPrograms = programs;
-        // Jika belum ada yang dipilih, pilih program aktif pertama
-        if (_selectedPatientProgramId == null && active.isNotEmpty) {
+        // Ikuti pilihan global dari MainScreen bila ada.
+        if (requestedExists) {
+          _selectedPatientProgramId = requestedProgramId;
+        } else if (_selectedPatientProgramId == null && active.isNotEmpty) {
           _selectedPatientProgramId = active.first['patientProgramId'] as String?;
+          widget.onProgramChanged?.call(_selectedPatientProgramId);
         }
         // Jika program yang dipilih sudah tidak ada (misal dihapus), reset
         final stillExists = programs.any(
@@ -118,6 +151,7 @@ class _HomeScreenState extends State<HomeScreen> {
         );
         if (!stillExists && active.isNotEmpty) {
           _selectedPatientProgramId = active.first['patientProgramId'] as String?;
+          widget.onProgramChanged?.call(_selectedPatientProgramId);
         }
       });
       // Reload nutrition target untuk program yang aktif
@@ -159,7 +193,17 @@ class _HomeScreenState extends State<HomeScreen> {
       // Auto-select first active program
       final activePrograms = patientPrograms.where((p) => p['status'] == 'active').toList();
       if (activePrograms.isNotEmpty) {
-        selectedProgramId = activePrograms.first['patientProgramId'] as String?;
+        final requestedProgramId = widget.selectedPatientProgramId;
+        Map<String, dynamic>? requestedProgram;
+        if (requestedProgramId != null) {
+          for (final program in activePrograms) {
+            if (program['patientProgramId'] == requestedProgramId) {
+              requestedProgram = program;
+              break;
+            }
+          }
+        }
+        selectedProgramId = (requestedProgram ?? activePrograms.first)['patientProgramId'] as String?;
         if (selectedProgramId != null) {
           selectedNutritionTarget = await AuthService.getNutritionTarget(selectedProgramId);
         }
@@ -218,6 +262,7 @@ class _HomeScreenState extends State<HomeScreen> {
         _selectedNutritionTarget = selectedNutritionTarget;
         _isLoading = false;
       });
+      if (selectedProgramId != null) widget.onProgramChanged?.call(selectedProgramId);
     }
   }
 
@@ -398,7 +443,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   // ── Catatan Makan Terakhir ──
                   if (_lastMealLog != null) _buildLastMealCard(),
                   _buildReminderCard(context),
-                  _buildEdukasiCard(context),
                   const SizedBox(height: 16),
 
                 ],
@@ -428,7 +472,12 @@ class _HomeScreenState extends State<HomeScreen> {
 
                   await Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (_) => CatatanScreen(patientProgramId: _selectedPatientProgramId)),
+                    MaterialPageRoute(
+                      builder: (_) => CatatanScreen(
+                        patientProgramId: _selectedPatientProgramId,
+                        onProgramChanged: widget.onProgramChanged,
+                      ),
+                    ),
                   ).then((_) => _loadData()); // Refresh setelah kembali
                 },
                 backgroundColor: AppColors.primary,
@@ -621,11 +670,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 return GestureDetector(
                   onTap: () async {
                     if (isSelected || programId == null) return;
-                    final target = await AuthService.getNutritionTarget(programId);
-                    setState(() {
-                      _selectedPatientProgramId = programId;
-                      _selectedNutritionTarget = target;
-                    });
+                    await _selectProgram(programId);
                   },
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 200),
@@ -1122,45 +1167,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
               const SizedBox(width: 8),
-              StreamBuilder<QuerySnapshot>(
-                stream: _user != null && _user!['uid'] != null ? FirebaseNotificationService.getUserNotifications(_user!['uid'], 'pasien') : null,
-                builder: (context, snapshot) {
-                  int unreadCount = 0;
-                  if (snapshot.hasData) {
-                    unreadCount = snapshot.data!.docs.where((doc) => doc['isRead'] == false).length;
-                  }
-                  
-                  return Stack(
-                    children: [
-                      IconButton(
-                        onPressed: () {
-                          if (_user != null && _user!['uid'] != null) {
-                            Navigator.push(context, MaterialPageRoute(builder: (_) => NotifikasiScreen(userId: _user!['uid'], role: 'pasien')));
-                          }
-                        },
-                        icon: const Icon(Icons.notifications_outlined, color: AppColors.textSecondary),
-                        constraints: const BoxConstraints(),
-                        padding: EdgeInsets.zero,
-                      ),
-                      if (unreadCount > 0)
-                        Positioned(
-                          right: 0,
-                          top: 0,
-                          child: Container(
-                            padding: const EdgeInsets.all(2),
-                            decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
-                            constraints: const BoxConstraints(minWidth: 14, minHeight: 14),
-                            child: Center(
-                              child: Text(
-                                unreadCount > 9 ? '9+' : '$unreadCount',
-                                style: GoogleFonts.manrope(color: Colors.white, fontSize: 8, fontWeight: FontWeight.w700),
-                              ),
-                            ),
-                          ),
-                        ),
-                    ],
-                  );
-                },
+              NotificationBell(
+                userId: _user?['uid'] as String?,
+                role: 'pasien',
+                constraints: const BoxConstraints(),
               ),
             ],
           ),
@@ -1653,7 +1663,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // Bottom Sheet: Lihat Semua Item Gizi
   void _showSemuaNutrienSheet(Map<String, dynamic> active) {
-    final dietType = _currentDietNutrisi?['diet_type'] as String? ?? '';
+    final dietType = _currentDietName;
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -1706,108 +1716,6 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
-
-  Widget _buildEdukasiCard(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.divider),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF0FDF4),
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(15)),
-              border: Border(bottom: BorderSide(color: AppColors.primary.withValues(alpha: 0.2))),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(7),
-                  decoration: BoxDecoration(color: AppColors.primaryLight, borderRadius: BorderRadius.circular(9)),
-                  child: const Icon(Icons.menu_book_rounded, color: AppColors.primary, size: 18),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Edukasi & Leaflet', style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.primaryDark)),
-                      Text('Artikel rekomendasi ahli', style: GoogleFonts.manrope(fontSize: 11, color: AppColors.primary)),
-                    ],
-                  ),
-                ),
-                TextButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const EdukasiScreen()),
-                    );
-                  },
-                  style: TextButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                    minimumSize: Size.zero,
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    backgroundColor: AppColors.primary.withValues(alpha: 0.1),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                  ),
-                  child: Text('Lihat', style: GoogleFonts.manrope(fontSize: 10, fontWeight: FontWeight.w700, color: AppColors.primaryDark)),
-                )
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              children: [
-                _buildLeafletItem(
-                  'Panduan Gizi Seimbang',
-                  'Tips mengatur asupan makanan sehat.',
-                  Icons.local_dining_outlined,
-                ),
-                const SizedBox(height: 12),
-                _buildLeafletItem(
-                  'Mengenal Indeks Glikemik',
-                  'Pilih karbohidrat yang tepat.',
-                  Icons.monitor_heart_outlined,
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildLeafletItem(String title, String subtitle, IconData icon) {
-    return Row(
-      children: [
-        Container(
-          width: 40, height: 40,
-          decoration: BoxDecoration(color: AppColors.background, borderRadius: BorderRadius.circular(10)),
-          child: Icon(icon, color: AppColors.textSecondary, size: 20),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(title, style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
-              const SizedBox(height: 2),
-              Text(subtitle, style: GoogleFonts.manrope(fontSize: 11, color: AppColors.textSecondary)),
-            ],
-          ),
-        ),
-        const Icon(Icons.chevron_right, color: AppColors.textMuted, size: 16),
-      ],
-    );
-  }
-
 
   Widget _buildDailyTargetChart() {
     final targetNutrients = _targetNutrients;

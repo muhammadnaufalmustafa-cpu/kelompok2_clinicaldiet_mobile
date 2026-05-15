@@ -15,14 +15,27 @@ class MainScreen extends StatefulWidget {
 
 class _MainScreenState extends State<MainScreen> {
   int _currentIndex = 0;
+  String? _selectedPatientProgramId;
 
   void _switchToTab(int index) {
     setState(() => _currentIndex = index);
   }
 
+  void _setSelectedPatientProgram(String? programId) {
+    if (_selectedPatientProgramId == programId) return;
+    setState(() => _selectedPatientProgramId = programId);
+  }
+
   List<Widget> get _screens => [
-    const HomeScreen(),
-    CatatanScreen(onSaved: () => _switchToTab(0)),
+    HomeScreen(
+      selectedPatientProgramId: _selectedPatientProgramId,
+      onProgramChanged: _setSelectedPatientProgram,
+    ),
+    CatatanScreen(
+      onSaved: () => _switchToTab(0),
+      patientProgramId: _selectedPatientProgramId,
+      onProgramChanged: _setSelectedPatientProgram,
+    ),
     const EdukasiScreen(),
     const ProfilScreen(),
   ];

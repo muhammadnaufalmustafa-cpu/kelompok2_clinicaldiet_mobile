@@ -9,6 +9,7 @@ import 'login_screen.dart';
 import 'pilih_jenis_diet_screen.dart';
 import 'pilih_ahli_gizi_screen.dart';
 import 'review_program_screen.dart';
+import '../widgets/notification_bell.dart';
 
 class ProfilScreen extends StatefulWidget {
   const ProfilScreen({super.key});
@@ -1047,8 +1048,11 @@ class _ProfilScreenState extends State<ProfilScreen> {
                     ),
                   ],
                 ),
-                const Icon(Icons.notifications_outlined,
-                    color: AppColors.textSecondary),
+                NotificationBell(
+                  userId: _user?['uid'] as String?,
+                  role: 'pasien',
+                  constraints: const BoxConstraints(),
+                ),
               ],
             ),
           ),

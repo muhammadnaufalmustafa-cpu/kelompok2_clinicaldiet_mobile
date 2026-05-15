@@ -23,6 +23,15 @@ class _AhliGiziPasienScreenState extends State<AhliGiziPasienScreen> {
   bool _isExporting = false;
   Map<String, dynamic>? _ahliGizi;
 
+  // Filter untuk Laporan
+  int _laporanMonth = DateTime.now().month;
+  int _laporanYear = DateTime.now().year;
+
+  final List<String> _bulanNames = [
+    '', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+    'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+  ];
+
   @override
   void initState() {
     super.initState();
@@ -39,10 +48,9 @@ class _AhliGiziPasienScreenState extends State<AhliGiziPasienScreen> {
   Future<void> _loadData() async {
     final user = await AuthService.getLoggedInUser();
     final allPasien = await AuthService.getAllPasien();
-    
-    // FILTER: Hanya ambil pasien yang memilih Ahli Gizi ini
-    final myPasien = allPasien.where((p) => 
-      p['role'] == 'pasien' && 
+
+    final myPasien = allPasien.where((p) =>
+      p['role'] == 'pasien' &&
       p['selected_ahli_gizi_nip'] == user?['nip']
     ).toList();
 
@@ -53,60 +61,6 @@ class _AhliGiziPasienScreenState extends State<AhliGiziPasienScreen> {
         _applyFilter();
         _isLoading = false;
       });
-    }
-  }
-
-  Future<void> _exportToExcel() async {
-    if (_ahliGizi == null || _filtered.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('Tidak ada data pasien untuk diekspor.', style: GoogleFonts.manrope()),
-        backgroundColor: Colors.orange,
-      ));
-      return;
-    }
-
-    // Tampilkan konfirmasi
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('Export Laporan Bulanan', style: GoogleFonts.manrope(fontWeight: FontWeight.w700)),
-        content: Text('Anda akan mengekspor ${_filtered.length} pasien (berdasarkan filter saat ini) ke dalam file Excel. Lanjutkan?', style: GoogleFonts.manrope()),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text('Batal', style: GoogleFonts.manrope(fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-            ),
-            child: Text('Ya, Export', style: GoogleFonts.manrope(color: Colors.white, fontWeight: FontWeight.w600)),
-          ),
-        ],
-      )
-    );
-
-    if (confirm != true) return;
-
-    setState(() => _isExporting = true);
-
-    final monthYear = DateFormat('MMMM_yyyy', 'id_ID').format(DateTime.now());
-    final success = await ExportService.exportPasienToExcel(
-      pasienList: _filtered, 
-      ahliGizi: _ahliGizi!, 
-      monthYearStr: monthYear
-    );
-
-    setState(() => _isExporting = false);
-
-    if (!success && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('Gagal membuat file Excel.', style: GoogleFonts.manrope()),
-        backgroundColor: Colors.red,
-      ));
     }
   }
 
@@ -126,6 +80,42 @@ class _AhliGiziPasienScreenState extends State<AhliGiziPasienScreen> {
     });
   }
 
+  Future<void> _exportToExcel() async {
+    if (_ahliGizi == null) return;
+
+    // Gunakan SEMUA pasien (tanpa filter status/search) untuk laporan bulanan rekap
+    final pasienUntukLaporan = _allPasien;
+
+    if (pasienUntukLaporan.isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('Tidak ada data pasien untuk diekspor.', style: GoogleFonts.manrope()),
+        backgroundColor: Colors.orange,
+      ));
+      return;
+    }
+
+    final bulanStr = _bulanNames[_laporanMonth];
+    final monthYearStr = '${bulanStr}_$_laporanYear';
+
+    setState(() => _isExporting = true);
+
+    final success = await ExportService.exportPasienToExcel(
+      pasienList: pasienUntukLaporan,
+      ahliGizi: _ahliGizi!,
+      monthYearStr: monthYearStr,
+    );
+
+    setState(() => _isExporting = false);
+
+    if (!success && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('Gagal membuat file Excel.', style: GoogleFonts.manrope()),
+        backgroundColor: Colors.red,
+      ));
+    }
+  }
+
   Color _statusColor(String status) {
     switch (status) {
       case 'berhasil':
@@ -139,6 +129,9 @@ class _AhliGiziPasienScreenState extends State<AhliGiziPasienScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final now = DateTime.now();
+    final months = List.generate(12, (i) => i + 1).reversed.toList();
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -148,13 +141,6 @@ class _AhliGiziPasienScreenState extends State<AhliGiziPasienScreen> {
             style: GoogleFonts.manrope(
                 fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
         actions: [
-          IconButton(
-            icon: _isExporting 
-              ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary))
-              : const Icon(Icons.download_outlined, color: AppColors.primary),
-            tooltip: 'Export Laporan (Excel)',
-            onPressed: _isExporting ? null : _exportToExcel,
-          ),
           IconButton(
             icon: const Icon(Icons.refresh, color: AppColors.textSecondary),
             onPressed: _loadData,
@@ -166,10 +152,166 @@ class _AhliGiziPasienScreenState extends State<AhliGiziPasienScreen> {
               child: CircularProgressIndicator(color: Color(0xFF0284C7)))
           : Column(
               children: [
-                // Search + filter
+                // ─────────── Panel Rekap Laporan Bulanan ───────────
+                Container(
+                  margin: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF0284C7), Color(0xFF0369A1)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(18),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF0284C7).withValues(alpha: 0.3),
+                        blurRadius: 12,
+                        offset: const Offset(0, 6),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(Icons.summarize_outlined,
+                                color: Colors.white, size: 20),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('Rekap Laporan Bulanan',
+                                    style: GoogleFonts.manrope(
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w700,
+                                        color: Colors.white)),
+                                Text(
+                                  'Total ${_allPasien.length} pasien akan diekspor ke Excel',
+                                  style: GoogleFonts.manrope(
+                                      fontSize: 12, color: Colors.white70),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+                      // Filter Bulan & Tahun
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.calendar_month_outlined,
+                                color: Colors.white70, size: 18),
+                            const SizedBox(width: 8),
+                            Text('Periode:',
+                                style: GoogleFonts.manrope(
+                                    fontSize: 13,
+                                    color: Colors.white70,
+                                    fontWeight: FontWeight.w500)),
+                            const SizedBox(width: 8),
+                            // Dropdown Bulan
+                            Expanded(
+                              child: DropdownButtonHideUnderline(
+                                child: DropdownButton<int>(
+                                  value: _laporanMonth,
+                                  dropdownColor: const Color(0xFF0369A1),
+                                  iconEnabledColor: Colors.white,
+                                  style: GoogleFonts.manrope(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w700,
+                                      color: Colors.white),
+                                  items: months
+                                      .map((m) => DropdownMenuItem(
+                                            value: m,
+                                            child: Text(_bulanNames[m]),
+                                          ))
+                                      .toList(),
+                                  onChanged: (v) =>
+                                      setState(() => _laporanMonth = v!),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            // Dropdown Tahun
+                            DropdownButtonHideUnderline(
+                              child: DropdownButton<int>(
+                                value: _laporanYear,
+                                dropdownColor: const Color(0xFF0369A1),
+                                iconEnabledColor: Colors.white,
+                                style: GoogleFonts.manrope(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.white),
+                                items: [now.year - 1, now.year, now.year + 1]
+                                    .map((y) => DropdownMenuItem(
+                                          value: y,
+                                          child: Text('$y'),
+                                        ))
+                                    .toList(),
+                                onChanged: (v) =>
+                                    setState(() => _laporanYear = v!),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      // Tombol Export
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: _isExporting ? null : _exportToExcel,
+                          icon: _isExporting
+                              ? const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                      strokeWidth: 2, color: Color(0xFF0284C7)))
+                              : const Icon(Icons.file_download_outlined,
+                                  size: 20, color: Color(0xFF0284C7)),
+                          label: Text(
+                            _isExporting
+                                ? 'Membuat file Excel...'
+                                : 'Cetak Laporan Rekap (.xlsx)',
+                            style: GoogleFonts.manrope(
+                                fontWeight: FontWeight.w700,
+                                color: const Color(0xFF0284C7),
+                                fontSize: 14),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12)),
+                            elevation: 0,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // ─────────── Search + Filter Status ───────────
                 Container(
                   color: Colors.white,
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                  margin: const EdgeInsets.only(top: 12),
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
                   child: Column(
                     children: [
                       TextField(
@@ -199,8 +341,7 @@ class _AhliGiziPasienScreenState extends State<AhliGiziPasienScreen> {
                                     _applyFilter();
                                   },
                                   child: AnimatedContainer(
-                                    duration:
-                                        const Duration(milliseconds: 200),
+                                    duration: const Duration(milliseconds: 200),
                                     margin: const EdgeInsets.only(right: 8),
                                     padding: const EdgeInsets.symmetric(
                                         horizontal: 14, vertical: 6),
@@ -208,8 +349,7 @@ class _AhliGiziPasienScreenState extends State<AhliGiziPasienScreen> {
                                       color: _filterStatus == s
                                           ? const Color(0xFF0284C7)
                                           : AppColors.background,
-                                      borderRadius:
-                                          BorderRadius.circular(20),
+                                      borderRadius: BorderRadius.circular(20),
                                     ),
                                     child: Text(s,
                                         style: GoogleFonts.manrope(
@@ -226,7 +366,8 @@ class _AhliGiziPasienScreenState extends State<AhliGiziPasienScreen> {
                     ],
                   ),
                 ),
-                // List
+
+                // ─────────── Daftar Pasien ───────────
                 Expanded(
                   child: _filtered.isEmpty
                       ? Center(
@@ -267,8 +408,7 @@ class _AhliGiziPasienScreenState extends State<AhliGiziPasienScreen> {
                                   padding: const EdgeInsets.all(14),
                                   decoration: BoxDecoration(
                                     color: Colors.white,
-                                    borderRadius:
-                                        BorderRadius.circular(14),
+                                    borderRadius: BorderRadius.circular(14),
                                   ),
                                   child: Row(
                                     children: [
@@ -288,8 +428,7 @@ class _AhliGiziPasienScreenState extends State<AhliGiziPasienScreen> {
                                             style: GoogleFonts.manrope(
                                                 fontSize: 18,
                                                 fontWeight: FontWeight.w700,
-                                                color:
-                                                    _statusColor(status)),
+                                                color: _statusColor(status)),
                                           ),
                                         ),
                                       ),
@@ -302,10 +441,9 @@ class _AhliGiziPasienScreenState extends State<AhliGiziPasienScreen> {
                                             Text(pasien['name'] ?? '-',
                                                 style: GoogleFonts.manrope(
                                                     fontSize: 14,
-                                                    fontWeight:
-                                                        FontWeight.w600,
-                                                    color: AppColors
-                                                        .textPrimary)),
+                                                    fontWeight: FontWeight.w600,
+                                                    color:
+                                                        AppColors.textPrimary)),
                                             Text(
                                                 'RM: ${pasien['rm'] ?? '-'} • Diet: ${pasien['diet_type'] != null && pasien['diet_type'] != '' ? pasien['diet_type'] : 'Belum Dipilih'}',
                                                 style: GoogleFonts.manrope(
@@ -317,19 +455,46 @@ class _AhliGiziPasienScreenState extends State<AhliGiziPasienScreen> {
                                               padding: const EdgeInsets.all(8),
                                               decoration: BoxDecoration(
                                                 color: AppColors.background,
-                                                borderRadius: BorderRadius.circular(8),
+                                                borderRadius:
+                                                    BorderRadius.circular(8),
                                               ),
                                               child: Column(
-                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
                                                 children: [
-                                                  Text('Umur: ${AgeCalculator.formatAge(AgeCalculator.calculateAge(pasien['birthdate']))}', style: GoogleFonts.manrope(fontSize: 11, color: AppColors.textPrimary, fontWeight: FontWeight.w600)),
+                                                  Text(
+                                                      'Umur: ${AgeCalculator.formatAge(AgeCalculator.calculateAge(pasien['birthdate']))}',
+                                                      style: GoogleFonts.manrope(
+                                                          fontSize: 11,
+                                                          color: AppColors
+                                                              .textPrimary,
+                                                          fontWeight:
+                                                              FontWeight.w600)),
                                                   const SizedBox(height: 2),
-                                                  Text('BB: ${pasien['weight'] ?? '-'} kg | TB: ${pasien['height'] ?? '-'} cm', style: GoogleFonts.manrope(fontSize: 11, color: AppColors.textSecondary)),
+                                                  Text(
+                                                      'BB: ${pasien['weight'] ?? '-'} kg | TB: ${pasien['height'] ?? '-'} cm',
+                                                      style: GoogleFonts.manrope(
+                                                          fontSize: 11,
+                                                          color: AppColors
+                                                              .textSecondary)),
                                                   const SizedBox(height: 2),
-                                                  Text('Jenis Kelamin: ${pasien['gender'] ?? '-'}', style: GoogleFonts.manrope(fontSize: 11, color: AppColors.textSecondary)),
-                                                  if (AgeCalculator.calculateIMT(pasien['weight'], pasien['height']) != null) ...[
+                                                  Text(
+                                                      'Jenis Kelamin: ${pasien['gender'] ?? '-'}',
+                                                      style: GoogleFonts.manrope(
+                                                          fontSize: 11,
+                                                          color: AppColors
+                                                              .textSecondary)),
+                                                  if (AgeCalculator.calculateIMT(
+                                                          pasien['weight'],
+                                                          pasien['height']) !=
+                                                      null) ...[
                                                     const SizedBox(height: 2),
-                                                    Text('IMT: ${AgeCalculator.calculateIMT(pasien['weight'], pasien['height'])}', style: GoogleFonts.manrope(fontSize: 11, color: AppColors.textSecondary)),
+                                                    Text(
+                                                        'IMT: ${AgeCalculator.calculateIMT(pasien['weight'], pasien['height'])}',
+                                                        style: GoogleFonts.manrope(
+                                                            fontSize: 11,
+                                                            color: AppColors
+                                                                .textSecondary)),
                                                   ],
                                                 ],
                                               ),
