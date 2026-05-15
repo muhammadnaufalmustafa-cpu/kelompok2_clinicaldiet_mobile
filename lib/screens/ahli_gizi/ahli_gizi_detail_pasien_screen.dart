@@ -681,41 +681,23 @@ class _AhliGiziDetailPasienScreenState
               ),
             ),
             const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: () {
-                      Navigator.push(context, MaterialPageRoute(builder: (_) => LaporanHarianAGScreen(
-                        pasien: widget.pasien,
-                      )));
-                    },
-                    icon: const Icon(Icons.bar_chart_rounded, size: 18, color: Colors.white),
-                    label: Text('Laporan Harian', style: GoogleFonts.manrope(fontWeight: FontWeight.w700, fontSize: 13, color: Colors.white)),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF0284C7),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                      elevation: 0,
-                    ),
-                  ),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => LaporanHarianAGScreen(
+                    pasien: widget.pasien,
+                  )));
+                },
+                icon: const Icon(Icons.bar_chart_rounded, size: 18, color: Colors.white),
+                label: Text('Laporan Harian', style: GoogleFonts.manrope(fontWeight: FontWeight.w700, fontSize: 13, color: Colors.white)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF0284C7),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  elevation: 0,
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: _isExportingBulanan ? null : _exportLaporanBulanan,
-                    icon: _isExportingBulanan 
-                      ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary))
-                      : const Icon(Icons.summarize_outlined, size: 18, color: AppColors.primary),
-                    label: Text(_isExportingBulanan ? 'Mengekspor...' : 'Laporan Bulanan', style: GoogleFonts.manrope(fontWeight: FontWeight.w700, fontSize: 13, color: AppColors.primary)),
-                    style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: AppColors.primary),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                    ),
-                  ),
-                ),
-              ],
+              ),
             ),
             const SizedBox(height: 24),
 

@@ -494,6 +494,41 @@ class _AhliGiziProfilScreenState extends State<AhliGiziProfilScreen> {
                     ),
                   ),
                   const SizedBox(height: 24),
+
+                  // ─────────── SECTION: Ulasan dari Pasien ───────────
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'ULASAN DARI PASIEN',
+                          style: GoogleFonts.manrope(fontSize: 11, fontWeight: FontWeight.w600, letterSpacing: 1.2, color: AppColors.textMuted),
+                        ),
+                        if (_ratingCount > 0)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFEF3C7),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.star, color: Color(0xFFF59E0B), size: 14),
+                                const SizedBox(width: 4),
+                                Text(
+                                  '${_rating.toStringAsFixed(1)} · $_ratingCount ulasan',
+                                  style: GoogleFonts.manrope(fontSize: 11, fontWeight: FontWeight.w700, color: const Color(0xFF92400E)),
+                                ),
+                              ],
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  _buildReviewsList(),
+                  const SizedBox(height: 24),
+
                   Center(
                     child: TextButton.icon(
                       onPressed: _showLogoutConfirmation,
@@ -511,6 +546,114 @@ class _AhliGiziProfilScreenState extends State<AhliGiziProfilScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildReviewsList() {
+    final reviews = (_user?['reviews'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+
+    if (reviews.isEmpty) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Column(
+          children: [
+            const Icon(Icons.chat_bubble_outline, size: 40, color: AppColors.textMuted),
+            const SizedBox(height: 8),
+            Text(
+              'Belum ada ulasan dari pasien.',
+              style: GoogleFonts.manrope(fontSize: 13, color: AppColors.textSecondary),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Column(
+      children: reviews.take(10).map((r) {
+        final name = r['pasienName']?.toString() ?? 'Pasien';
+        final rm = r['pasienRm']?.toString() ?? '';
+        final rating = (r['rating'] as num?)?.toDouble() ?? 0.0;
+        final ulasan = r['ulasan']?.toString() ?? '';
+        final tanggalStr = r['tanggal']?.toString() ?? '';
+        String tanggalFormatted = '-';
+        try {
+          final dt = DateTime.parse(tanggalStr);
+          tanggalFormatted = '${dt.day}/${dt.month}/${dt.year}';
+        } catch (_) {}
+
+        return Container(
+          margin: const EdgeInsets.only(bottom: 10),
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: AppColors.divider),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFEF3C7),
+                  shape: BoxShape.circle,
+                ),
+                child: Center(
+                  child: Text(
+                    name.isNotEmpty ? name[0].toUpperCase() : 'P',
+                    style: GoogleFonts.manrope(
+                        fontSize: 16, fontWeight: FontWeight.w700, color: const Color(0xFFD97706)),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            name + (rm.isNotEmpty ? ' (RM: $rm)' : ''),
+                            style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        Text(tanggalFormatted, style: GoogleFonts.manrope(fontSize: 11, color: AppColors.textMuted)),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: List.generate(5, (i) => Icon(
+                        i < rating.round() ? Icons.star : Icons.star_border,
+                        color: const Color(0xFFF59E0B),
+                        size: 16,
+                      )),
+                    ),
+                    if (ulasan.isNotEmpty) ...[
+                      const SizedBox(height: 6),
+                      Text(
+                        '"$ulasan"',
+                        style: GoogleFonts.manrope(fontSize: 13, color: AppColors.textSecondary, fontStyle: FontStyle.italic),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      }).toList(),
     );
   }
 
