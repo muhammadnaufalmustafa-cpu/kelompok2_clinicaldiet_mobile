@@ -31,17 +31,18 @@ class _AhliGiziDetailPasienScreenState
   List<Map<String, dynamic>> _riwayatMakan = [];
   String? _selectedDietType; // Jenis diet yang sedang diedit
   bool _isExportingBulanan = false;
+  int _missedDays = 0; // jumlah hari tidak isi log
 
-  // ── Patient Therapy Programs ──
+  // â”€â”€ Patient Therapy Programs â”€â”€
   List<Map<String, dynamic>> _patientPrograms = [];
   Map<String, dynamic>? _selectedPatientProgram;
   bool _isLoadingPrograms = false;
   List<Map<String, dynamic>> _availableTherapyPrograms = [];
 
-  // ── Existing controllers ──
+  // â”€â”€ Existing controllers â”€â”€
   final _targetCtrl = TextEditingController();
 
-  // ── Clinical Inputs ──
+  // â”€â”€ Clinical Inputs â”€â”€
   final _diagnosisCtrl = TextEditingController();
   final _catatanNutrisiCtrl = TextEditingController();
   final _customDietCtrl = TextEditingController();
@@ -84,7 +85,7 @@ class _AhliGiziDetailPasienScreenState
     'K58.9 - Irritable Bowel Syndrome (IBS) tanpa Diare',
   ];
 
-  // ── Dynamic Nutrition Target controllers & state ──
+  // â”€â”€ Dynamic Nutrition Target controllers & state â”€â”€
   final Map<String, TextEditingController> _targetCtrls = {};
   final Map<String, TextEditingController> _aktualCtrls = {};
   final Map<String, bool> _checkedNutrients = {};
@@ -111,6 +112,20 @@ class _AhliGiziDetailPasienScreenState
     _status = widget.pasien['status'] ?? 'aktif';
     _targetCtrl.text = widget.pasien['target_diet'] ?? '';
     _loadInitialData();
+    _checkMissedLogs();
+  }
+
+  Future<void> _checkMissedLogs() async {
+    final agUser = await AuthService.getLoggedInUser();
+    if (agUser == null) return;
+    final result = await FirebaseNotificationService.checkPatientMissedLogs(
+      patientRm: widget.pasien['rm'] as String? ?? '',
+      patientId: widget.pasien['uid'] as String? ?? '',
+      patientName: widget.pasien['name'] as String? ?? 'Pasien',
+      ahliGiziId: agUser['uid'] as String? ?? '',
+      ahliGiziName: agUser['name'] as String? ?? 'Ahli Gizi',
+    );
+    if (mounted) setState(() => _missedDays = result['missedDays'] as int? ?? 0);
   }
 
   Future<void> _loadInitialData() async {
@@ -192,7 +207,7 @@ class _AhliGiziDetailPasienScreenState
     super.dispose();
   }
 
-  // ── Export Laporan Bulanan (1 Pasien) ──
+  // â”€â”€ Export Laporan Bulanan (1 Pasien) â”€â”€
   Future<void> _exportLaporanBulanan() async {
     final user = await AuthService.getLoggedInUser();
     if (user == null) return;
@@ -350,6 +365,14 @@ class _AhliGiziDetailPasienScreenState
   Future<void> _updateStatus(String newStatus) async {
     await AuthService.updatePasienStatus(
         widget.pasien['rm'] as String, newStatus);
+    // Notif ke Pasien
+    final patientId = widget.pasien['uid'] as String? ?? '';
+    final agName = (await AuthService.getLoggedInUser())?['name'] ?? 'Ahli Gizi';
+    await FirebaseNotificationService.notifyStatusChanged(
+      patientId: patientId,
+      newStatus: newStatus,
+      ahliGiziName: agName,
+    );
     if (mounted) {
       setState(() => _status = newStatus);
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -386,7 +409,7 @@ class _AhliGiziDetailPasienScreenState
         }
       });
 
-      // 1a. Jika ada program terpilih → save ke nutritionTargets (collection baru)
+      // 1a. Jika ada program terpilih â†’ save ke nutritionTargets (collection baru)
       if (_selectedPatientProgram != null) {
         String patientProgramId = _selectedPatientProgram!['patientProgramId'] as String;
         String therapyProgramId = _selectedPatientProgram!['therapyProgramId'] as String? ?? '';
@@ -479,7 +502,7 @@ class _AhliGiziDetailPasienScreenState
         await FirebaseNotificationService.createNotification(
           userId: patientId,
           role: 'pasien',
-          title: '📋 Target Nutrisi Diperbarui',
+          title: 'ðŸ“‹ Target Nutrisi Diperbarui',
           message: 'Ahli Gizi $agName telah memperbarui target nutrisi untuk program "$progName". '
               'Silakan cek tab Catatan Makan untuk melihat target terbaru Anda.',
           type: 'target',
@@ -488,7 +511,7 @@ class _AhliGiziDetailPasienScreenState
       }
 
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('Data pasien berhasil disimpan! ✓',
+        content: Text('Data pasien berhasil disimpan! âœ“',
             style: GoogleFonts.manrope(fontWeight: FontWeight.w600)),
         backgroundColor: AppColors.primary,
         behavior: SnackBarBehavior.floating,
@@ -542,17 +565,17 @@ class _AhliGiziDetailPasienScreenState
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ── Info Pasien ──
+            // â”€â”€ Info Pasien â”€â”€
             _buildPasienCard(),
             const SizedBox(height: 12),
             _buildInfoGrid(),
             const SizedBox(height: 16),
 
-            // ── Program Terapi Diet Pasien ──
+            // â”€â”€ Program Terapi Diet Pasien â”€â”€
             _buildPatientProgramsSection(),
             const SizedBox(height: 24),
 
-            // ── Clinical Info ──
+            // â”€â”€ Clinical Info â”€â”€
             _buildSectionLabel('Kondisi Klinis Pasien'),
             const SizedBox(height: 8),
             Container(
@@ -570,7 +593,7 @@ class _AhliGiziDetailPasienScreenState
             ),
             const SizedBox(height: 24),
 
-            // ── Terapi Diet Selection (hanya tampil jika belum ada program dipilih) ──
+            // â”€â”€ Terapi Diet Selection (hanya tampil jika belum ada program dipilih) â”€â”€
             if (_selectedPatientProgram == null) ...[
               _buildSectionLabel('Pilih Terapi Diet'),
               const SizedBox(height: 8),
@@ -582,7 +605,7 @@ class _AhliGiziDetailPasienScreenState
               const SizedBox(height: 24),
             ],
 
-            // ── Banner: Program yang sedang diedit ──
+            // â”€â”€ Banner: Program yang sedang diedit â”€â”€
             if (_selectedPatientProgram != null) ...[
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -624,15 +647,15 @@ class _AhliGiziDetailPasienScreenState
               ),
             ],
 
-            // ── NUTRISI SECTION ──
+            // â”€â”€ NUTRISI SECTION â”€â”€
             _buildNutrisiSection(),
             const SizedBox(height: 24),
 
-            // ── CAPAIAN GIZI SECTION ──
+            // â”€â”€ CAPAIAN GIZI SECTION â”€â”€
             _buildCapaianGiziSection(),
             const SizedBox(height: 24),
             
-            // ── RIWAYAT CATATAN MAKANAN ──
+            // â”€â”€ RIWAYAT CATATAN MAKANAN â”€â”€
             _buildRiwayatMakanSection(),
             const SizedBox(height: 12),
             SizedBox(
@@ -701,7 +724,7 @@ class _AhliGiziDetailPasienScreenState
             ),
             const SizedBox(height: 24),
 
-            // ── Ubah Status ──
+            // â”€â”€ Ubah Status â”€â”€
             _buildSectionLabel('Ubah Status Pasien'),
             const SizedBox(height: 8),
             _buildStatusButtons(),
@@ -712,9 +735,9 @@ class _AhliGiziDetailPasienScreenState
     );
   }
 
-  // ─────────────────────────────────────────────────────────────────────────
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   // WIDGET BUILDERS
-  // ─────────────────────────────────────────────────────────────────────────
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   Widget _buildPasienCard() {
     return Container(
@@ -853,7 +876,7 @@ class _AhliGiziDetailPasienScreenState
           ),
         ),
         const SizedBox(height: 12),
-        // ── Informed Consent Card ──
+        // â”€â”€ Informed Consent Card â”€â”€
         _buildConsentCard(hasConsent, base64Sig, filePath, signedAt),
       ],
     );
@@ -1037,7 +1060,7 @@ class _AhliGiziDetailPasienScreenState
                         children: [
                           Text('Surat Persetujuan Program Diet',
                               style: GoogleFonts.manrope(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.white)),
-                          Text('Informed Consent — ${widget.pasien['name'] ?? ''}',
+                          Text('Informed Consent â€” ${widget.pasien['name'] ?? ''}',
                               style: GoogleFonts.manrope(fontSize: 11, color: Colors.white.withValues(alpha: 0.85))),
                         ],
                       ),
@@ -1052,7 +1075,7 @@ class _AhliGiziDetailPasienScreenState
                 ),
               ),
 
-              // Body — dokumen lengkap
+              // Body â€” dokumen lengkap
               Flexible(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.all(20),
@@ -1209,7 +1232,7 @@ class _AhliGiziDetailPasienScreenState
                         children: [
                           const Icon(Icons.info_outline, size: 13, color: AppColors.textMuted),
                           const SizedBox(width: 4),
-                          Text('Tanda tangan digital pasien — ${widget.pasien['name'] ?? ''}',
+                          Text('Tanda tangan digital pasien â€” ${widget.pasien['name'] ?? ''}',
                               style: GoogleFonts.manrope(fontSize: 11, color: AppColors.textMuted)),
                         ],
                       ),
@@ -1218,7 +1241,7 @@ class _AhliGiziDetailPasienScreenState
                 ),
               ),
 
-              // Footer — tombol download
+              // Footer â€” tombol download
               Container(
                 padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
                 decoration: const BoxDecoration(
@@ -1554,6 +1577,30 @@ class _AhliGiziDetailPasienScreenState
       children: [
         _buildSectionLabel('Riwayat Catatan Makanan (7 Hari Terakhir)'),
         const SizedBox(height: 8),
+        if (_missedDays > 0)
+          Container(
+            margin: const EdgeInsets.only(bottom: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFF7ED),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFFED7AA)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.warning_amber_rounded, color: Color(0xFFD97706), size: 22),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    _missedDays >= 3
+                        ? '⚠️ Pasien tidak mengisi catatan makan selama $_missedDays hari terakhir. Segera hubungi pasien.'
+                        : '⚠️ Pasien tidak mengisi catatan makan selama $_missedDays hari terakhir.',
+                    style: GoogleFonts.manrope(fontSize: 12, color: const Color(0xFF92400E), fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ],
+            ),
+          ),
         if (_riwayatMakan.isEmpty)
           Container(
             width: double.infinity,
@@ -1855,9 +1902,9 @@ class _AhliGiziDetailPasienScreenState
     );
   }
 
-  // ─────────────────────────────────────────────────────────────────────────
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   // HELPER WIDGETS
-  // ─────────────────────────────────────────────────────────────────────────
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   Widget _buildSectionLabel(String label) => Text(label,
       style: GoogleFonts.manrope(
@@ -1951,7 +1998,7 @@ class _AhliGiziDetailPasienScreenState
     );
   }
 
-  // ── PATIENT PROGRAMS SECTION ─────────────────────────────────────────────
+  // â”€â”€ PATIENT PROGRAMS SECTION â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   Widget _buildPatientProgramsSection() {
     return Column(
@@ -2415,7 +2462,7 @@ class _AhliGiziDetailPasienScreenState
                     await FirebaseNotificationService.createNotification(
                       userId: patientId,
                       role: 'pasien',
-                      title: '🌿 Program Diet Baru Ditambahkan',
+                      title: 'ðŸŒ¿ Program Diet Baru Ditambahkan',
                       message: 'Ahli Gizi $agName telah menambahkan program diet baru "$pName" untuk Anda. '
                           'Buka beranda untuk melihat detail program.',
                       type: 'info',
@@ -2455,4 +2502,5 @@ class _AhliGiziDetailPasienScreenState
     notesCtrl.dispose();
   }
 }
+
 

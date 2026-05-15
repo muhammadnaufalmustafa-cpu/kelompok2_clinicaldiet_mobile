@@ -1,10 +1,11 @@
-import 'dart:io';
+﻿import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../theme/app_theme.dart';
 import '../services/auth_service.dart';
+import '../services/firebase_notification_service.dart';
 import 'login_screen.dart';
 import 'pilih_jenis_diet_screen.dart';
 import 'pilih_ahli_gizi_screen.dart';
@@ -468,6 +469,16 @@ class _ProfilScreenState extends State<ProfilScreen> {
                               if (!context.mounted) return;
                               Navigator.pop(context);
                               await _loadUser();
+                              final agNip = _user?['selected_ahli_gizi_nip'] as String? ?? '';
+                              if (agNip.isNotEmpty) {
+                                FirebaseNotificationService.notifyBBTBUpdated(
+                                  ahliGiziNip: agNip,
+                                  pasienName: _user?['name'] ?? 'Pasien',
+                                  pasienRm: _user?['rm'] ?? '',
+                                  weight: weight,
+                                  height: height,
+                                );
+                              }
                               if (!context.mounted) return;
                               ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Data berhasil diperbarui!', style: GoogleFonts.manrope()), backgroundColor: AppColors.primary));
                             } else {
@@ -573,6 +584,12 @@ class _ProfilScreenState extends State<ProfilScreen> {
                     ulasan: ulasan,
                     pasienName: _user?['name'] ?? 'Pasien',
                     pasienRm: _user?['rm'] ?? ''
+                  );
+                  await FirebaseNotificationService.notifyRatingReceived(
+                    ahliGiziNip: _selectedAhliGizi!['nip'],
+                    pasienName: _user?['name'] ?? 'Pasien',
+                    pasienRm: _user?['rm'] ?? '',
+                    rating: _selectedRating,
                   );
                 } else {
                   final ahliGiziList = await AuthService.getAllAhliGizi();
@@ -1614,3 +1631,5 @@ class _ProfilScreenState extends State<ProfilScreen> {
     );
   }
 }
+
+

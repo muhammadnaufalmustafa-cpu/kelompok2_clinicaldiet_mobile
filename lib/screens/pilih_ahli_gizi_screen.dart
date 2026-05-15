@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_theme.dart';
 import '../services/auth_service.dart';
+import '../services/firebase_notification_service.dart';
 import 'inform_consent_screen.dart';
 import 'tampil_leaflet_onboarding_screen.dart';
 
@@ -108,6 +109,12 @@ class _PilihAhliGiziScreenState extends State<PilihAhliGiziScreen> {
               final nip = ag['nip'] as String;
               
               await AuthService.selectAhliGizi(rm, nip);
+              // Notif ke Ahli Gizi bahwa ada pasien baru bergabung
+              await FirebaseNotificationService.notifyNewPatientJoined(
+                ahliGiziNip: nip,
+                pasienName: user['name'] ?? 'Pasien',
+                pasienRm: rm,
+              );
               
               if (!mounted) return;
               ScaffoldMessenger.of(context).showSnackBar(
