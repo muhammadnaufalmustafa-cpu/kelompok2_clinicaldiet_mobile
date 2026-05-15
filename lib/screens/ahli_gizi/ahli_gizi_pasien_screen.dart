@@ -4,6 +4,8 @@ import '../../theme/app_theme.dart';
 import '../../services/auth_service.dart';
 import '../../utils/age_calculator.dart';
 import 'ahli_gizi_detail_pasien_screen.dart';
+import '../../services/export_service.dart';
+import 'package:intl/intl.dart';
 
 class AhliGiziPasienScreen extends StatefulWidget {
   const AhliGiziPasienScreen({super.key});
@@ -18,6 +20,8 @@ class _AhliGiziPasienScreenState extends State<AhliGiziPasienScreen> {
   final _searchCtrl = TextEditingController();
   String _filterStatus = 'Semua';
   bool _isLoading = true;
+  bool _isExporting = false;
+  Map<String, dynamic>? _ahliGizi;
 
   @override
   void initState() {
@@ -44,10 +48,65 @@ class _AhliGiziPasienScreenState extends State<AhliGiziPasienScreen> {
 
     if (mounted) {
       setState(() {
+        _ahliGizi = user;
         _allPasien = myPasien;
         _applyFilter();
         _isLoading = false;
       });
+    }
+  }
+
+  Future<void> _exportToExcel() async {
+    if (_ahliGizi == null || _filtered.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('Tidak ada data pasien untuk diekspor.', style: GoogleFonts.manrope()),
+        backgroundColor: Colors.orange,
+      ));
+      return;
+    }
+
+    // Tampilkan konfirmasi
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text('Export Laporan Bulanan', style: GoogleFonts.manrope(fontWeight: FontWeight.w700)),
+        content: Text('Anda akan mengekspor ${_filtered.length} pasien (berdasarkan filter saat ini) ke dalam file Excel. Lanjutkan?', style: GoogleFonts.manrope()),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text('Batal', style: GoogleFonts.manrope(fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            child: Text('Ya, Export', style: GoogleFonts.manrope(color: Colors.white, fontWeight: FontWeight.w600)),
+          ),
+        ],
+      )
+    );
+
+    if (confirm != true) return;
+
+    setState(() => _isExporting = true);
+
+    final monthYear = DateFormat('MMMM_yyyy', 'id_ID').format(DateTime.now());
+    final success = await ExportService.exportPasienToExcel(
+      pasienList: _filtered, 
+      ahliGizi: _ahliGizi!, 
+      monthYearStr: monthYear
+    );
+
+    setState(() => _isExporting = false);
+
+    if (!success && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('Gagal membuat file Excel.', style: GoogleFonts.manrope()),
+        backgroundColor: Colors.red,
+      ));
     }
   }
 
@@ -89,6 +148,13 @@ class _AhliGiziPasienScreenState extends State<AhliGiziPasienScreen> {
             style: GoogleFonts.manrope(
                 fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
         actions: [
+          IconButton(
+            icon: _isExporting 
+              ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary))
+              : const Icon(Icons.download_outlined, color: AppColors.primary),
+            tooltip: 'Export Laporan (Excel)',
+            onPressed: _isExporting ? null : _exportToExcel,
+          ),
           IconButton(
             icon: const Icon(Icons.refresh, color: AppColors.textSecondary),
             onPressed: _loadData,

@@ -12,6 +12,8 @@ import '../../utils/age_calculator.dart';
 import 'laporan_pasien_screen.dart';
 import 'laporan_harian_ag_screen.dart';
 import '../../services/firebase_notification_service.dart';
+import '../../services/export_service.dart';
+import 'package:intl/intl.dart';
 
 class AhliGiziDetailPasienScreen extends StatefulWidget {
   final Map<String, dynamic> pasien;
@@ -28,6 +30,7 @@ class _AhliGiziDetailPasienScreenState
   bool _isSaving = false;
   List<Map<String, dynamic>> _riwayatMakan = [];
   String? _selectedDietType; // Jenis diet yang sedang diedit
+  bool _isExportingBulanan = false;
 
   // ── Patient Therapy Programs ──
   List<Map<String, dynamic>> _patientPrograms = [];
@@ -184,8 +187,33 @@ class _AhliGiziDetailPasienScreenState
     _diagnosisCtrl.dispose();
     _catatanNutrisiCtrl.dispose();
     for (var c in _targetCtrls.values) { c.dispose(); }
+    for (var c in _targetCtrls.values) { c.dispose(); }
     for (var c in _aktualCtrls.values) { c.dispose(); }
     super.dispose();
+  }
+
+  // ── Export Laporan Bulanan (1 Pasien) ──
+  Future<void> _exportLaporanBulanan() async {
+    final user = await AuthService.getLoggedInUser();
+    if (user == null) return;
+
+    setState(() => _isExportingBulanan = true);
+    
+    final monthYear = DateFormat('MMMM_yyyy', 'id_ID').format(DateTime.now());
+    final success = await ExportService.exportPasienToExcel(
+      pasienList: [widget.pasien], 
+      ahliGizi: user, 
+      monthYearStr: monthYear
+    );
+
+    setState(() => _isExportingBulanan = false);
+
+    if (!success && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('Gagal mengekspor laporan bulanan.', style: GoogleFonts.manrope()),
+        backgroundColor: Colors.red,
+      ));
+    }
   }
 
   List<String> _getDietList() {
@@ -675,11 +703,11 @@ class _AhliGiziDetailPasienScreenState
                 const SizedBox(width: 12),
                 Expanded(
                   child: OutlinedButton.icon(
-                    onPressed: () {
-                      Navigator.push(context, MaterialPageRoute(builder: (_) => LaporanPasienScreen(pasien: widget.pasien)));
-                    },
-                    icon: const Icon(Icons.summarize_outlined, size: 18, color: AppColors.primary),
-                    label: Text('Laporan Bulanan', style: GoogleFonts.manrope(fontWeight: FontWeight.w700, fontSize: 13, color: AppColors.primary)),
+                    onPressed: _isExportingBulanan ? null : _exportLaporanBulanan,
+                    icon: _isExportingBulanan 
+                      ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary))
+                      : const Icon(Icons.summarize_outlined, size: 18, color: AppColors.primary),
+                    label: Text(_isExportingBulanan ? 'Mengekspor...' : 'Laporan Bulanan', style: GoogleFonts.manrope(fontWeight: FontWeight.w700, fontSize: 13, color: AppColors.primary)),
                     style: OutlinedButton.styleFrom(
                       side: const BorderSide(color: AppColors.primary),
                       padding: const EdgeInsets.symmetric(vertical: 12),

@@ -570,7 +570,8 @@ class _ProfilScreenState extends State<ProfilScreen> {
                     _selectedAhliGizi!['nip'], 
                     _selectedRating.toDouble(), 
                     ulasan: ulasan,
-                    pasienName: _user?['name'] ?? 'Pasien'
+                    pasienName: _user?['name'] ?? 'Pasien',
+                    pasienRm: _user?['rm'] ?? ''
                   );
                 } else {
                   final ahliGiziList = await AuthService.getAllAhliGizi();
@@ -580,7 +581,8 @@ class _ProfilScreenState extends State<ProfilScreen> {
                       ag['nip'], 
                       _selectedRating.toDouble(),
                       ulasan: ulasan,
-                      pasienName: _user?['name'] ?? 'Pasien'
+                      pasienName: _user?['name'] ?? 'Pasien',
+                      pasienRm: _user?['rm'] ?? ''
                     );
                   }
                 }

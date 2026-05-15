@@ -156,7 +156,7 @@ class AuthService {
 
   // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ RATING AHLI GIZI â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-  static Future<void> submitRatingAhliGizi(String nip, double newRating, {String ulasan = '', String pasienName = 'Pasien'}) async {
+  static Future<void> submitRatingAhliGizi(String nip, double newRating, {String ulasan = '', String pasienName = 'Pasien', String pasienRm = ''}) async {
     try {
       final snapshot = await FirebaseFirestore.instance.collection('users').where('nip', isEqualTo: nip).where('role', isEqualTo: 'ahli_gizi').get();
       if (snapshot.docs.isNotEmpty) {
@@ -166,11 +166,26 @@ class AuthService {
         final currentRating = (ag['rating'] as num?)?.toDouble() ?? 0.0;
         final currentCount = (ag['rating_count'] as num?)?.toInt() ?? 0;
         
-        final newCount = currentCount + 1;
-        final updatedRating = ((currentRating * currentCount) + newRating) / newCount;
-        
+        // Remove old rating from this patient if exists
         List reviews = ag['reviews'] ?? [];
+        double ratingDiff = newRating;
+        int countDiff = 1;
+
+        if (pasienRm.isNotEmpty) {
+          final existingIndex = reviews.indexWhere((r) => r['pasienRm'] == pasienRm);
+          if (existingIndex != -1) {
+            final oldRating = (reviews[existingIndex]['rating'] as num?)?.toDouble() ?? 0.0;
+            ratingDiff = newRating - oldRating;
+            countDiff = 0; // Already rated, just updating
+            reviews.removeAt(existingIndex);
+          }
+        }
+
+        final newCount = currentCount + countDiff;
+        final updatedRating = newCount > 0 ? ((currentRating * currentCount) + ratingDiff) / newCount : newRating;
+        
         reviews.insert(0, {
+          'pasienRm': pasienRm,
           'pasienName': pasienName,
           'rating': newRating,
           'ulasan': ulasan,
