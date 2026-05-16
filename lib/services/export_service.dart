@@ -7,6 +7,17 @@ import 'package:share_plus/share_plus.dart';
 import '../utils/age_calculator.dart';
 
 class ExportService {
+  /// Hitung status gizi berdasarkan IMT
+  static String _hitungStatusGizi(dynamic weight, dynamic height) {
+    final imt = AgeCalculator.calculateIMT(weight, height);
+    if (imt == null) return '-';
+    final imtVal = double.tryParse(imt.toString()) ?? 0;
+    if (imtVal < 18.5) return 'Kurang ($imt)';
+    if (imtVal < 25.0) return 'Normal ($imt)';
+    if (imtVal < 30.0) return 'Gemuk/Lebih ($imt)';
+    return 'Obesitas ($imt)';
+  }
+
   /// Ekspor daftar pasien yang difilter ke format Excel (.xlsx)
   static Future<bool> exportPasienToExcel({
     required List<Map<String, dynamic>> pasienList,
@@ -24,22 +35,23 @@ class ExportService {
         fontFamily: getFontFamily(FontFamily.Calibri),
       );
 
-      // Header Kolom (14 Kolom)
+      // Header Kolom (15 Kolom)
       final headers = [
         'No',
-        'No rm',
-        'Nama',
-        'no hp',
-        'Tanggal lahir',
-        'Jenis kelamin',
-        'Berat badan',
-        'Tinggi badan',
-        'Status gizi',
+        'No RM',
+        'Nama Pasien',
+        'No HP',
+        'Tanggal Lahir',
+        'Jenis Kelamin',
+        'Berat Badan (kg)',
+        'Tinggi Badan (cm)',
+        'Status Gizi (IMT)',
         'Diagnosis Medis',
         'Terapi Diet',
-        'Nama ahli gizi',
-        'Rating pemberian pasien',
-        'Keterangan'
+        'Status Program',
+        'Nama Ahli Gizi',
+        'Rating Pasien',
+        'Evaluasi Akhir Ahli Gizi',
       ];
 
       for (int i = 0; i < headers.length; i++) {
@@ -55,7 +67,7 @@ class ExportService {
       for (int i = 0; i < pasienList.length; i++) {
         final p = pasienList[i];
         final rm = p['rm']?.toString() ?? '-';
-        
+
         // Terapi diet
         final dietStr = () {
           final raw = p['diet_types'];
@@ -63,32 +75,54 @@ class ExportService {
           return p['diet_type'] as String? ?? '-';
         }();
 
-        // Cari rating pasien ini
-        String ratingStr = '-';
+        // Status gizi dihitung dari IMT (BB/TB)
+        final statusGizi = _hitungStatusGizi(p['weight'], p['height']);
+
+        // Status program
+        final statusPasien = p['status']?.toString() ?? 'aktif';
+        final statusProgram = () {
+          switch (statusPasien) {
+            case 'berhasil': return 'Selesai/Berhasil';
+            case 'dropout': return 'Dropout';
+            case 'meninggal': return 'Meninggal';
+            case 'aktif': return 'Aktif';
+            default: return statusPasien;
+          }
+        }();
+
+        // Rating dari reviews
+        String ratingStr = 'Belum ada rating';
         try {
           final review = reviews.firstWhere((r) => r['pasienRm'] == rm);
-          if (review['rating'] != null) {
-            ratingStr = review['rating'].toString();
+          final ratingVal = review['rating'];
+          if (ratingVal != null) {
+            ratingStr = '$ratingVal ★';
           }
-        } catch (_) {
-          // Tidak ada rating dari pasien ini
-        }
+        } catch (_) {}
+
+        // Evaluasi akhir (diisi saat klik "Berhasil")
+        final evaluasiAkhir = p['evaluasi_akhir']?.toString() ?? '-';
+        final outcomeProgram = p['outcome_program']?.toString() ?? '';
+        final keteranganFinal = evaluasiAkhir == '-'
+            ? '-'
+            : (outcomeProgram.isNotEmpty ? '[$outcomeProgram] $evaluasiAkhir' : evaluasiAkhir);
 
         final rowData = [
-          (i + 1).toString(), // No
-          rm, // No rm
-          p['name']?.toString() ?? '-', // Nama
-          p['phone']?.toString() ?? '-', // no hp
-          p['birthdate']?.toString() ?? '-', // Tanggal lahir
-          p['gender']?.toString() ?? '-', // Jenis kelamin
-          p['weight']?.toString() ?? '-', // Berat badan
-          p['height']?.toString() ?? '-', // Tinggi badan
-          p['status_gizi']?.toString() ?? '-', // Status gizi
-          p['diagnosis']?.toString() ?? '-', // Diagnosis Medis
-          dietStr, // Terapi Diet
-          ahliGizi['name']?.toString() ?? '-', // Nama ahli gizi
-          ratingStr, // Rating
-          p['catatan_klinis']?.toString() ?? '-', // Keterangan
+          (i + 1).toString(),                        // No
+          rm,                                         // No RM
+          p['name']?.toString() ?? '-',              // Nama Pasien
+          p['phone']?.toString() ?? '-',             // No HP
+          p['birthdate']?.toString() ?? '-',         // Tanggal Lahir
+          p['gender']?.toString() ?? '-',            // Jenis Kelamin
+          p['weight']?.toString() ?? '-',            // Berat Badan
+          p['height']?.toString() ?? '-',            // Tinggi Badan
+          statusGizi,                                 // Status Gizi (auto dari IMT)
+          p['diagnosis']?.toString() ?? '-',         // Diagnosis Medis
+          dietStr,                                    // Terapi Diet
+          statusProgram,                              // Status Program
+          ahliGizi['name']?.toString() ?? '-',       // Nama Ahli Gizi
+          ratingStr,                                  // Rating Pasien
+          keteranganFinal,                            // Evaluasi Akhir
         ];
 
         for (int c = 0; c < rowData.length; c++) {
@@ -104,13 +138,11 @@ class ExportService {
       final fileName = 'Laporan_Pasien_${ahliGizi['name']?.toString().replaceAll(" ", "_")}_$monthYearStr.xlsx';
 
       if (kIsWeb) {
-        // Untuk web
         await Share.shareXFiles(
           [XFile.fromData(Uint8List.fromList(fileBytes), name: fileName, mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')],
           text: 'Laporan Pasien Bulanan',
         );
       } else {
-        // Untuk Android/iOS
         final directory = await getTemporaryDirectory();
         final filePath = '${directory.path}/$fileName';
         final file = File(filePath);
@@ -123,7 +155,6 @@ class ExportService {
 
       return true;
     } catch (e) {
-      print('DEBUG: Error exporting excel: $e');
       return false;
     }
   }

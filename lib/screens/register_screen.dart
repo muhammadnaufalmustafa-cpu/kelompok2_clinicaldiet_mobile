@@ -232,7 +232,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           children: [
             const Icon(Icons.assignment_ind, color: AppColors.primaryDark),
             const SizedBox(width: 8),
-            Text('Clinical Diet',
+            Text('Nak Sihat',
                 style: GoogleFonts.manrope(
                   fontSize: 18,
                   fontWeight: FontWeight.w600,

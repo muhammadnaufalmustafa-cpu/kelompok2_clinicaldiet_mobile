@@ -198,18 +198,23 @@ class _LaporanHarianScreenState extends State<LaporanHarianScreen> {
   Widget _buildReportContent() {
     final targets = _nutritionData!['target_nutrients'] as Map<String, dynamic>? ?? {};
     
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildInfoCard(),
-          const SizedBox(height: 20),
-          _buildChartSection(targets),
-          const SizedBox(height: 20),
-          _buildSummaryTable(targets),
-          const SizedBox(height: 30),
-        ],
+    return RefreshIndicator(
+      color: AppColors.primary,
+      onRefresh: _loadData,
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildInfoCard(),
+            const SizedBox(height: 20),
+            _buildChartSection(targets),
+            const SizedBox(height: 20),
+            _buildSummaryTable(targets),
+            const SizedBox(height: 30),
+          ],
+        ),
       ),
     );
   }

@@ -794,7 +794,7 @@ class _CatatanScreenState extends State<CatatanScreen> {
                 )
               else
                 const SizedBox(width: 34),
-              Text('Clinical Diet', style: GoogleFonts.manrope(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.primary)),
+              Text('Nak Sihat', style: GoogleFonts.manrope(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.primary)),
               NotificationBell(
                 userId: _userId,
                 role: 'pasien',

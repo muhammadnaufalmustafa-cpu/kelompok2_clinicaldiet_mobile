@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -31,6 +32,7 @@ class _AhliGiziDetailPasienScreenState
   List<Map<String, dynamic>> _riwayatMakan = [];
   String? _selectedDietType; // Jenis diet yang sedang diedit
   bool _isExportingBulanan = false;
+  bool _isRegeneratingConsent = false;
   int _missedDays = 0; // jumlah hari tidak isi log
 
   // â”€â”€ Patient Therapy Programs â”€â”€
@@ -206,6 +208,167 @@ class _AhliGiziDetailPasienScreenState
     super.dispose();
   }
 
+  // ── Regenerate Informed Consent (oleh Ahli Gizi) ──
+  Future<void> _regenerateConsent() async {
+    final rm = widget.pasien['rm'] as String? ?? '';
+    final name = widget.pasien['name'] as String? ?? '-';
+    if (rm.isEmpty) return;
+    setState(() => _isRegeneratingConsent = true);
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .where('rm', isEqualTo: rm)
+          .where('role', isEqualTo: 'pasien')
+          .limit(1)
+          .get();
+      if (snapshot.docs.isEmpty) {
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Data pasien tidak ditemukan.', style: GoogleFonts.manrope()),
+          backgroundColor: Colors.red,
+        ));
+        return;
+      }
+      final patientData = snapshot.docs.first.data();
+      final signatureBase64 = patientData['consent_signature_base64'] as String? ?? '';
+      final consentSignedAt = patientData['consent_signed_at'] as String? ?? '';
+      if (signatureBase64.isEmpty) {
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Pasien belum menandatangani informed consent.', style: GoogleFonts.manrope()),
+          backgroundColor: Colors.orange,
+        ));
+        return;
+      }
+      String signedDateStr = 'Tanggal tidak tercatat';
+      if (consentSignedAt.isNotEmpty) {
+        try {
+          final dt = DateTime.parse(consentSignedAt).toLocal();
+          signedDateStr =
+              '${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')}/${dt.year} '
+              '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')} WIB';
+        } catch (_) {}
+      }
+      final logoNatunaData = await rootBundle.load('assets/images/logo_natuna.png');
+      final logoNatunaBase64 = base64Encode(logoNatunaData.buffer.asUint8List());
+      final logoKarsData = await rootBundle.load('assets/images/logo_kars.png');
+      final logoKarsBase64 = base64Encode(logoKarsData.buffer.asUint8List());
+      final newDocBase64 = _generateConsentHtml(
+        patientName: name, patientRm: rm, signedDateStr: signedDateStr,
+        signatureBase64: signatureBase64, logoNatunaBase64: logoNatunaBase64,
+        logoKarsBase64: logoKarsBase64,
+      );
+      await snapshot.docs.first.reference.update({
+        'consent_regenerated_at': DateTime.now().toIso8601String(),
+      });
+      final htmlContent = utf8.decode(base64Decode(newDocBase64));
+      downloadHtmlFileOnWeb(htmlContent, 'informed_consent_$rm.html');
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('✅ Dokumen consent diperbarui & diunduh!', style: GoogleFonts.manrope(fontWeight: FontWeight.w600)),
+        backgroundColor: AppColors.primary, behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ));
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('Gagal: $e', style: GoogleFonts.manrope()), backgroundColor: Colors.red,
+      ));
+    } finally {
+      if (mounted) setState(() => _isRegeneratingConsent = false);
+    }
+  }
+
+  String _generateConsentHtml({
+    required String patientName, required String patientRm,
+    required String signedDateStr, required String signatureBase64,
+    required String logoNatunaBase64, required String logoKarsBase64,
+  }) {
+    final html = '''<!DOCTYPE html>
+<html lang="id"><head><meta charset="UTF-8">
+<title>Informed Consent Monitoring Diet - $patientName</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+* { box-sizing:border-box; margin:0; padding:0; }
+body { font-family:'Manrope',Arial,sans-serif; background:#f8fafc; padding:32px; }
+.page { max-width:800px; margin:0 auto; background:#fff; border-radius:16px; box-shadow:0 4px 24px rgba(0,0,0,.1); padding:48px 56px; }
+.kop { display:flex; align-items:center; justify-content:space-between; padding-bottom:10px; border-bottom:3px solid #000; margin-bottom:4px; }
+.kop img { height:90px; }
+.kop-mid { text-align:center; flex:1; padding:0 16px; }
+.kop-mid .gov { font-size:13px; font-weight:500; }
+.kop-mid .rs { font-size:16px; font-weight:800; text-transform:uppercase; margin:4px 0; }
+.kop-mid .addr { font-size:11px; color:#374151; line-height:1.6; }
+hr.thin { border:none; border-top:1.5px solid #000; margin-top:3px; }
+.title { font-size:15px; font-weight:800; text-align:center; margin:28px 0 24px; letter-spacing:1px; text-transform:uppercase; text-decoration:underline; }
+.info-box { background:#f1faf5; border:1px solid #bbf0d4; border-radius:10px; padding:16px 20px; margin-bottom:28px; }
+.info-box table { width:100%; border-collapse:collapse; }
+.info-box td { padding:5px 8px; font-size:14px; }
+.info-box td:first-child { color:#64748b; width:160px; }
+.info-box td:last-child { font-weight:600; }
+.sec-label { font-size:12px; font-weight:700; color:#3B7A57; letter-spacing:1.2px; text-transform:uppercase; margin-bottom:10px; }
+.consent-box { border:1px solid #e2e8f0; border-radius:10px; padding:20px 24px; margin-bottom:24px; background:#fafafa; }
+p { font-size:14px; color:#475569; line-height:1.7; margin-bottom:10px; }
+.pt { display:flex; gap:10px; margin-bottom:8px; }
+.pn { font-size:14px; font-weight:700; color:#3B7A57; min-width:24px; }
+.px { font-size:14px; color:#475569; line-height:1.6; }
+.agree { background:#f0fdf4; border:2px solid #3B7A57; border-radius:10px; padding:14px 18px; margin-bottom:24px; font-size:14px; font-weight:600; color:#166534; }
+.sig-label { font-size:12px; font-weight:700; color:#64748b; letter-spacing:1.2px; text-transform:uppercase; margin-bottom:10px; }
+.sig-box { border:1.5px solid #3B7A57; border-radius:12px; padding:12px; display:inline-block; }
+.sig-box img { max-width:100%; max-height:180px; display:block; border-radius:6px; }
+.footer { border-top:2px solid #e2e8f0; padding-top:20px; margin-top:32px; display:flex; justify-content:space-between; align-items:flex-end; }
+.signed { font-size:12px; color:#64748b; }
+.signed strong { color:#1e293b; font-weight:700; }
+.badge { background:#dcfce7; border:1px solid #86efac; border-radius:20px; padding:6px 14px; font-size:12px; font-weight:700; color:#16a34a; }
+@media print { body{background:#fff;padding:0;} .page{box-shadow:none;border-radius:0;padding:32px;} }
+</style></head>
+<body><div class="page">
+  <div class="kop">
+    <img src="data:image/png;base64,$logoNatunaBase64" alt="Logo Natuna">
+    <div class="kop-mid">
+      <div class="gov">PEMERINTAH KABUPATEN NATUNA</div>
+      <div class="gov">DINAS KESEHATAN</div>
+      <div class="rs">UPTD Rumah Sakit Umum Daerah Natuna</div>
+      <div class="addr">Jalan H. Ali Murtopo, Kabupaten Natuna, Provinsi Kepulauan Riau, 29783<br>
+        Telp. (0773) 3211378 | rsud.natunakab.go.id | natuna.rsud@gmail.com</div>
+    </div>
+    <img src="data:image/png;base64,$logoKarsBase64" alt="Logo KARS">
+  </div>
+  <hr class="thin">
+  <div class="title">Informed Consent Monitoring Diet</div>
+  <div class="info-box">
+    <div class="sec-label">Data Pasien</div>
+    <table>
+      <tr><td>Nama Lengkap</td><td>: $patientName</td></tr>
+      <tr><td>No. Rekam Medis</td><td>: $patientRm</td></tr>
+      <tr><td>Tanggal Tanda Tangan</td><td>: $signedDateStr</td></tr>
+    </table>
+  </div>
+  <div class="sec-label">Isi Persetujuan</div>
+  <div class="consent-box">
+    <p>Saya dengan ini menyatakan bahwa saya telah memahami dan menyetujui untuk mengikuti Program Diet Klinik yang diselenggarakan oleh Nak Sihat.</p>
+    <p>Saya memahami bahwa program ini melibatkan pemantauan asupan makanan, berat badan, tinggi badan, dan parameter gizi lainnya oleh ahli gizi yang telah ditunjuk.</p>
+    <div class="pt"><span class="pn">1.</span><span class="px">Saya bersedia untuk mengisi catatan makan harian secara jujur dan tepat waktu.</span></div>
+    <div class="pt"><span class="pn">2.</span><span class="px">Saya memahami bahwa apabila tidak mengisi catatan makan selama 3 (tiga) hari berturut-turut, saya akan dinyatakan GUGUR dari program dan tidak dapat menggunakan aplikasi hingga dikonfirmasi ulang oleh ahli gizi.</span></div>
+    <div class="pt"><span class="pn">3.</span><span class="px">Saya bersedia memberikan data kesehatan yang akurat, termasuk berat badan dan tinggi badan secara berkala.</span></div>
+    <div class="pt"><span class="pn">4.</span><span class="px">Saya memahami bahwa data saya akan digunakan untuk keperluan pemantauan gizi dan tidak akan disebarluaskan kepada pihak ketiga tanpa izin.</span></div>
+    <div class="pt"><span class="pn">5.</span><span class="px">Saya berhak untuk mengundurkan diri dari program dengan memberitahukan ahli gizi terlebih dahulu.</span></div>
+    <div class="pt"><span class="pn">6.</span><span class="px">Saya memahami bahwa rekomendasi dalam aplikasi ini bersifat edukatif dan tidak menggantikan konsultasi medis langsung.</span></div>
+    <p style="margin-top:12px">Dengan menandatangani dokumen ini, saya menyatakan bahwa saya telah membaca, memahami, dan menyetujui seluruh ketentuan di atas.</p>
+  </div>
+  <div class="agree">✔ Saya telah membaca dan menyetujui seluruh ketentuan di atas</div>
+  <div style="margin-bottom:32px">
+    <div class="sig-label">Tanda Tangan Pasien</div>
+    <div class="sig-box"><img src="data:image/png;base64,$signatureBase64" alt="TTD $patientName"></div>
+    <p style="margin-top:8px;font-size:12px;color:#94a3b8">Tanda tangan digital dibuat oleh pasien pada $signedDateStr</p>
+  </div>
+  <div class="footer">
+    <div class="signed">
+      <div>Ditandatangani secara digital oleh:</div>
+      <div><strong>$patientName</strong> | RM: $patientRm</div>
+      <div>Tanggal: $signedDateStr</div>
+    </div>
+    <div class="badge">✓ Terverifikasi</div>
+  </div>
+</div></body></html>''';
+    return base64Encode(utf8.encode(html));
+  }
+
   // â”€â”€ Export Laporan Bulanan (1 Pasien) â”€â”€
   Future<void> _exportLaporanBulanan() async {
     final user = await AuthService.getLoggedInUser();
@@ -362,8 +525,35 @@ class _AhliGiziDetailPasienScreenState
   }
 
   Future<void> _updateStatus(String newStatus) async {
-    await AuthService.updatePasienStatus(
-        widget.pasien['rm'] as String, newStatus);
+    // Jika status "berhasil" wajib isi evaluasi akhir dulu
+    if (newStatus == 'berhasil') {
+      await _showEvaluasiAkhirDialog();
+      return;
+    }
+    await _doUpdateStatus(newStatus, evaluasiAkhir: null);
+  }
+
+  Future<void> _doUpdateStatus(String newStatus, {String? evaluasiAkhir, String? outcomeType}) async {
+    final rm = widget.pasien['rm'] as String;
+    await AuthService.updatePasienStatus(rm, newStatus);
+
+    // Simpan evaluasi akhir jika ada
+    if (evaluasiAkhir != null && evaluasiAkhir.isNotEmpty) {
+      await FirebaseFirestore.instance
+          .collection('users')
+          .where('rm', isEqualTo: rm)
+          .get()
+          .then((snap) async {
+        if (snap.docs.isNotEmpty) {
+          await snap.docs.first.reference.update({
+            'evaluasi_akhir': evaluasiAkhir,
+            'outcome_program': outcomeType ?? 'Tercapai',
+            'tanggal_selesai': FieldValue.serverTimestamp(),
+          });
+        }
+      });
+    }
+
     // Notif ke Pasien
     final patientId = widget.pasien['uid'] as String? ?? '';
     final agName = (await AuthService.getLoggedInUser())?['name'] ?? 'Ahli Gizi';
@@ -381,6 +571,128 @@ class _AhliGiziDetailPasienScreenState
         behavior: SnackBarBehavior.floating,
       ));
     }
+  }
+
+  Future<void> _showEvaluasiAkhirDialog() async {
+    final evaluasiCtrl = TextEditingController();
+    String selectedOutcome = 'Tercapai';
+    final outcomes = ['Tercapai', 'Belum Tercapai', 'Pasien Keluar Lebih Awal'];
+
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Row(
+            children: [
+              const Icon(Icons.assignment_turned_in_outlined, color: Color(0xFF0284C7), size: 22),
+              const SizedBox(width: 8),
+              Text('Evaluasi Akhir Program', style: GoogleFonts.manrope(fontWeight: FontWeight.w700, fontSize: 16)),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Sebelum menyelesaikan program, isi evaluasi akhir untuk dokumentasi laporan.',
+                  style: GoogleFonts.manrope(fontSize: 13, color: const Color(0xFF64748B), height: 1.5),
+                ),
+                const SizedBox(height: 16),
+                Text('Outcome Program', style: GoogleFonts.manrope(fontSize: 12, fontWeight: FontWeight.w700, color: const Color(0xFF475569))),
+                const SizedBox(height: 8),
+                ...outcomes.map((o) => GestureDetector(
+                  onTap: () => setDialogState(() => selectedOutcome = o),
+                  child: Container(
+                    margin: const EdgeInsets.only(bottom: 6),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: selectedOutcome == o ? const Color(0xFFE0F2FE) : const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: selectedOutcome == o ? const Color(0xFF0284C7) : const Color(0xFFE2E8F0),
+                        width: selectedOutcome == o ? 1.5 : 1,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          selectedOutcome == o ? Icons.radio_button_checked : Icons.radio_button_unchecked,
+                          color: selectedOutcome == o ? const Color(0xFF0284C7) : const Color(0xFF94A3B8),
+                          size: 18,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(o, style: GoogleFonts.manrope(fontSize: 13, color: selectedOutcome == o ? const Color(0xFF0284C7) : const Color(0xFF334155), fontWeight: selectedOutcome == o ? FontWeight.w600 : FontWeight.w400)),
+                      ],
+                    ),
+                  ),
+                )),
+                const SizedBox(height: 12),
+                Text('Evaluasi & Kesimpulan', style: GoogleFonts.manrope(fontSize: 12, fontWeight: FontWeight.w700, color: const Color(0xFF475569))),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: evaluasiCtrl,
+                  maxLines: 4,
+                  style: GoogleFonts.manrope(fontSize: 13),
+                  decoration: InputDecoration(
+                    hintText: 'Contoh: Pasien berhasil mencapai target BB ideal. Kepatuhan diet 90%. Disarankan tetap menjaga pola makan...',
+                    hintStyle: GoogleFonts.manrope(fontSize: 12, color: const Color(0xFF94A3B8)),
+                    filled: true,
+                    fillColor: const Color(0xFFF8FAFC),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: Color(0xFF0284C7), width: 1.5),
+                    ),
+                    contentPadding: const EdgeInsets.all(12),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text('* Minimal 10 karakter', style: GoogleFonts.manrope(fontSize: 11, color: const Color(0xFF94A3B8))),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text('Batal', style: GoogleFonts.manrope(color: const Color(0xFF64748B))),
+            ),
+            StatefulBuilder(
+              builder: (ctx2, _) => ElevatedButton.icon(
+                onPressed: () {
+                  if (evaluasiCtrl.text.trim().length < 10) {
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                      content: Text('Evaluasi minimal 10 karakter.', style: GoogleFonts.manrope()),
+                      backgroundColor: Colors.orange,
+                    ));
+                    return;
+                  }
+                  Navigator.pop(ctx);
+                  _doUpdateStatus(
+                    'berhasil',
+                    evaluasiAkhir: evaluasiCtrl.text.trim(),
+                    outcomeType: selectedOutcome,
+                  );
+                },
+                icon: const Icon(Icons.check_circle_outline, color: Colors.white, size: 18),
+                label: Text('Konfirmasi Selesai', style: GoogleFonts.manrope(fontWeight: FontWeight.w700, color: Colors.white, fontSize: 13)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF0284C7),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  elevation: 0,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+    evaluasiCtrl.dispose();
   }
 
   Future<void> _saveAll() async {
@@ -702,6 +1014,31 @@ class _AhliGiziDetailPasienScreenState
                 ),
               ),
             ),
+            const SizedBox(height: 12),
+
+            // ── Tombol Regenerate Dokumen Informed Consent ──
+            if (widget.pasien['inform_consent_signed'] == true)
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: _isRegeneratingConsent ? null : _regenerateConsent,
+                  icon: _isRegeneratingConsent
+                      ? const SizedBox(
+                          width: 18, height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                      : const Icon(Icons.description_outlined, size: 18, color: Colors.white),
+                  label: Text(
+                    _isRegeneratingConsent ? 'Memperbarui & mengunduh...' : 'Unduh Informed Consent (Terbaru)',
+                    style: GoogleFonts.manrope(fontWeight: FontWeight.w700, fontSize: 13, color: Colors.white),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF3B7A57),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    elevation: 0,
+                  ),
+                ),
+              ),
             const SizedBox(height: 12),
             SizedBox(
               width: double.infinity,
@@ -1057,7 +1394,7 @@ class _AhliGiziDetailPasienScreenState
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Surat Persetujuan Program Diet',
+                          Text('Informed Consent Monitoring Diet',
                               style: GoogleFonts.manrope(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.white)),
                           Text('Informed Consent â€” ${widget.pasien['name'] ?? ''}',
                               style: GoogleFonts.manrope(fontSize: 11, color: Colors.white.withValues(alpha: 0.85))),
@@ -1129,7 +1466,7 @@ class _AhliGiziDetailPasienScreenState
 
                       // Judul dokumen
                       Center(
-                        child: Text('SURAT PERSETUJUAN PROGRAM DIET',
+                        child: Text('INFORMED CONSENT MONITORING DIET',
                             textAlign: TextAlign.center,
                             style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.textPrimary, letterSpacing: 0.5)),
                       ),
@@ -1147,7 +1484,7 @@ class _AhliGiziDetailPasienScreenState
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Saya dengan ini menyatakan bahwa saya telah memahami dan menyetujui untuk mengikuti Program Diet Klinik yang diselenggarakan oleh Clinical Diet.',
+                              'Saya dengan ini menyatakan bahwa saya telah memahami dan menyetujui untuk mengikuti Program Diet Klinik yang diselenggarakan oleh Nak Sihat.',
                               style: GoogleFonts.manrope(fontSize: 13, color: AppColors.textSecondary, height: 1.6),
                             ),
                             const SizedBox(height: 8),
@@ -1306,70 +1643,7 @@ class _AhliGiziDetailPasienScreenState
   }
 
   Future<void> _downloadConsent(String? consentDocB64, String? base64Sig, String? filePath, String rm) async {
-    if (kIsWeb) {
-      if (consentDocB64 != null && consentDocB64.isNotEmpty) {
-        // Download dokumen HTML lengkap (isi + centang + tanda tangan)
-        String htmlContent;
-        try {
-          htmlContent = utf8.decode(base64Decode(consentDocB64));
-        } catch (_) {
-          htmlContent = String.fromCharCodes(base64Decode(consentDocB64));
-        }
-
-        try {
-          final ByteData logoData = await rootBundle.load('assets/images/icon.png');
-          final String logoBase64 = base64Encode(logoData.buffer.asUint8List());
-          final String logoImg = '<img src="data:image/png;base64,$logoBase64" class="logo-img" alt="Logo" style="height: 28px; margin-right: 8px;">';
-
-          // Ganti string rusak / lama dengan logo asli dan perbaiki styling headline
-          htmlContent = htmlContent.replaceAllMapped(
-            RegExp(r'<div class="logo-title">.*?Clinical Diet<\/div>'),
-            (match) => '<div class="logo-title" style="display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 800; color: #3B7A57; letter-spacing: 1px; margin-bottom: 4px; font-family: \'Manrope\', sans-serif;">$logoImg Clinical Diet</div>'
-          );
-          
-          // Tambahkan import font jika belum ada
-          if (!htmlContent.contains('Manrope')) {
-             htmlContent = htmlContent.replaceFirst('<style>', '<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">\n  <style>');
-          }
-        } catch (_) {}
-
-        downloadHtmlFileOnWeb(htmlContent, 'informed_consent_$rm.html');
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('Dokumen informed_consent_$rm.html berhasil diunduh.', style: GoogleFonts.manrope()),
-          backgroundColor: AppColors.primary,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ));
-      } else if (base64Sig != null && base64Sig.isNotEmpty) {
-        // Fallback: download hanya gambar tanda tangan
-        downloadFileOnWeb(base64Sig, 'ttd_consent_$rm.png');
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('Tanda tangan berhasil diunduh sebagai ttd_consent_$rm.png', style: GoogleFonts.manrope()),
-          backgroundColor: Colors.orange,
-          behavior: SnackBarBehavior.floating,
-        ));
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('Data informed consent tidak tersedia.', style: GoogleFonts.manrope()),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-        ));
-      }
-    } else {
-      if (filePath == null || filePath.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('File tanda tangan tidak tersedia.', style: GoogleFonts.manrope()),
-          backgroundColor: Colors.orange,
-          behavior: SnackBarBehavior.floating,
-        ));
-        return;
-      }
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('File tersimpan di: $filePath', style: GoogleFonts.manrope()),
-        backgroundColor: AppColors.primary,
-        behavior: SnackBarBehavior.floating,
-      ));
-    }
+    await _regenerateConsent();
   }
 
   Widget _buildTerapiDietDropdown() {
@@ -1983,7 +2257,7 @@ class _AhliGiziDetailPasienScreenState
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(vertical: 10),
         decoration: BoxDecoration(
-          color: isSelected ? color : color.withValues(alpha: 0.08),
+          color: isSelected ? color : color.withOpacity(0.08),
           borderRadius: BorderRadius.circular(10),
         ),
         child: Center(

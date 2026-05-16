@@ -67,19 +67,24 @@ class _GrafikHarianScreenState extends State<GrafikHarianScreen> {
           ],
         ),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildSectionTitle('Tren Berat Badan (30 Hari)'),
-            const SizedBox(height: 12),
-            _buildLineChartBB(),
-            const SizedBox(height: 32),
-            _buildSectionTitle('Tingkat Kepatuhan Pengisian (30 Hari)'),
-            const SizedBox(height: 12),
-            _buildBarChartKepatuhan(),
-          ],
+      body: RefreshIndicator(
+        color: AppColors.primary,
+        onRefresh: _loadData,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildSectionTitle('Tren Berat Badan (30 Hari)'),
+              const SizedBox(height: 12),
+              _buildLineChartBB(),
+              const SizedBox(height: 32),
+              _buildSectionTitle('Tingkat Kepatuhan Pengisian (30 Hari)'),
+              const SizedBox(height: 12),
+              _buildBarChartKepatuhan(),
+            ],
+          ),
         ),
       ),
     );

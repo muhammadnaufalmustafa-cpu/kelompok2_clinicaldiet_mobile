@@ -166,10 +166,6 @@ class _AdminMainScreenState extends State<AdminMainScreen>
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh, color: Colors.white),
-            onPressed: _loadData,
-          ),
-          IconButton(
             icon: const Icon(Icons.logout, color: Colors.white70),
             tooltip: 'Keluar',
             onPressed: () async {
@@ -226,10 +222,14 @@ class _AdminMainScreenState extends State<AdminMainScreen>
       );
     }
 
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: list.length,
-      itemBuilder: (ctx, i) {
+    return RefreshIndicator(
+      color: const Color(0xFF0284C7),
+      onRefresh: _loadData,
+      child: ListView.builder(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(16),
+        itemCount: list.length,
+        itemBuilder: (ctx, i) {
         final ag = list[i];
         final status = ag['status_akun'] as String? ?? 'approved';
         return Container(
@@ -338,6 +338,7 @@ class _AdminMainScreenState extends State<AdminMainScreen>
           ),
         );
       },
+      ),
     );
   }
 

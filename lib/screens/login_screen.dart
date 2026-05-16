@@ -17,100 +17,81 @@ class LoginScreen extends StatefulWidget {
   State<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen>
-    with SingleTickerProviderStateMixin {
-  late TabController _tabController;
-
-  // Pasien
+class _LoginScreenState extends State<LoginScreen> {
   final _identifierController = TextEditingController();
   final _passController = TextEditingController();
   bool _obscurePass = true;
-  bool _isLoadingPasien = false;
+  bool _isLoading = false;
 
-  // Ahli Gizi
-  final _identifierAGController = TextEditingController();
-  final _passAGController = TextEditingController();
-  bool _obscurePassAG = true;
-  bool _isLoadingAG = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 2, vsync: this);
-  }
+  // Role: 'pasien' atau 'ahli_gizi'
+  String _selectedRole = 'pasien';
 
   @override
   void dispose() {
-    _tabController.dispose();
     _identifierController.dispose();
     _passController.dispose();
-    _identifierAGController.dispose();
-    _passAGController.dispose();
     super.dispose();
   }
 
-  Future<void> _loginPasien() async {
+  Future<void> _login() async {
     final identifier = _identifierController.text.trim();
     final password = _passController.text;
 
     if (identifier.isEmpty || password.isEmpty) {
-      _showError('Email/Username/RM dan kata sandi tidak boleh kosong.');
+      _showError('Identifier dan kata sandi tidak boleh kosong.');
       return;
     }
 
-    setState(() => _isLoadingPasien = true);
-    final result = await AuthService.loginPasien(identifier: identifier, password: password);
-    if (!mounted) return;
-    setState(() => _isLoadingPasien = false);
+    setState(() => _isLoading = true);
 
-    if (result['success'] == true) {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => WelcomeScreen(user: result['user'])),
-      );
-    } else {
-      _showError(result['message'] ?? 'Login gagal.');
-    }
-  }
+    if (_selectedRole == 'pasien') {
+      final result = await AuthService.loginPasien(
+          identifier: identifier, password: password);
+      if (!mounted) return;
+      setState(() => _isLoading = false);
 
-  Future<void> _loginAhliGizi() async {
-    final identifier = _identifierAGController.text.trim();
-    final password = _passAGController.text;
-
-    if (identifier.isEmpty || password.isEmpty) {
-      _showError('Email/NIP dan kata sandi tidak boleh kosong.');
-      return;
-    }
-
-    setState(() => _isLoadingAG = true);
-    final result =
-        await AuthService.loginAhliGizi(identifier: identifier, password: password);
-    if (!mounted) return;
-    setState(() => _isLoadingAG = false);
-
-    if (result['success'] == true) {
-      final role = result['role'] as String? ?? 'ahli_gizi';
-      if (role == 'admin') {
+      if (result['success'] == true) {
         Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const AdminMainScreen()),
+          MaterialPageRoute(builder: (_) => WelcomeScreen(user: result['user'])),
         );
       } else {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const AhliGiziMainScreen()),
-        );
+        _showError(result['message'] ?? 'Login gagal.');
       }
-    } else if (result['message'] == 'PENDING') {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => PendingApprovalScreen(user: result['user'] as Map<String, dynamic>)),
-      );
-    } else if (result['message'] == 'REJECTED') {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => RejectedScreen(
-          user: result['user'] as Map<String, dynamic>,
-          reason: result['rejection_reason'] as String? ?? 'Tidak ada keterangan.',
-        )),
-      );
     } else {
-      _showError(result['message'] ?? 'Login gagal.');
+      final result = await AuthService.loginAhliGizi(
+          identifier: identifier, password: password);
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+
+      if (result['success'] == true) {
+        final role = result['role'] as String? ?? 'ahli_gizi';
+        if (role == 'admin') {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (_) => const AdminMainScreen()),
+          );
+        } else {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (_) => const AhliGiziMainScreen()),
+          );
+        }
+      } else if (result['message'] == 'PENDING') {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+              builder: (_) => PendingApprovalScreen(
+                  user: result['user'] as Map<String, dynamic>)),
+        );
+      } else if (result['message'] == 'REJECTED') {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+              builder: (_) => RejectedScreen(
+                    user: result['user'] as Map<String, dynamic>,
+                    reason: result['rejection_reason'] as String? ??
+                        'Tidak ada keterangan.',
+                  )),
+        );
+      } else {
+        _showError(result['message'] ?? 'Login gagal.');
+      }
     }
   }
 
@@ -127,105 +108,284 @@ class _LoginScreenState extends State<LoginScreen>
 
   @override
   Widget build(BuildContext context) {
+    final isPasien = _selectedRole == 'pasien';
+
     return Scaffold(
       backgroundColor: const Color(0xFFF0F4F8),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              const SizedBox(height: 24),
-              // Logo & App Name
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Image.asset('assets/images/icon.png',
-                      width: 36, height: 36,
-                      errorBuilder: (context, error, stackTrace) => const Icon(
-                            Icons.local_hospital,
-                            color: AppColors.primary,
-                            size: 36,
-                          )),
-                  const SizedBox(width: 10),
-                  Text(
-                    'Clinical Diet',
-                    style: GoogleFonts.manrope(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.primaryDark,
-                    ),
-                  ),
-                ],
+              const SizedBox(height: 16),
+
+              // ── Logo & App Name ──
+              Image.asset(
+                'assets/images/logo.png',
+                height: 56,
+                errorBuilder: (_, __, ___) => Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.local_hospital,
+                        color: AppColors.primary, size: 36),
+                    const SizedBox(width: 8),
+                    Text('Nak Sihat',
+                        style: GoogleFonts.manrope(
+                            fontSize: 24,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.primaryDark)),
+                  ],
+                ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 10),
               Text(
-                'Sistem Manajemen Diet Klinik',
+                'Aplikasi Monitoring Diet Klinis',
                 style: GoogleFonts.manrope(
                     fontSize: 13, color: AppColors.textSecondary),
               ),
-              const SizedBox(height: 32),
+              const SizedBox(height: 36),
 
-              // Card Login
+              // ── Card Login ──
               Container(
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(24),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.06),
-                      blurRadius: 24,
+                      color: Colors.black.withValues(alpha: 0.07),
+                      blurRadius: 28,
                       offset: const Offset(0, 8),
                     ),
                   ],
                 ),
+                padding: const EdgeInsets.all(24),
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Tab Bar
-                    Container(
-                      margin: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: AppColors.background,
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      child: TabBar(
-                        controller: _tabController,
-                        indicator: BoxDecoration(
-                          color: AppColors.primary,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        indicatorSize: TabBarIndicatorSize.tab,
-                        labelColor: Colors.white,
-                        unselectedLabelColor: AppColors.textSecondary,
-                        labelStyle: GoogleFonts.manrope(
-                            fontWeight: FontWeight.w600, fontSize: 13),
-                        unselectedLabelStyle:
-                            GoogleFonts.manrope(fontSize: 13),
-                        dividerColor: Colors.transparent,
-                        tabs: const [
-                          Tab(text: 'Pasien'),
-                          Tab(text: 'Ahli Gizi'),
-                        ],
+                    // Judul
+                    Text(
+                      'Masuk ke Akun',
+                      style: GoogleFonts.manrope(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textPrimary,
                       ),
                     ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Masukkan kredensial Anda untuk melanjutkan',
+                      style: GoogleFonts.manrope(
+                          fontSize: 12, color: AppColors.textMuted),
+                    ),
+                    const SizedBox(height: 20),
 
-                    SizedBox(
-                      height: 350,
-                      child: TabBarView(
-                        controller: _tabController,
-                        children: [
-                          _buildPasienForm(),
-                          _buildAhliGiziForm(),
-                        ],
+                    // ── Role Dropdown ──
+                    Text('LOGIN SEBAGAI',
+                        style: GoogleFonts.manrope(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 0.8,
+                            color: AppColors.textSecondary)),
+                    const SizedBox(height: 6),
+                    Container(
+                      decoration: BoxDecoration(
+                        color: AppColors.background,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppColors.divider),
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<String>(
+                          value: _selectedRole,
+                          isExpanded: true,
+                          style: GoogleFonts.manrope(
+                              fontSize: 14, color: AppColors.textPrimary),
+                          icon: const Icon(Icons.keyboard_arrow_down,
+                              color: AppColors.textMuted),
+                          onChanged: (val) {
+                            if (val != null) {
+                              setState(() {
+                                _selectedRole = val;
+                                _identifierController.clear();
+                                _passController.clear();
+                              });
+                            }
+                          },
+                          items: const [
+                            DropdownMenuItem(
+                              value: 'pasien',
+                              child: Row(children: [
+                                Icon(Icons.person_outline,
+                                    size: 18, color: AppColors.primary),
+                                SizedBox(width: 10),
+                                Text('Pasien'),
+                              ]),
+                            ),
+                            DropdownMenuItem(
+                              value: 'ahli_gizi',
+                              child: Row(children: [
+                                Icon(Icons.medical_services_outlined,
+                                    size: 18, color: Color(0xFF0284C7)),
+                                SizedBox(width: 10),
+                                Text('Ahli Gizi'),
+                              ]),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                     const SizedBox(height: 16),
+
+                    // ── Identifier ──
+                    Text(
+                      isPasien
+                          ? 'USERNAME / EMAIL / NO. RM'
+                          : 'EMAIL / NIP',
+                      style: GoogleFonts.manrope(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0.8,
+                          color: AppColors.textSecondary),
+                    ),
+                    const SizedBox(height: 6),
+                    _buildTextField(
+                      controller: _identifierController,
+                      hint: isPasien
+                          ? 'Contoh: budi123 atau RM-12345'
+                          : 'Masukkan Email atau NIP',
+                      suffix: Icon(
+                        isPasien
+                            ? Icons.person_outline
+                            : Icons.badge_outlined,
+                        color: AppColors.textMuted,
+                        size: 20,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // ── Password ──
+                    Text('KATA SANDI',
+                        style: GoogleFonts.manrope(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 0.8,
+                            color: AppColors.textSecondary)),
+                    const SizedBox(height: 6),
+                    _buildTextField(
+                      controller: _passController,
+                      hint: '••••••••',
+                      obscure: _obscurePass,
+                      suffix: GestureDetector(
+                        onTap: () =>
+                            setState(() => _obscurePass = !_obscurePass),
+                        child: Icon(
+                          _obscurePass
+                              ? Icons.visibility_off_outlined
+                              : Icons.visibility_outlined,
+                          color: AppColors.textMuted,
+                          size: 20,
+                        ),
+                      ),
+                    ),
+
+                    // ── Lupa Kata Sandi ──
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton(
+                        onPressed: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) => const LupaKataSandiScreen())),
+                        child: Text(
+                          'Lupa Kata Sandi?',
+                          style: GoogleFonts.manrope(
+                            color: AppColors.primary,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 8),
+
+                    // ── Tombol Masuk ──
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: _isLoading ? null : _login,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: isPasien
+                              ? AppColors.primary
+                              : const Color(0xFF0284C7),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 15),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
+                          elevation: 0,
+                        ),
+                        child: _isLoading
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                    color: Colors.white, strokeWidth: 2))
+                            : Text(
+                                'MASUK',
+                                style: GoogleFonts.manrope(
+                                    fontWeight: FontWeight.w700, fontSize: 14),
+                              ),
+                      ),
+                    ),
                   ],
                 ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 24),
 
-              // Register links
-              _buildRegisterRow(),
+              // ── Register Links ──
+              GestureDetector(
+                onTap: () => Navigator.push(context,
+                    MaterialPageRoute(builder: (_) => const RegisterScreen())),
+                child: Text.rich(
+                  TextSpan(
+                    text: 'Belum punya akun pasien? ',
+                    style: GoogleFonts.manrope(
+                        color: AppColors.textSecondary, fontSize: 13),
+                    children: [
+                      TextSpan(
+                        text: 'Daftar di sini',
+                        style: GoogleFonts.manrope(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.w600),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+              GestureDetector(
+                onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const RegisterAhliGiziScreen())),
+                child: Text.rich(
+                  TextSpan(
+                    text: 'Daftar sebagai ahli gizi? ',
+                    style: GoogleFonts.manrope(
+                        color: AppColors.textSecondary, fontSize: 13),
+                    children: [
+                      TextSpan(
+                        text: 'Klik di sini',
+                        style: GoogleFonts.manrope(
+                            color: const Color(0xFF0284C7),
+                            fontWeight: FontWeight.w600),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
             ],
           ),
         ),
@@ -233,228 +393,52 @@ class _LoginScreenState extends State<LoginScreen>
     );
   }
 
-  Widget _buildPasienForm() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('USERNAME / EMAIL / NO. RM',
-              style: GoogleFonts.manrope(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 0.8,
-                  color: AppColors.textSecondary)),
-          const SizedBox(height: 6),
-          _buildTextField(
-            controller: _identifierController,
-            hint: 'Contoh: budi123 atau RM-12345',
-            suffix: const Icon(Icons.person_outline,
-                color: AppColors.textMuted, size: 20),
-            keyboardType: TextInputType.text,
-          ),
-          const SizedBox(height: 16),
-          Text('KATA SANDI',
-              style: GoogleFonts.manrope(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 0.8,
-                  color: AppColors.textSecondary)),
-          const SizedBox(height: 6),
-          _buildTextField(
-            controller: _passController,
-            hint: '••••••••',
-            obscure: _obscurePass,
-            suffix: GestureDetector(
-              onTap: () => setState(() => _obscurePass = !_obscurePass),
-              child: Icon(
-                _obscurePass
-                    ? Icons.visibility_off_outlined
-                    : Icons.visibility_outlined,
-                color: AppColors.textMuted,
-                size: 20,
-              ),
+  Widget _buildRoleChip({
+    required String label,
+    required IconData icon,
+    required String role,
+    required Color color,
+  }) {
+    final isSelected = _selectedRole == role;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () {
+          setState(() {
+            _selectedRole = role;
+            _identifierController.clear();
+            _passController.clear();
+          });
+        },
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          decoration: BoxDecoration(
+            color: isSelected ? color : AppColors.background,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: isSelected ? color : AppColors.divider,
+              width: isSelected ? 1.5 : 1,
             ),
           ),
-          Align(
-            alignment: Alignment.centerRight,
-            child: TextButton(
-              onPressed: () {
-                Navigator.push(context, MaterialPageRoute(builder: (_) => const LupaKataSandiScreen()));
-              },
-              child: Text(
-                'Lupa Kata Sandi?',
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon,
+                  size: 18,
+                  color: isSelected ? Colors.white : AppColors.textSecondary),
+              const SizedBox(width: 6),
+              Text(
+                label,
                 style: GoogleFonts.manrope(
-                  color: AppColors.primary,
-                  fontSize: 12,
+                  fontSize: 13,
                   fontWeight: FontWeight.w600,
+                  color: isSelected ? Colors.white : AppColors.textSecondary,
                 ),
               ),
-            ),
-          ),
-          const Spacer(),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: _isLoadingPasien ? null : _loginPasien,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
-                elevation: 0,
-              ),
-              child: _isLoadingPasien
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                          color: Colors.white, strokeWidth: 2))
-                  : Text('MASUK SEBAGAI PASIEN',
-                      style: GoogleFonts.manrope(
-                          fontWeight: FontWeight.w600, fontSize: 14)),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAhliGiziForm() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('EMAIL / NIP',
-              style: GoogleFonts.manrope(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 0.8,
-                  color: AppColors.textSecondary)),
-          const SizedBox(height: 6),
-          _buildTextField(
-            controller: _identifierAGController,
-            hint: 'Masukkan Email atau NIP',
-            suffix: const Icon(Icons.badge_outlined,
-                color: AppColors.textMuted, size: 20),
-          ),
-          const SizedBox(height: 16),
-          Text('KATA SANDI',
-              style: GoogleFonts.manrope(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 0.8,
-                  color: AppColors.textSecondary)),
-          const SizedBox(height: 6),
-          _buildTextField(
-            controller: _passAGController,
-            hint: '••••••••',
-            obscure: _obscurePassAG,
-            suffix: GestureDetector(
-              onTap: () => setState(() => _obscurePassAG = !_obscurePassAG),
-              child: Icon(
-                _obscurePassAG
-                    ? Icons.visibility_off_outlined
-                    : Icons.visibility_outlined,
-                color: AppColors.textMuted,
-                size: 20,
-              ),
-            ),
-          ),
-          Align(
-            alignment: Alignment.centerRight,
-            child: TextButton(
-              onPressed: () {
-                Navigator.push(context, MaterialPageRoute(builder: (_) => const LupaKataSandiScreen()));
-              },
-              child: Text(
-                'Lupa Kata Sandi?',
-                style: GoogleFonts.manrope(
-                  color: AppColors.primary,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ),
-          const Spacer(),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: _isLoadingAG ? null : _loginAhliGizi,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF0284C7),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
-                elevation: 0,
-              ),
-              child: _isLoadingAG
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                          color: Colors.white, strokeWidth: 2))
-                  : Text('MASUK SEBAGAI AHLI GIZI',
-                      style: GoogleFonts.manrope(
-                          fontWeight: FontWeight.w600, fontSize: 14)),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildRegisterRow() {
-    return Column(
-      children: [
-        GestureDetector(
-          onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                  builder: (_) => const RegisterScreen())),
-          child: Text.rich(
-            TextSpan(
-              text: 'Belum punya akun pasien? ',
-              style: GoogleFonts.manrope(
-                  color: AppColors.textSecondary, fontSize: 13),
-              children: [
-                TextSpan(
-                  text: 'Daftar di sini',
-                  style: GoogleFonts.manrope(
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.w600),
-                ),
-              ],
-            ),
+            ],
           ),
         ),
-        const SizedBox(height: 8),
-        GestureDetector(
-          onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                  builder: (_) => const RegisterAhliGiziScreen())),
-          child: Text.rich(
-            TextSpan(
-              text: 'Daftar sebagai ahli gizi? ',
-              style: GoogleFonts.manrope(
-                  color: AppColors.textSecondary, fontSize: 13),
-              children: [
-                TextSpan(
-                  text: 'Klik di sini',
-                  style: GoogleFonts.manrope(
-                      color: const Color(0xFF0284C7),
-                      fontWeight: FontWeight.w600),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
+      ),
     );
   }
 
@@ -475,8 +459,8 @@ class _LoginScreenState extends State<LoginScreen>
         controller: controller,
         obscureText: obscure,
         keyboardType: keyboardType,
-        style: GoogleFonts.manrope(
-            fontSize: 15, color: AppColors.textPrimary),
+        style:
+            GoogleFonts.manrope(fontSize: 15, color: AppColors.textPrimary),
         decoration: InputDecoration(
           hintText: hint,
           hintStyle:

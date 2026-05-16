@@ -94,11 +94,7 @@ class _InformConsentScreenState extends State<InformConsentScreen> {
         signatureBase64 = sigBase64; // juga simpan base64 untuk dokumen HTML
       }
 
-      // Load logo for HTML
-      final ByteData logoData = await rootBundle.load('assets/images/icon.png');
-      final String logoBase64 = base64Encode(logoData.buffer.asUint8List());
-
-      // Generate dokumen HTML lengkap (isi + centang + tanda tangan)
+      // Generate dokumen HTML (tanpa embed base64 logo besar agar hemat kapasitas Firestore)
       final signedAt = DateTime.now();
       final signedDateStr =
           '${signedAt.day.toString().padLeft(2, '0')}/${signedAt.month.toString().padLeft(2, '0')}/${signedAt.year} '
@@ -111,7 +107,8 @@ class _InformConsentScreenState extends State<InformConsentScreen> {
         patientRm: patientRm,
         signedDateStr: signedDateStr,
         signatureBase64: sigBase64,
-        logoBase64: logoBase64,
+        logoNatunaBase64: '',
+        logoKarsBase64: '',
       );
 
       await AuthService.saveInformConsent(
@@ -148,7 +145,8 @@ class _InformConsentScreenState extends State<InformConsentScreen> {
     required String patientRm,
     required String signedDateStr,
     required String signatureBase64,
-    required String logoBase64,
+    required String logoNatunaBase64,
+    required String logoKarsBase64,
   }) {
     final htmlContent =
         '''<!DOCTYPE html>
@@ -156,17 +154,21 @@ class _InformConsentScreenState extends State<InformConsentScreen> {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Informed Consent - $patientName</title>
+  <title>Informed Consent Monitoring Diet - $patientName</title>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: 'Manrope', 'Segoe UI', Arial, sans-serif; background: #f8fafc; color: #1e293b; padding: 32px; }
     .page { max-width: 800px; margin: 0 auto; background: #fff; border-radius: 16px; box-shadow: 0 4px 24px rgba(0,0,0,0.10); padding: 48px 56px; }
-    .header { text-align: center; border-bottom: 3px solid #3B7A57; padding-bottom: 24px; margin-bottom: 32px; }
-    .logo-title { display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 800; color: #3B7A57; letter-spacing: 1px; margin-bottom: 4px; }
-    .logo-img { height: 28px; margin-right: 8px; }
-    .subtitle { font-size: 13px; color: #64748b; }
-    .doc-title { font-size: 18px; font-weight: 700; color: #1e293b; text-align: center; margin-bottom: 24px; letter-spacing: 0.5px; text-transform: uppercase; }
+    .kop-surat { display: flex; align-items: center; justify-content: space-between; padding-bottom: 10px; border-bottom: 3px solid #000; margin-bottom: 4px; }
+    .kop-surat-logo { height: 90px; width: auto; object-fit: contain; }
+    .kop-surat-text { text-align: center; flex: 1; padding: 0 16px; }
+    .kop-surat-text .gov { font-size: 13px; font-weight: 500; color: #1e293b; letter-spacing: 0.3px; }
+    .kop-surat-text .dinkes { font-size: 13px; font-weight: 500; color: #1e293b; }
+    .kop-surat-text .rs-name { font-size: 16px; font-weight: 800; color: #1e293b; letter-spacing: 0.5px; text-transform: uppercase; margin: 4px 0; }
+    .kop-surat-text .address { font-size: 11px; color: #374151; line-height: 1.6; }
+    .kop-divider-thin { border: none; border-top: 1.5px solid #000; margin-top: 3px; }
+    .doc-title { font-size: 15px; font-weight: 800; color: #1e293b; text-align: center; margin: 28px 0 24px 0; letter-spacing: 1px; text-transform: uppercase; text-decoration: underline; }
     .patient-info { background: #f1faf5; border: 1px solid #bbf0d4; border-radius: 10px; padding: 16px 20px; margin-bottom: 28px; }
     .patient-info table { width: 100%; border-collapse: collapse; }
     .patient-info td { padding: 5px 8px; font-size: 14px; }
@@ -198,12 +200,23 @@ class _InformConsentScreenState extends State<InformConsentScreen> {
 </head>
 <body>
   <div class="page">
-    <div class="header">
-      <div class="logo-title"><img src="data:image/png;base64,$logoBase64" class="logo-img" alt="Logo"> Clinical Diet</div>
-      <div class="subtitle">Sistem Pemantauan Gizi Klinik</div>
+    <!-- KOP SURAT RSUD NATUNA -->
+    <div class="kop-surat">
+      <img src="data:image/png;base64,$logoNatunaBase64" class="kop-surat-logo" alt="Logo Natuna">
+      <div class="kop-surat-text">
+        <div class="gov">PEMERINTAH KABUPATEN NATUNA</div>
+        <div class="dinkes">DINAS KESEHATAN</div>
+        <div class="rs-name">UPTD Rumah Sakit Umum Daerah Natuna</div>
+        <div class="address">
+          Jalan H. Ali Murtopo, Kabupaten Natuna, Provinsi Kepulauan Riau, 29783<br>
+          Telp. (0773) 3211378, Laman: rsud.natunakab.go.id, Pos-el: natuna.rsud@gmail.com
+        </div>
+      </div>
+      <img src="data:image/png;base64,$logoKarsBase64" class="kop-surat-logo" alt="Logo KARS">
     </div>
+    <hr class="kop-divider-thin">
 
-    <div class="doc-title">Surat Persetujuan Program Diet<br><span style="font-size:13px;font-weight:500;color:#64748b;text-transform:none;letter-spacing:0">Informed Consent</span></div>
+    <div class="doc-title">Informed Consent Monitoring Diet</div>
 
     <div class="patient-info">
       <div class="section-label">Data Pasien</div>
@@ -216,7 +229,7 @@ class _InformConsentScreenState extends State<InformConsentScreen> {
 
     <div class="section-label">Isi Persetujuan</div>
     <div class="consent-box">
-      <p>Saya dengan ini menyatakan bahwa saya telah memahami dan menyetujui untuk mengikuti Program Diet Klinik yang diselenggarakan oleh Clinical Diet.</p>
+      <p>Saya dengan ini menyatakan bahwa saya telah memahami dan menyetujui untuk mengikuti Program Diet Klinik yang diselenggarakan oleh Nak Sihat.</p>
       <p>Saya memahami bahwa program ini melibatkan pemantauan asupan makanan, berat badan, tinggi badan, dan parameter gizi lainnya oleh ahli gizi yang telah ditunjuk.</p>
       <div class="point-row"><span class="point-num">1.</span><span class="point-text">Saya bersedia untuk mengisi catatan makan harian secara jujur dan tepat waktu.</span></div>
       <div class="point-row"><span class="point-num">2.</span><span class="point-text">Saya memahami bahwa apabila tidak mengisi catatan makan selama 3 (tiga) hari berturut-turut, saya akan dinyatakan GUGUR dari program dan tidak dapat menggunakan aplikasi hingga dikonfirmasi ulang oleh ahli gizi.</span></div>
@@ -364,7 +377,7 @@ class _InformConsentScreenState extends State<InformConsentScreen> {
                         ),
                         const Divider(height: 20),
                         _consentParagraph(
-                          'Saya dengan ini menyatakan bahwa saya telah memahami dan menyetujui untuk mengikuti Program Diet Klinik yang diselenggarakan oleh Clinical Diet.',
+                          'Saya dengan ini menyatakan bahwa saya telah memahami dan menyetujui untuk mengikuti Program Diet Klinik yang diselenggarakan oleh Nak Sihat.',
                         ),
                         _consentParagraph(
                           'Saya memahami bahwa program ini melibatkan pemantauan asupan makanan, berat badan, tinggi badan, dan parameter gizi lainnya oleh ahli gizi yang telah ditunjuk.',

@@ -1,4 +1,4 @@
-﻿import 'dart:io';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
@@ -1056,7 +1056,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      'Clinical Diet',
+                      'Nak Sihat',
                       style: GoogleFonts.manrope(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,

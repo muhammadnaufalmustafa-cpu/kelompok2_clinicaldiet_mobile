@@ -72,75 +72,46 @@ class _LaporanHarianAGScreenState extends State<LaporanHarianAGScreen> {
       });
   }
 
-  String _buildReportText() {
+  /// Generate HTML-Word document string (.doc)
+  String _buildReportWordDoc() {
     final p = widget.pasien;
     final logs = _filteredLogs;
-    final buf = StringBuffer();
     final periodStr = _selectedSpecificDate != null
         ? '${_selectedSpecificDate!.day} ${_bulanNames[_selectedSpecificDate!.month]} ${_selectedSpecificDate!.year}'
         : '${_bulanNames[_selectedMonth]} $_selectedYear';
-
-    buf.writeln('==============================');
-    buf.writeln('   LAPORAN HARIAN PASIEN   ');
-    buf.writeln('   $periodStr  ');
-    buf.writeln('==============================');
-    buf.writeln();
-
-    buf.writeln('INFORMASI PASIEN');
-    buf.writeln('----------------------------');
-    buf.writeln('Nama       : ${p['name'] ?? '-'}');
-    buf.writeln('No. RM     : ${p['rm'] ?? '-'}');
-    buf.writeln('Usia/TTL   : ${p['birthdate'] ?? '-'}');
-    buf.writeln('Jenis Kel. : ${p['gender'] ?? '-'}');
-    buf.writeln('Diagnosis  : ${p['diagnosis'] ?? '-'}');
-    buf.writeln('Status Gizi: ${p['status_gizi'] ?? '-'}');
 
     final diets = () {
       final raw = p['diet_types'];
       if (raw is List && raw.isNotEmpty) return raw.cast<String>().join(', ');
       return p['diet_type'] as String? ?? '-';
     }();
-    buf.writeln('Terapi Diet: $diets');
-    buf.writeln();
 
-    if (_nutrisiPerDiet.isNotEmpty) {
-      buf.writeln('TARGET GIZI HARIAN');
-      buf.writeln('----------------------------');
-      for (final n in _nutrisiPerDiet) {
-        final dt = n['diet_type'] ?? '-';
-        buf.writeln('[$dt]');
-        final targetNutrients = n['target_nutrients'] as Map<String, dynamic>?;
-        if (targetNutrients != null && targetNutrients.isNotEmpty) {
-          targetNutrients.forEach((key, val) {
-            final target = (val['target'] as num?)?.toStringAsFixed(1) ?? '0';
-            final aktual = (val['aktual'] as num?)?.toStringAsFixed(1) ?? '0';
-            buf.writeln('  $key: Target $target | Capaian $aktual');
-          });
-        } else {
-          buf.writeln('  (Belum ada target nutrisi)');
-        }
-        buf.writeln();
+    // ─── Nutrisi rows ───
+    final nutrisiRows = StringBuffer();
+    for (final n in _nutrisiPerDiet) {
+      final dt = n['diet_type'] ?? '-';
+      final targetNutrients = n['target_nutrients'] as Map<String, dynamic>?;
+      nutrisiRows.write('<tr><td colspan="3" style="background:#e8f5e9;font-weight:bold;padding:6px 10px;">$dt</td></tr>');
+      if (targetNutrients == null || targetNutrients.isEmpty) {
+        nutrisiRows.write('<tr><td colspan="3" style="padding:4px 10px;color:#888;font-style:italic;">Belum ada target nutrisi</td></tr>');
+      } else {
+        targetNutrients.forEach((key, val) {
+          final target = (val['target'] as num?)?.toStringAsFixed(1) ?? '0';
+          final aktual = (val['aktual'] as num?)?.toStringAsFixed(1) ?? '0';
+          final pct = double.tryParse(target) != null && double.parse(target) > 0
+              ? ((double.tryParse(aktual) ?? 0) / double.parse(target) * 100).toInt()
+              : 0;
+          final isOk = pct >= 80 && pct <= 120;
+          final badge = '<span style="background:${isOk ? '#d1fae5' : '#fee2e2'};color:${isOk ? '#065f46' : '#991b1b'};border-radius:4px;padding:1px 6px;font-size:10px;">$pct%</span>';
+          nutrisiRows.write('<tr><td style="padding:4px 10px;">$key</td><td style="padding:4px 10px;text-align:center;">$aktual / $target</td><td style="padding:4px 10px;text-align:center;">$badge</td></tr>');
+        });
       }
     }
 
-    if ((p['catatan_klinis'] as String? ?? '').isNotEmpty) {
-      buf.writeln('CATATAN KLINIS');
-      buf.writeln('----------------------------');
-      buf.writeln(p['catatan_klinis']);
-      buf.writeln();
-    }
-
-    if ((p['target_diet'] as String? ?? '').isNotEmpty) {
-      buf.writeln('TARGET DIET PASIEN');
-      buf.writeln('----------------------------');
-      buf.writeln(p['target_diet']);
-      buf.writeln();
-    }
-
-    buf.writeln('REKAP CATATAN MAKAN (${logs.length} entri)');
-    buf.writeln('----------------------------');
+    // ─── Meal log rows ───
+    final mealRows = StringBuffer();
     if (logs.isEmpty) {
-      buf.writeln('(Tidak ada data catatan makan pada periode ini)');
+      mealRows.write('<tr><td colspan="2" style="padding:12px;text-align:center;color:#888;font-style:italic;">Tidak ada data catatan makan pada periode ini</td></tr>');
     } else {
       for (final log in logs) {
         final date = DateTime.tryParse(log['date'] ?? '');
@@ -150,52 +121,119 @@ class _LaporanHarianAGScreenState extends State<LaporanHarianAGScreen> {
         final bb = (log['berat_badan'] as num?)?.toStringAsFixed(1) ?? '-';
         final tb = (log['tinggi_badan'] as num?)?.toStringAsFixed(0) ?? '-';
 
-        buf.writeln('Tanggal: $dateStr  |  BB: ${bb}kg  TB: ${tb}cm');
-        if ((log['meal_pagi'] as String? ?? '').isNotEmpty) {
-          buf.writeln('  Pagi    : ${log['meal_pagi']}');
+        final meals = StringBuffer();
+        void addMeal(String label, String? val) {
+          if ((val ?? '').isNotEmpty) {
+            meals.write('<b>$label:</b> $val<br>');
+          }
         }
-        if ((log['selingan_pagi'] as String? ?? '').isNotEmpty) {
-          buf.writeln('  Sel.Pagi: ${log['selingan_pagi']}');
-        }
-        if ((log['meal_siang'] as String? ?? '').isNotEmpty) {
-          buf.writeln('  Siang   : ${log['meal_siang']}');
-        }
-        if ((log['selingan_sore'] as String? ?? '').isNotEmpty) {
-          buf.writeln('  Sel.Sore: ${log['selingan_sore']}');
-        }
-        if ((log['meal_malam'] as String? ?? '').isNotEmpty) {
-          buf.writeln('  Malam   : ${log['meal_malam']}');
-        }
-        buf.writeln();
+        addMeal('Pagi', log['meal_pagi'] as String?);
+        addMeal('Selingan Pagi', log['selingan_pagi'] as String?);
+        addMeal('Siang', log['meal_siang'] as String?);
+        addMeal('Selingan Sore', log['selingan_sore'] as String?);
+        addMeal('Malam', log['meal_malam'] as String?);
+
+        mealRows.write('''
+          <tr>
+            <td style="padding:8px 10px;vertical-align:top;white-space:nowrap;">
+              <b style="color:#0284c7;">$dateStr</b><br>
+              <span style="font-size:11px;color:#64748b;">BB: ${bb}kg &middot; TB: ${tb}cm</span>
+            </td>
+            <td style="padding:8px 10px;">${meals.toString().isEmpty ? '<i style="color:#aaa;">-</i>' : meals.toString()}</td>
+          </tr>
+        ''');
       }
     }
 
-    buf.writeln('==============================');
-    buf.writeln('Laporan dibuat otomatis oleh');
-    buf.writeln('Sistem Gizi Klinik');
-    buf.writeln('==============================');
+    final now = DateTime.now();
+    final createdStr = '${now.day.toString().padLeft(2,'0')}/${now.month.toString().padLeft(2,'0')}/${now.year} '
+        '${now.hour.toString().padLeft(2,'0')}:${now.minute.toString().padLeft(2,'0')}';
 
-    return buf.toString();
+    return '''
+<html xmlns:o="urn:schemas-microsoft-com:office:office"
+      xmlns:w="urn:schemas-microsoft-com:office:word"
+      xmlns="http://www.w3.org/TR/REC-html40">
+<head>
+  <meta charset="UTF-8">
+  <title>Laporan Harian - ${p['name'] ?? ''}</title>
+  <!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View><w:Zoom>100</w:Zoom></w:WordDocument></xml><![endif]-->
+  <style>
+    body { font-family: "Times New Roman", serif; font-size: 12pt; margin: 2cm; }
+    h1 { font-size: 16pt; text-align: center; margin-bottom: 4px; }
+    h2 { font-size: 13pt; border-bottom: 2px solid #3B7A57; color: #3B7A57; padding-bottom: 4px; margin-top: 20px; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
+    th { background: #3B7A57; color: white; padding: 7px 10px; text-align: left; }
+    td { border: 1px solid #ddd; font-size: 11pt; }
+    .info-table td { border: none; padding: 4px 8px; }
+    .info-table td:first-child { color: #555; width: 170px; }
+    .footer { margin-top: 24px; font-size: 10pt; color: #888; text-align: center; border-top: 1px solid #eee; padding-top: 8px; }
+  </style>
+</head>
+<body>
+  <h1>LAPORAN HARIAN PASIEN</h1>
+  <p style="text-align:center;color:#555;margin-top:0;">Periode: $periodStr</p>
+
+  <h2>Informasi Pasien</h2>
+  <table class="info-table">
+    <tr><td>Nama</td><td>: ${p['name'] ?? '-'}</td></tr>
+    <tr><td>No. Rekam Medis</td><td>: ${p['rm'] ?? '-'}</td></tr>
+    <tr><td>Tanggal Lahir</td><td>: ${p['birthdate'] ?? '-'}</td></tr>
+    <tr><td>Jenis Kelamin</td><td>: ${p['gender'] ?? '-'}</td></tr>
+    <tr><td>Diagnosis</td><td>: ${p['diagnosis'] ?? '-'}</td></tr>
+    <tr><td>Status Gizi</td><td>: ${p['status_gizi'] ?? '-'}</td></tr>
+    <tr><td>Terapi Diet</td><td>: $diets</td></tr>
+    ${(p['target_diet'] as String? ?? '').isNotEmpty ? '<tr><td>Target Diet</td><td>: ${p['target_diet']}</td></tr>' : ''}
+    ${(p['catatan_klinis'] as String? ?? '').isNotEmpty ? '<tr><td>Catatan Klinis</td><td>: ${p['catatan_klinis']}</td></tr>' : ''}
+  </table>
+
+  ${_nutrisiPerDiet.isNotEmpty ? '''
+  <h2>Target &amp; Capaian Gizi Harian</h2>
+  <table>
+    <tr>
+      <th>Parameter</th>
+      <th style="text-align:center;">Capaian / Target</th>
+      <th style="text-align:center;">%</th>
+    </tr>
+    ${nutrisiRows.toString()}
+  </table>
+  ''' : ''}
+
+  <h2>Rekap Catatan Makan (${logs.length} entri)</h2>
+  <table>
+    <tr>
+      <th style="width:130px;">Tanggal</th>
+      <th>Catatan Makan</th>
+    </tr>
+    ${mealRows.toString()}
+  </table>
+
+  <div class="footer">
+    Laporan dicetak otomatis oleh Sistem Gizi Klinik RSUD Natuna &mdash; $createdStr
+  </div>
+</body>
+</html>
+''';
   }
 
   Future<void> _exportLaporan() async {
     setState(() => _isExporting = true);
     try {
-      final text = _buildReportText();
+      final docContent = _buildReportWordDoc();
       final periodStr = _selectedSpecificDate != null
           ? '${_selectedSpecificDate!.day}_${_selectedSpecificDate!.month}_${_selectedSpecificDate!.year}'
           : '${_selectedMonth}_$_selectedYear';
+      final fileName =
+          'Laporan_Harian_${widget.pasien['rm']}_$periodStr.doc';
       if (kIsWeb) {
-        await Share.share(text,
+        // Di web: share sebagai plain text fallback
+        await Share.share(docContent,
             subject: 'Laporan Harian ${widget.pasien['name']} - $periodStr');
       } else {
         final dir = await getTemporaryDirectory();
-        final fileName =
-            'laporan_harian_${widget.pasien['rm']}_$periodStr.txt';
         final file = File('${dir.path}/$fileName');
-        await file.writeAsString(text, flush: true);
+        await file.writeAsString(docContent, flush: true);
         await Share.shareXFiles(
-          [XFile(file.path)],
+          [XFile(file.path, mimeType: 'application/msword')],
           subject: 'Laporan Harian ${widget.pasien['name']} - $periodStr',
         );
       }

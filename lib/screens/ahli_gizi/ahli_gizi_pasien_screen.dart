@@ -140,12 +140,7 @@ class _AhliGiziPasienScreenState extends State<AhliGiziPasienScreen> {
         title: Text('Daftar Pasien',
             style: GoogleFonts.manrope(
                 fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh, color: AppColors.textSecondary),
-            onPressed: _loadData,
-          ),
-        ],
+        actions: const [],
       ),
       body: _isLoading
           ? const Center(
