@@ -283,10 +283,9 @@ class _AhliGiziDetailPasienScreenState
     final html = '''<!DOCTYPE html>
 <html lang="id"><head><meta charset="UTF-8">
 <title>Informed Consent Monitoring Diet - $patientName</title>
-<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
 * { box-sizing:border-box; margin:0; padding:0; }
-body { font-family:'Manrope',Arial,sans-serif; background:#f8fafc; padding:32px; }
+body { font-family: "Times New Roman", Times, serif; background:#f8fafc; padding:32px; }
 .page { max-width:800px; margin:0 auto; background:#fff; border-radius:16px; box-shadow:0 4px 24px rgba(0,0,0,.1); padding:48px 56px; }
 .kop { display:flex; align-items:center; justify-content:space-between; padding-bottom:10px; border-bottom:3px solid #000; margin-bottom:4px; }
 .kop img { height:90px; }

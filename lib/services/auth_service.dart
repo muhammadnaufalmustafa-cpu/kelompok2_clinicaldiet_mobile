@@ -225,161 +225,82 @@ class AuthService {
   }
 
   // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ LOGIN (PASIEN & AHLI GIZI) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
-  static Future<Map<String, dynamic>> loginPasien({
-    required String identifier, // bisa rm, email, atau username
+  // ── LOGIN UNIVERSAL (SATU PINTU TANPA PILIH ROLE) ──
+  static Future<Map<String, dynamic>> loginUniversal({
+    required String identifier, // bisa rm, nip, username, atau email
     required String password,
   }) async {
     try {
-      print('DEBUG_AUTH: Memulai login pasien untuk identifier: $identifier');
+      print('DEBUG_AUTH: Memulai login universal untuk identifier: $identifier');
       final usersRef = FirebaseFirestore.instance.collection('users');
       String loginEmail = identifier;
 
-      // 1. Jika bukan format email, cari emailnya di Firestore berdasarkan RM atau Username
+      // 1. Jika bukan format email, cari emailnya di Firestore berdasarkan RM, Username, atau NIP
       if (!identifier.contains('@')) {
-        print('DEBUG_AUTH: Mencari email berdasarkan RM/Username...');
-        final rmCheck = await usersRef
-            .where('rm', isEqualTo: identifier)
-            .where('role', isEqualTo: 'pasien')
-            .get()
-            .timeout(const Duration(seconds: 15), onTimeout: () => throw 'Timeout saat mencari data RM.');
-            
-        if (rmCheck.docs.isNotEmpty) {
-          loginEmail = rmCheck.docs.first.data()['email'] ?? '';
+        print('DEBUG_AUTH: Mencari email berdasarkan RM/Username/NIP...');
+        var check = await usersRef.where('rm', isEqualTo: identifier).get();
+        if (check.docs.isEmpty) {
+          check = await usersRef.where('username', isEqualTo: identifier).get();
+        }
+        if (check.docs.isEmpty) {
+          check = await usersRef.where('nip', isEqualTo: identifier).get();
+        }
+        
+        if (check.docs.isNotEmpty) {
+          loginEmail = check.docs.first.data()['email'] ?? '';
         } else {
-          final usernameCheck = await usersRef
-              .where('username', isEqualTo: identifier)
-              .where('role', isEqualTo: 'pasien')
-              .get()
-              .timeout(const Duration(seconds: 15), onTimeout: () => throw 'Timeout saat mencari data Username.');
-              
-          if (usernameCheck.docs.isNotEmpty) {
-            loginEmail = usernameCheck.docs.first.data()['email'] ?? '';
-          } else {
-            return {'success': false, 'message': 'RM/Username tidak terdaftar.'};
-          }
+          return {'success': false, 'message': 'Username / RM / NIP tidak terdaftar.'};
         }
       }
 
       print('DEBUG_AUTH: Melakukan signInWithEmailAndPassword untuk: $loginEmail');
-      // 2. Login ke Firebase Auth (biarkan Firebase kelola timeout-nya sendiri)
       final userCredential = await FirebaseAuth.instance
           .signInWithEmailAndPassword(email: loginEmail, password: password);
           
       final uid = userCredential.user!.uid;
 
       print('DEBUG_AUTH: Login Auth berhasil, mengambil profil Firestore untuk UID: $uid');
-      // 3. Ambil profil lengkap dari Firestore
       final userDoc = await usersRef.doc(uid).get()
           .timeout(const Duration(seconds: 15), onTimeout: () => throw 'Timeout saat mengambil profil pengguna.');
           
-      if (!userDoc.exists || userDoc.data()?['role'] != 'pasien') {
+      if (!userDoc.exists) {
          await FirebaseAuth.instance.signOut();
-         return {'success': false, 'message': 'Akun ini bukan pasien.'};
+         return {'success': false, 'message': 'Data akun tidak ditemukan di database.'};
       }
 
       final userData = userDoc.data()!;
-      // Backup session ke SharedPreferences agar tidak merusak halaman lain (SANGAT AMAN)
-      final prefs = await SharedPreferences.getInstance();
-      userData['password'] = password; // Tetap simpan dummy password untuk backward compatibility jika ada fitur yang butuh
-      await prefs.setString(_loggedInUserKey, jsonEncode(_makeEncodable(userData)));
+      final userRole = userData['role'] as String? ?? 'pasien';
 
-      print('DEBUG_AUTH: Login pasien BERHASIL.');
-      return {'success': true, 'user': userData};
-
-    } on FirebaseAuthException catch (e) {
-      print('DEBUG_AUTH_ERROR (Auth): ${e.code} - ${e.message}');
-      return {'success': false, 'message': 'Email/RM atau kata sandi salah.'};
-    } catch (e) {
-      print('DEBUG_AUTH_ERROR (General): $e');
-      return {'success': false, 'message': 'Terjadi kesalahan: $e'};
-    }
-  }
-
-  static Future<Map<String, dynamic>> loginAhliGizi({
-    required String identifier, // bisa nip atau email
-    required String password,
-  }) async {
-    try {
-      print('DEBUG_AUTH: Memulai login ahli gizi untuk identifier: $identifier');
-      final usersRef = FirebaseFirestore.instance.collection('users');
-      String loginEmail = identifier;
-
-      // 1. Jika bukan format email, cari emailnya berdasarkan NIP
-      if (!identifier.contains('@')) {
-        print('DEBUG_AUTH: Mencari email berdasarkan NIP...');
-        final nipCheck = await usersRef
-            .where('nip', isEqualTo: identifier)
-            .where('role', isEqualTo: 'ahli_gizi')
-            .get()
-            .timeout(const Duration(seconds: 15), onTimeout: () => throw 'Timeout saat mencari data NIP.');
-            
-        if (nipCheck.docs.isNotEmpty) {
-          loginEmail = nipCheck.docs.first.data()['email'] ?? '';
-        } else {
-          return {'success': false, 'message': 'NIP tidak terdaftar.'};
+      if (userRole == 'ahli_gizi') {
+        final statusAkun = userData['status_akun'] as String? ?? 'approved';
+        if (statusAkun == 'pending') {
+          await FirebaseAuth.instance.signOut();
+          return {'success': false, 'message': 'PENDING', 'user': userData};
+        }
+        if (statusAkun == 'rejected') {
+          await FirebaseAuth.instance.signOut();
+          final reason = userData['rejection_reason'] as String? ?? 'Tidak ada keterangan.';
+          return {'success': false, 'message': 'REJECTED', 'rejection_reason': reason, 'user': userData};
         }
       }
 
-      print('DEBUG_AUTH: Melakukan signInWithEmailAndPassword untuk ahli gizi: $loginEmail');
-      // 2. Login ke Firebase Auth (biarkan Firebase kelola timeout-nya sendiri)
-      final userCredential = await FirebaseAuth.instance
-          .signInWithEmailAndPassword(email: loginEmail, password: password);
-          
-      final uid = userCredential.user!.uid;
-
-      print('DEBUG_AUTH: Login Auth berhasil, mengambil profil Firestore untuk UID: $uid');
-      // 3. Ambil profil dari Firestore
-      final userDoc = await usersRef.doc(uid).get()
-          .timeout(const Duration(seconds: 15), onTimeout: () => throw 'Timeout saat mengambil profil ahli gizi.');
-          
-      if (!userDoc.exists) {
-        await FirebaseAuth.instance.signOut();
-        return {'success': false, 'message': 'Data akun tidak ditemukan.'};
-      }
-
-      final userData = userDoc.data()!;
-      final userRole = userData['role'] as String? ?? '';
-
-      // Jika admin, langsung lolos tanpa cek status_akun
-      if (userRole == 'admin') {
-        final prefs = await SharedPreferences.getInstance();
-        userData['password'] = password;
-        await prefs.setString(_loggedInUserKey, jsonEncode(_makeEncodable(userData)));
-        return {'success': true, 'user': userData, 'role': 'admin'};
-      }
-
-      if (userRole != 'ahli_gizi') {
-        await FirebaseAuth.instance.signOut();
-        return {'success': false, 'message': 'Akun ini bukan ahli gizi.'};
-      }
-
-      // Cek status verifikasi
-      final statusAkun = userData['status_akun'] as String? ?? 'approved';
-      if (statusAkun == 'pending') {
-        await FirebaseAuth.instance.signOut();
-        return {'success': false, 'message': 'PENDING', 'user': userData};
-      }
-      if (statusAkun == 'rejected') {
-        await FirebaseAuth.instance.signOut();
-        final reason = userData['rejection_reason'] as String? ?? 'Tidak ada keterangan.';
-        return {'success': false, 'message': 'REJECTED', 'rejection_reason': reason, 'user': userData};
-      }
-      // Backup session ke SharedPreferences (Ahli Gizi approved)
+      // Backup session ke SharedPreferences
       final prefs = await SharedPreferences.getInstance();
       userData['password'] = password;
       await prefs.setString(_loggedInUserKey, jsonEncode(_makeEncodable(userData)));
-      print('DEBUG_AUTH: Login ahli gizi BERHASIL.');
-      return {'success': true, 'user': userData};
+
+      print('DEBUG_AUTH: Login universal BERHASIL ($userRole).');
+      return {'success': true, 'user': userData, 'role': userRole};
 
     } on FirebaseAuthException catch (e) {
-      print('DEBUG_AUTH_ERROR (Auth AG): ${e.code} - ${e.message}');
-      return {'success': false, 'message': 'Email/NIP atau kata sandi salah.'};
+      print('DEBUG_AUTH_ERROR (Auth Universal): ${e.code} - ${e.message}');
+      return {'success': false, 'message': 'Kredensial (Email/Username/RM/NIP atau Kata Sandi) salah.'};
     } catch (e) {
-      print('DEBUG_AUTH_ERROR (General AG): $e');
+      print('DEBUG_AUTH_ERROR (General Universal): $e');
       return {'success': false, 'message': 'Terjadi kesalahan: $e'};
     }
   }
+
 
   // ════════════════════════════════════════════════════
   // ── ADMIN: Ambil semua Ahli Gizi untuk verifikasi ──

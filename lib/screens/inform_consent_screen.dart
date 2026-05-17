@@ -155,10 +155,9 @@ class _InformConsentScreenState extends State<InformConsentScreen> {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Informed Consent Monitoring Diet - $patientName</title>
-  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Manrope', 'Segoe UI', Arial, sans-serif; background: #f8fafc; color: #1e293b; padding: 32px; }
+    body { font-family: "Times New Roman", Times, serif; background: #f8fafc; color: #1e293b; padding: 32px; }
     .page { max-width: 800px; margin: 0 auto; background: #fff; border-radius: 16px; box-shadow: 0 4px 24px rgba(0,0,0,0.10); padding: 48px 56px; }
     .kop-surat { display: flex; align-items: center; justify-content: space-between; padding-bottom: 10px; border-bottom: 3px solid #000; margin-bottom: 4px; }
     .kop-surat-logo { height: 90px; width: auto; object-fit: contain; }

@@ -23,8 +23,7 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _obscurePass = true;
   bool _isLoading = false;
 
-  // Role: 'pasien' atau 'ahli_gizi'
-  String _selectedRole = 'pasien';
+
 
   @override
   void dispose() {
@@ -44,54 +43,51 @@ class _LoginScreenState extends State<LoginScreen> {
 
     setState(() => _isLoading = true);
 
-    if (_selectedRole == 'pasien') {
-      final result = await AuthService.loginPasien(
-          identifier: identifier, password: password);
-      if (!mounted) return;
-      setState(() => _isLoading = false);
+    final result = await AuthService.loginUniversal(
+      identifier: identifier,
+      password: password,
+    );
+    if (!mounted) return;
+    setState(() => _isLoading = false);
 
-      if (result['success'] == true) {
+    if (result['success'] == true) {
+      final role = result['role'] as String? ?? 'pasien';
+      if (role == 'admin') {
         Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => WelcomeScreen(user: result['user'])),
+          MaterialPageRoute(builder: (_) => const AdminMainScreen()),
+        );
+      } else if (role == 'ahli_gizi') {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const AhliGiziMainScreen()),
         );
       } else {
-        _showError(result['message'] ?? 'Login gagal.');
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (_) => WelcomeScreen(user: result['user']),
+          ),
+        );
       }
+    } else if (result['message'] == 'PENDING') {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (_) => PendingApprovalScreen(
+            user: result['user'] as Map<String, dynamic>,
+          ),
+        ),
+      );
+    } else if (result['message'] == 'REJECTED') {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (_) => RejectedScreen(
+            user: result['user'] as Map<String, dynamic>,
+            reason:
+                result['rejection_reason'] as String? ??
+                'Tidak ada keterangan.',
+          ),
+        ),
+      );
     } else {
-      final result = await AuthService.loginAhliGizi(
-          identifier: identifier, password: password);
-      if (!mounted) return;
-      setState(() => _isLoading = false);
-
-      if (result['success'] == true) {
-        final role = result['role'] as String? ?? 'ahli_gizi';
-        if (role == 'admin') {
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (_) => const AdminMainScreen()),
-          );
-        } else {
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (_) => const AhliGiziMainScreen()),
-          );
-        }
-      } else if (result['message'] == 'PENDING') {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(
-              builder: (_) => PendingApprovalScreen(
-                  user: result['user'] as Map<String, dynamic>)),
-        );
-      } else if (result['message'] == 'REJECTED') {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(
-              builder: (_) => RejectedScreen(
-                    user: result['user'] as Map<String, dynamic>,
-                    reason: result['rejection_reason'] as String? ??
-                        'Tidak ada keterangan.',
-                  )),
-        );
-      } else {
-        _showError(result['message'] ?? 'Login gagal.');
-      }
+      _showError(result['message'] ?? 'Login gagal.');
     }
   }
 
@@ -108,8 +104,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isPasien = _selectedRole == 'pasien';
-
     return Scaffold(
       backgroundColor: const Color(0xFFF0F4F8),
       body: SafeArea(
@@ -127,14 +121,20 @@ class _LoginScreenState extends State<LoginScreen> {
                 errorBuilder: (_, __, ___) => Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.local_hospital,
-                        color: AppColors.primary, size: 36),
+                    const Icon(
+                      Icons.local_hospital,
+                      color: AppColors.primary,
+                      size: 36,
+                    ),
                     const SizedBox(width: 8),
-                    Text('Nak Sihat',
-                        style: GoogleFonts.manrope(
-                            fontSize: 24,
-                            fontWeight: FontWeight.w800,
-                            color: AppColors.primaryDark)),
+                    Text(
+                      'Nak Sihat',
+                      style: GoogleFonts.manrope(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.primaryDark,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -142,7 +142,9 @@ class _LoginScreenState extends State<LoginScreen> {
               Text(
                 'Aplikasi Monitoring Diet Klinis',
                 style: GoogleFonts.manrope(
-                    fontSize: 13, color: AppColors.textSecondary),
+                  fontSize: 13,
+                  color: AppColors.textSecondary,
+                ),
               ),
               const SizedBox(height: 36),
 
@@ -176,88 +178,28 @@ class _LoginScreenState extends State<LoginScreen> {
                     Text(
                       'Masukkan kredensial Anda untuk melanjutkan',
                       style: GoogleFonts.manrope(
-                          fontSize: 12, color: AppColors.textMuted),
+                        fontSize: 12,
+                        color: AppColors.textMuted,
+                      ),
                     ),
                     const SizedBox(height: 20),
 
-                    // ── Role Dropdown ──
-                    Text('LOGIN SEBAGAI',
-                        style: GoogleFonts.manrope(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: 0.8,
-                            color: AppColors.textSecondary)),
-                    const SizedBox(height: 6),
-                    Container(
-                      decoration: BoxDecoration(
-                        color: AppColors.background,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: AppColors.divider),
-                      ),
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: DropdownButtonHideUnderline(
-                        child: DropdownButton<String>(
-                          value: _selectedRole,
-                          isExpanded: true,
-                          style: GoogleFonts.manrope(
-                              fontSize: 14, color: AppColors.textPrimary),
-                          icon: const Icon(Icons.keyboard_arrow_down,
-                              color: AppColors.textMuted),
-                          onChanged: (val) {
-                            if (val != null) {
-                              setState(() {
-                                _selectedRole = val;
-                                _identifierController.clear();
-                                _passController.clear();
-                              });
-                            }
-                          },
-                          items: const [
-                            DropdownMenuItem(
-                              value: 'pasien',
-                              child: Row(children: [
-                                Icon(Icons.person_outline,
-                                    size: 18, color: AppColors.primary),
-                                SizedBox(width: 10),
-                                Text('Pasien'),
-                              ]),
-                            ),
-                            DropdownMenuItem(
-                              value: 'ahli_gizi',
-                              child: Row(children: [
-                                Icon(Icons.medical_services_outlined,
-                                    size: 18, color: Color(0xFF0284C7)),
-                                SizedBox(width: 10),
-                                Text('Ahli Gizi'),
-                              ]),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-
                     // ── Identifier ──
                     Text(
-                      isPasien
-                          ? 'USERNAME / EMAIL / NO. RM'
-                          : 'EMAIL / NIP',
+                      'USERNAME / EMAIL / NO. RM / NIP',
                       style: GoogleFonts.manrope(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: 0.8,
-                          color: AppColors.textSecondary),
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.8,
+                        color: AppColors.textSecondary,
+                      ),
                     ),
                     const SizedBox(height: 6),
                     _buildTextField(
                       controller: _identifierController,
-                      hint: isPasien
-                          ? 'Contoh: budi123 atau RM-12345'
-                          : 'Masukkan Email atau NIP',
-                      suffix: Icon(
-                        isPasien
-                            ? Icons.person_outline
-                            : Icons.badge_outlined,
+                      hint: 'Contoh: budi123, RM-12345, atau NIP',
+                      suffix: const Icon(
+                        Icons.person_outline,
                         color: AppColors.textMuted,
                         size: 20,
                       ),
@@ -265,12 +207,15 @@ class _LoginScreenState extends State<LoginScreen> {
                     const SizedBox(height: 16),
 
                     // ── Password ──
-                    Text('KATA SANDI',
-                        style: GoogleFonts.manrope(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: 0.8,
-                            color: AppColors.textSecondary)),
+                    Text(
+                      'KATA SANDI',
+                      style: GoogleFonts.manrope(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.8,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
                     const SizedBox(height: 6),
                     _buildTextField(
                       controller: _passController,
@@ -294,9 +239,11 @@ class _LoginScreenState extends State<LoginScreen> {
                       alignment: Alignment.centerRight,
                       child: TextButton(
                         onPressed: () => Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (_) => const LupaKataSandiScreen())),
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const LupaKataSandiScreen(),
+                          ),
+                        ),
                         child: Text(
                           'Lupa Kata Sandi?',
                           style: GoogleFonts.manrope(
@@ -316,13 +263,12 @@ class _LoginScreenState extends State<LoginScreen> {
                       child: ElevatedButton(
                         onPressed: _isLoading ? null : _login,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: isPasien
-                              ? AppColors.primary
-                              : const Color(0xFF0284C7),
+                          backgroundColor: AppColors.primary,
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 15),
                           shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12)),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                           elevation: 0,
                         ),
                         child: _isLoading
@@ -330,11 +276,16 @@ class _LoginScreenState extends State<LoginScreen> {
                                 width: 20,
                                 height: 20,
                                 child: CircularProgressIndicator(
-                                    color: Colors.white, strokeWidth: 2))
+                                  color: Colors.white,
+                                  strokeWidth: 2,
+                                ),
+                              )
                             : Text(
                                 'MASUK',
                                 style: GoogleFonts.manrope(
-                                    fontWeight: FontWeight.w700, fontSize: 14),
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 14,
+                                ),
                               ),
                       ),
                     ),
@@ -345,19 +296,24 @@ class _LoginScreenState extends State<LoginScreen> {
 
               // ── Register Links ──
               GestureDetector(
-                onTap: () => Navigator.push(context,
-                    MaterialPageRoute(builder: (_) => const RegisterScreen())),
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const RegisterScreen()),
+                ),
                 child: Text.rich(
                   TextSpan(
                     text: 'Belum punya akun pasien? ',
                     style: GoogleFonts.manrope(
-                        color: AppColors.textSecondary, fontSize: 13),
+                      color: AppColors.textSecondary,
+                      fontSize: 13,
+                    ),
                     children: [
                       TextSpan(
                         text: 'Daftar di sini',
                         style: GoogleFonts.manrope(
-                            color: AppColors.primary,
-                            fontWeight: FontWeight.w600),
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ],
                   ),
@@ -366,20 +322,25 @@ class _LoginScreenState extends State<LoginScreen> {
               const SizedBox(height: 10),
               GestureDetector(
                 onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (_) => const RegisterAhliGiziScreen())),
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const RegisterAhliGiziScreen(),
+                  ),
+                ),
                 child: Text.rich(
                   TextSpan(
                     text: 'Daftar sebagai ahli gizi? ',
                     style: GoogleFonts.manrope(
-                        color: AppColors.textSecondary, fontSize: 13),
+                      color: AppColors.textSecondary,
+                      fontSize: 13,
+                    ),
                     children: [
                       TextSpan(
                         text: 'Klik di sini',
                         style: GoogleFonts.manrope(
-                            color: const Color(0xFF0284C7),
-                            fontWeight: FontWeight.w600),
+                          color: const Color(0xFF0284C7),
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ],
                   ),
@@ -393,54 +354,7 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  Widget _buildRoleChip({
-    required String label,
-    required IconData icon,
-    required String role,
-    required Color color,
-  }) {
-    final isSelected = _selectedRole == role;
-    return Expanded(
-      child: GestureDetector(
-        onTap: () {
-          setState(() {
-            _selectedRole = role;
-            _identifierController.clear();
-            _passController.clear();
-          });
-        },
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          decoration: BoxDecoration(
-            color: isSelected ? color : AppColors.background,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: isSelected ? color : AppColors.divider,
-              width: isSelected ? 1.5 : 1,
-            ),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon,
-                  size: 18,
-                  color: isSelected ? Colors.white : AppColors.textSecondary),
-              const SizedBox(width: 6),
-              Text(
-                label,
-                style: GoogleFonts.manrope(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: isSelected ? Colors.white : AppColors.textSecondary,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+
 
   Widget _buildTextField({
     required TextEditingController controller,
@@ -459,23 +373,28 @@ class _LoginScreenState extends State<LoginScreen> {
         controller: controller,
         obscureText: obscure,
         keyboardType: keyboardType,
-        style:
-            GoogleFonts.manrope(fontSize: 15, color: AppColors.textPrimary),
+        style: GoogleFonts.manrope(fontSize: 15, color: AppColors.textPrimary),
         decoration: InputDecoration(
           hintText: hint,
-          hintStyle:
-              GoogleFonts.manrope(color: AppColors.textMuted, fontSize: 14),
+          hintStyle: GoogleFonts.manrope(
+            color: AppColors.textMuted,
+            fontSize: 14,
+          ),
           suffixIcon: suffix != null
               ? Padding(
                   padding: const EdgeInsets.only(right: 12),
                   child: suffix,
                 )
               : null,
-          suffixIconConstraints:
-              const BoxConstraints(minWidth: 0, minHeight: 0),
+          suffixIconConstraints: const BoxConstraints(
+            minWidth: 0,
+            minHeight: 0,
+          ),
           border: InputBorder.none,
-          contentPadding:
-              const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 14,
+          ),
         ),
       ),
     );
