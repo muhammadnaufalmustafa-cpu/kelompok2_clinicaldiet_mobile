@@ -1,6 +1,5 @@
-﻿import 'dart:convert';
+import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
@@ -13,14 +12,10 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import '../../theme/app_theme.dart';
 import '../../services/auth_service.dart';
-import '../../services/web_download.dart';
 import '../../utils/age_calculator.dart';
-import 'laporan_pasien_screen.dart';
 import 'laporan_harian_ag_screen.dart';
 import '../../services/firebase_notification_service.dart';
 import '../../services/notification_service.dart';
-import '../../services/export_service.dart';
-import 'package:intl/intl.dart';
 
 class AhliGiziDetailPasienScreen extends StatefulWidget {
   final Map<String, dynamic> pasien;
@@ -37,7 +32,6 @@ class _AhliGiziDetailPasienScreenState
   bool _isSaving = false;
   List<Map<String, dynamic>> _riwayatMakan = [];
   String? _selectedDietType; // Jenis diet yang sedang diedit
-  bool _isExportingBulanan = false;
   bool _isRegeneratingConsent = false;
   int _missedDays = 0; // jumlah hari tidak isi log
 
@@ -550,122 +544,8 @@ class _AhliGiziDetailPasienScreenState
     return doc.save();
   }
 
-  String _generateConsentHtml({
-    required String patientName, required String patientRm,
-    required String signedDateStr, required String signatureBase64,
-    required String logoNatunaBase64, required String logoKarsBase64,
-  }) {
-    final html = '''<!DOCTYPE html>
-<html lang="id"><head><meta charset="UTF-8">
-<title>Informed Consent Monitoring Diet - $patientName</title>
-<style>
-* { box-sizing:border-box; margin:0; padding:0; }
-body { font-family: "Times New Roman", Times, serif; background:#f8fafc; padding:32px; }
-.page { max-width:800px; margin:0 auto; background:#fff; border-radius:16px; box-shadow:0 4px 24px rgba(0,0,0,.1); padding:48px 56px; }
-.kop { display:flex; align-items:center; justify-content:space-between; padding-bottom:10px; border-bottom:3px solid #000; margin-bottom:4px; }
-.kop img { height:90px; }
-.kop-mid { text-align:center; flex:1; padding:0 16px; }
-.kop-mid .gov { font-size:13px; font-weight:500; }
-.kop-mid .rs { font-size:16px; font-weight:800; text-transform:uppercase; margin:4px 0; }
-.kop-mid .addr { font-size:11px; color:#374151; line-height:1.6; }
-hr.thin { border:none; border-top:1.5px solid #000; margin-top:3px; }
-.title { font-size:15px; font-weight:800; text-align:center; margin:28px 0 24px; letter-spacing:1px; text-transform:uppercase; text-decoration:underline; }
-.info-box { background:#f1faf5; border:1px solid #bbf0d4; border-radius:10px; padding:16px 20px; margin-bottom:28px; }
-.info-box table { width:100%; border-collapse:collapse; }
-.info-box td { padding:5px 8px; font-size:14px; }
-.info-box td:first-child { color:#64748b; width:160px; }
-.info-box td:last-child { font-weight:600; }
-.sec-label { font-size:12px; font-weight:700; color:#3B7A57; letter-spacing:1.2px; text-transform:uppercase; margin-bottom:10px; }
-.consent-box { border:1px solid #e2e8f0; border-radius:10px; padding:20px 24px; margin-bottom:24px; background:#fafafa; }
-p { font-size:14px; color:#475569; line-height:1.7; margin-bottom:10px; }
-.pt { display:flex; gap:10px; margin-bottom:8px; }
-.pn { font-size:14px; font-weight:700; color:#3B7A57; min-width:24px; }
-.px { font-size:14px; color:#475569; line-height:1.6; }
-.agree { background:#f0fdf4; border:2px solid #3B7A57; border-radius:10px; padding:14px 18px; margin-bottom:24px; font-size:14px; font-weight:600; color:#166534; }
-.sig-label { font-size:12px; font-weight:700; color:#64748b; letter-spacing:1.2px; text-transform:uppercase; margin-bottom:10px; }
-.sig-box { border:1.5px solid #3B7A57; border-radius:12px; padding:12px; display:inline-block; }
-.sig-box img { max-width:100%; max-height:180px; display:block; border-radius:6px; }
-.footer { border-top:2px solid #e2e8f0; padding-top:20px; margin-top:32px; display:flex; justify-content:space-between; align-items:flex-end; }
-.signed { font-size:12px; color:#64748b; }
-.signed strong { color:#1e293b; font-weight:700; }
-.badge { background:#dcfce7; border:1px solid #86efac; border-radius:20px; padding:6px 14px; font-size:12px; font-weight:700; color:#16a34a; }
-@media print { body{background:#fff;padding:0;} .page{box-shadow:none;border-radius:0;padding:32px;} }
-</style></head>
-<body><div class="page">
-  <div class="kop">
-    <img src="data:image/png;base64,$logoNatunaBase64" alt="Logo Natuna">
-    <div class="kop-mid">
-      <div class="gov">PEMERINTAH KABUPATEN NATUNA</div>
-      <div class="gov">DINAS KESEHATAN</div>
-      <div class="rs">UPTD Rumah Sakit Umum Daerah Natuna</div>
-      <div class="addr">Jalan H. Ali Murtopo, Kabupaten Natuna, Provinsi Kepulauan Riau, 29783<br>
-        Telp. (0773) 3211378 | rsud.natunakab.go.id | natuna.rsud@gmail.com</div>
-    </div>
-    <img src="data:image/png;base64,$logoKarsBase64" alt="Logo KARS">
-  </div>
-  <hr class="thin">
-  <div class="title">Informed Consent Monitoring Diet</div>
-  <div class="info-box">
-    <div class="sec-label">Data Pasien</div>
-    <table>
-      <tr><td>Nama Lengkap</td><td>: $patientName</td></tr>
-      <tr><td>No. Rekam Medis</td><td>: $patientRm</td></tr>
-      <tr><td>Tanggal Tanda Tangan</td><td>: $signedDateStr</td></tr>
-    </table>
-  </div>
-  <div class="sec-label">Isi Persetujuan</div>
-  <div class="consent-box">
-    <p>Saya dengan ini menyatakan bahwa saya telah memahami dan menyetujui untuk mengikuti Program Diet Klinik yang diselenggarakan oleh Nak Sihat.</p>
-    <p>Saya memahami bahwa program ini melibatkan pemantauan asupan makanan, berat badan, tinggi badan, dan parameter gizi lainnya oleh ahli gizi yang telah ditunjuk.</p>
-    <div class="pt"><span class="pn">1.</span><span class="px">Saya bersedia untuk mengisi catatan makan harian secara jujur dan tepat waktu.</span></div>
-    <div class="pt"><span class="pn">2.</span><span class="px">Saya memahami bahwa apabila tidak mengisi catatan makan selama 3 (tiga) hari berturut-turut, saya akan dinyatakan GUGUR dari program dan tidak dapat menggunakan aplikasi hingga dikonfirmasi ulang oleh ahli gizi.</span></div>
-    <div class="pt"><span class="pn">3.</span><span class="px">Saya bersedia memberikan data kesehatan yang akurat, termasuk berat badan dan tinggi badan secara berkala.</span></div>
-    <div class="pt"><span class="pn">4.</span><span class="px">Saya memahami bahwa data saya akan digunakan untuk keperluan pemantauan gizi dan tidak akan disebarluaskan kepada pihak ketiga tanpa izin.</span></div>
-    <div class="pt"><span class="pn">5.</span><span class="px">Saya berhak untuk mengundurkan diri dari program dengan memberitahukan ahli gizi terlebih dahulu.</span></div>
-    <div class="pt"><span class="pn">6.</span><span class="px">Saya memahami bahwa rekomendasi dalam aplikasi ini bersifat edukatif dan tidak menggantikan konsultasi medis langsung.</span></div>
-    <p style="margin-top:12px">Dengan menandatangani dokumen ini, saya menyatakan bahwa saya telah membaca, memahami, dan menyetujui seluruh ketentuan di atas.</p>
-  </div>
-  <div class="agree">âœ” Saya telah membaca dan menyetujui seluruh ketentuan di atas</div>
-  <div style="margin-bottom:32px">
-    <div class="sig-label">Tanda Tangan Pasien</div>
-    <div class="sig-box"><img src="data:image/png;base64,$signatureBase64" alt="TTD $patientName"></div>
-    <p style="margin-top:8px;font-size:12px;color:#94a3b8">Tanda tangan digital dibuat oleh pasien pada $signedDateStr</p>
-  </div>
-  <div class="footer">
-    <div class="signed">
-      <div>Ditandatangani secara digital oleh:</div>
-      <div><strong>$patientName</strong> | RM: $patientRm</div>
-      <div>Tanggal: $signedDateStr</div>
-    </div>
-    <div class="badge">âœ“ Terverifikasi</div>
-  </div>
-</div></body></html>''';
-    return base64Encode(utf8.encode(html));
-  }
+  // HTML-based consent generation and _exportLaporanBulanan removed (replaced by native PDF flow).
 
-  // Ã¢â€â‚¬Ã¢â€â‚¬ Export Laporan Bulanan (1 Pasien) Ã¢â€â‚¬Ã¢â€â‚¬
-  Future<void> _exportLaporanBulanan() async {
-    final user = await AuthService.getLoggedInUser();
-    if (user == null) return;
-
-    setState(() => _isExportingBulanan = true);
-    
-    final monthYear = DateFormat('MMMM_yyyy', 'id_ID').format(DateTime.now());
-    final success = await ExportService.exportPasienToExcel(
-      pasienList: [widget.pasien], 
-      ahliGizi: user, 
-      monthYearStr: monthYear
-    );
-
-    setState(() => _isExportingBulanan = false);
-
-    if (!success && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('Gagal mengekspor laporan bulanan.', style: GoogleFonts.manrope()),
-        backgroundColor: Colors.red,
-      ));
-    }
-  }
 
   List<String> _getDietList() {
     final raw = widget.pasien['diet_types'];
@@ -1011,7 +891,7 @@ p { font-size:14px; color:#475569; line-height:1.7; margin-bottom:10px; }
             therapyProgramId: '', // Kosongkan jika tidak ada template ID
             createdBy: createdBy,
           );
-          if (newProg != null && newProg['patientProgramId'] != null) {
+          if (newProg['patientProgramId'] != null) {
             patientProgramId = newProg['patientProgramId'];
             // Update state agar program virtual diganti yang asli
             if (mounted) {
@@ -2516,7 +2396,7 @@ p { font-size:14px; color:#475569; line-height:1.7; margin-bottom:10px; }
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
                       color: AppColors.textPrimary))),
-          if (trailing != null) trailing,
+          ?trailing,
         ],
       ),
     );
@@ -2532,7 +2412,7 @@ p { font-size:14px; color:#475569; line-height:1.7; margin-bottom:10px; }
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(vertical: 10),
         decoration: BoxDecoration(
-          color: isSelected ? color : color.withOpacity(0.08),
+          color: isSelected ? color : color.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(10),
         ),
         child: Center(
