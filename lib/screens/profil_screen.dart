@@ -1,4 +1,4 @@
-import 'dart:io';
+﻿import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
@@ -1050,7 +1050,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
                 Row(
                   children: [
                     Image.asset(
-                      'assets/images/icon.png',
+                      'assets/images/logo.png',
                       width: 30,
                       height: 30,
                     ),

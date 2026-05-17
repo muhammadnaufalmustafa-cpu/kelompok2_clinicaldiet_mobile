@@ -47,12 +47,7 @@ class _AhliGiziPasienScreenState extends State<AhliGiziPasienScreen> {
 
   Future<void> _loadData() async {
     final user = await AuthService.getLoggedInUser();
-    final allPasien = await AuthService.getAllPasien();
-
-    final myPasien = allPasien.where((p) =>
-      p['role'] == 'pasien' &&
-      p['selected_ahli_gizi_nip'] == user?['nip']
-    ).toList();
+    final myPasien = await AuthService.getPasienByAhliGiziNip(user?['nip'] ?? '');
 
     if (mounted) {
       setState(() {
@@ -108,11 +103,37 @@ class _AhliGiziPasienScreenState extends State<AhliGiziPasienScreen> {
 
     setState(() => _isExporting = false);
 
-    if (!success && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('Gagal membuat file Excel.', style: GoogleFonts.manrope()),
-        backgroundColor: Colors.red,
-      ));
+    if (mounted) {
+      if (success) {
+        showDialog(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            title: Row(
+              children: [
+                const Icon(Icons.check_circle, color: AppColors.primary),
+                const SizedBox(width: 8),
+                Expanded(child: Text('Berhasil Diunduh', style: GoogleFonts.manrope(fontWeight: FontWeight.w700, fontSize: 18))),
+              ],
+            ),
+            content: Text(
+              'File laporan bulanan (Excel) berhasil disimpan ke folder Download di HP Anda dan siap dibagikan.',
+              style: GoogleFonts.manrope(fontSize: 14),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: Text('Tutup', style: GoogleFonts.manrope(color: AppColors.primary, fontWeight: FontWeight.w600)),
+              ),
+            ],
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Gagal membuat file Excel.', style: GoogleFonts.manrope()),
+          backgroundColor: Colors.red,
+        ));
+      }
     }
   }
 

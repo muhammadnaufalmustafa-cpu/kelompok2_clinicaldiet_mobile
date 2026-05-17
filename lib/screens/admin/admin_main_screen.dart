@@ -170,13 +170,12 @@ class _AdminMainScreenState extends State<AdminMainScreen>
             tooltip: 'Keluar',
             onPressed: () async {
               await AuthService.logout();
-              if (mounted) {
-                Navigator.pushAndRemoveUntil(
-                  context,
-                  MaterialPageRoute(builder: (_) => const LoginScreen()),
-                  (r) => false,
-                );
-              }
+              if (!context.mounted) return;
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(builder: (_) => const LoginScreen()),
+                (r) => false,
+              );
             },
           ),
         ],

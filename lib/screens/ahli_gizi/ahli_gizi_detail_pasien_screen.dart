@@ -1,4 +1,4 @@
-import 'dart:convert';
+﻿import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -41,16 +41,16 @@ class _AhliGiziDetailPasienScreenState
   bool _isRegeneratingConsent = false;
   int _missedDays = 0; // jumlah hari tidak isi log
 
-  // â”€â”€ Patient Therapy Programs â”€â”€
+  // Ã¢â€â‚¬Ã¢â€â‚¬ Patient Therapy Programs Ã¢â€â‚¬Ã¢â€â‚¬
   List<Map<String, dynamic>> _patientPrograms = [];
   Map<String, dynamic>? _selectedPatientProgram;
   bool _isLoadingPrograms = false;
   List<Map<String, dynamic>> _availableTherapyPrograms = [];
 
-  // â”€â”€ Existing controllers â”€â”€
+  // Ã¢â€â‚¬Ã¢â€â‚¬ Existing controllers Ã¢â€â‚¬Ã¢â€â‚¬
   final _targetCtrl = TextEditingController();
 
-  // â”€â”€ Clinical Inputs â”€â”€
+  // Ã¢â€â‚¬Ã¢â€â‚¬ Clinical Inputs Ã¢â€â‚¬Ã¢â€â‚¬
   final _diagnosisCtrl = TextEditingController();
   final _catatanNutrisiCtrl = TextEditingController();
   final _customDietCtrl = TextEditingController();
@@ -93,7 +93,7 @@ class _AhliGiziDetailPasienScreenState
     'K58.9 - Irritable Bowel Syndrome (IBS) tanpa Diare',
   ];
 
-  // â”€â”€ Dynamic Nutrition Target controllers & state â”€â”€
+  // Ã¢â€â‚¬Ã¢â€â‚¬ Dynamic Nutrition Target controllers & state Ã¢â€â‚¬Ã¢â€â‚¬
   final Map<String, TextEditingController> _targetCtrls = {};
   final Map<String, TextEditingController> _aktualCtrls = {};
   final Map<String, bool> _checkedNutrients = {};
@@ -214,7 +214,7 @@ class _AhliGiziDetailPasienScreenState
     super.dispose();
   }
 
-  // ── Regenerate Informed Consent (oleh Ahli Gizi) ──
+  // â”€â”€ Regenerate Informed Consent (oleh Ahli Gizi) â”€â”€
   Future<void> _regenerateConsent() async {
     final rm = widget.pasien['rm'] as String? ?? '';
     final name = widget.pasien['name'] as String? ?? '-';
@@ -294,7 +294,7 @@ class _AhliGiziDetailPasienScreenState
         try {
           await NotificationService().showInstantNotification(
             id: DateTime.now().millisecondsSinceEpoch ~/ 1000,
-            title: 'Unduhan Berhasil 📄',
+            title: 'Unduhan Berhasil ðŸ“„',
             body: 'File Informed_Consent_$rm.pdf berhasil disimpan di folder Download.',
           );
         } catch (_) {}
@@ -307,7 +307,7 @@ class _AhliGiziDetailPasienScreenState
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('✅ Dokumen consent (PDF) berhasil diunduh!', style: GoogleFonts.manrope(fontWeight: FontWeight.w600)),
+          content: Text('âœ… Dokumen consent (PDF) berhasil diunduh!', style: GoogleFonts.manrope(fontWeight: FontWeight.w600)),
           backgroundColor: AppColors.primary, behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ));
@@ -625,7 +625,7 @@ p { font-size:14px; color:#475569; line-height:1.7; margin-bottom:10px; }
     <div class="pt"><span class="pn">6.</span><span class="px">Saya memahami bahwa rekomendasi dalam aplikasi ini bersifat edukatif dan tidak menggantikan konsultasi medis langsung.</span></div>
     <p style="margin-top:12px">Dengan menandatangani dokumen ini, saya menyatakan bahwa saya telah membaca, memahami, dan menyetujui seluruh ketentuan di atas.</p>
   </div>
-  <div class="agree">✔ Saya telah membaca dan menyetujui seluruh ketentuan di atas</div>
+  <div class="agree">âœ” Saya telah membaca dan menyetujui seluruh ketentuan di atas</div>
   <div style="margin-bottom:32px">
     <div class="sig-label">Tanda Tangan Pasien</div>
     <div class="sig-box"><img src="data:image/png;base64,$signatureBase64" alt="TTD $patientName"></div>
@@ -637,13 +637,13 @@ p { font-size:14px; color:#475569; line-height:1.7; margin-bottom:10px; }
       <div><strong>$patientName</strong> | RM: $patientRm</div>
       <div>Tanggal: $signedDateStr</div>
     </div>
-    <div class="badge">✓ Terverifikasi</div>
+    <div class="badge">âœ“ Terverifikasi</div>
   </div>
 </div></body></html>''';
     return base64Encode(utf8.encode(html));
   }
 
-  // â”€â”€ Export Laporan Bulanan (1 Pasien) â”€â”€
+  // Ã¢â€â‚¬Ã¢â€â‚¬ Export Laporan Bulanan (1 Pasien) Ã¢â€â‚¬Ã¢â€â‚¬
   Future<void> _exportLaporanBulanan() async {
     final user = await AuthService.getLoggedInUser();
     if (user == null) return;
@@ -994,7 +994,7 @@ p { font-size:14px; color:#475569; line-height:1.7; margin-bottom:10px; }
         }
       });
 
-      // 1a. Jika ada program terpilih â†’ save ke nutritionTargets (collection baru)
+      // 1a. Jika ada program terpilih Ã¢â€ â€™ save ke nutritionTargets (collection baru)
       if (_selectedPatientProgram != null) {
         String patientProgramId = _selectedPatientProgram!['patientProgramId'] as String;
         String therapyProgramId = _selectedPatientProgram!['therapyProgramId'] as String? ?? '';
@@ -1087,7 +1087,7 @@ p { font-size:14px; color:#475569; line-height:1.7; margin-bottom:10px; }
         await FirebaseNotificationService.createNotification(
           userId: patientId,
           role: 'pasien',
-          title: 'ðŸ“‹ Target Nutrisi Diperbarui',
+          title: 'Ã°Å¸â€œâ€¹ Target Nutrisi Diperbarui',
           message: 'Ahli Gizi $agName telah memperbarui target nutrisi untuk program "$progName". '
               'Silakan cek tab Catatan Makan untuk melihat target terbaru Anda.',
           type: 'target',
@@ -1095,8 +1095,9 @@ p { font-size:14px; color:#475569; line-height:1.7; margin-bottom:10px; }
         );
       }
 
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('Data pasien berhasil disimpan! âœ“',
+        content: Text('Data pasien berhasil disimpan! Ã¢Å“â€œ',
             style: GoogleFonts.manrope(fontWeight: FontWeight.w600)),
         backgroundColor: AppColors.primary,
         behavior: SnackBarBehavior.floating,
@@ -1150,17 +1151,17 @@ p { font-size:14px; color:#475569; line-height:1.7; margin-bottom:10px; }
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // â”€â”€ Info Pasien â”€â”€
+            // Ã¢â€â‚¬Ã¢â€â‚¬ Info Pasien Ã¢â€â‚¬Ã¢â€â‚¬
             _buildPasienCard(),
             const SizedBox(height: 12),
             _buildInfoGrid(),
             const SizedBox(height: 16),
 
-            // â”€â”€ Program Terapi Diet Pasien â”€â”€
+            // Ã¢â€â‚¬Ã¢â€â‚¬ Program Terapi Diet Pasien Ã¢â€â‚¬Ã¢â€â‚¬
             _buildPatientProgramsSection(),
             const SizedBox(height: 24),
 
-            // â”€â”€ Clinical Info â”€â”€
+            // Ã¢â€â‚¬Ã¢â€â‚¬ Clinical Info Ã¢â€â‚¬Ã¢â€â‚¬
             _buildSectionLabel('Kondisi Klinis Pasien'),
             const SizedBox(height: 8),
             Container(
@@ -1178,7 +1179,7 @@ p { font-size:14px; color:#475569; line-height:1.7; margin-bottom:10px; }
             ),
             const SizedBox(height: 24),
 
-            // â”€â”€ Terapi Diet Selection (hanya tampil jika belum ada program dipilih) â”€â”€
+            // Ã¢â€â‚¬Ã¢â€â‚¬ Terapi Diet Selection (hanya tampil jika belum ada program dipilih) Ã¢â€â‚¬Ã¢â€â‚¬
             if (_selectedPatientProgram == null) ...[
               _buildSectionLabel('Pilih Terapi Diet'),
               const SizedBox(height: 8),
@@ -1190,7 +1191,7 @@ p { font-size:14px; color:#475569; line-height:1.7; margin-bottom:10px; }
               const SizedBox(height: 24),
             ],
 
-            // â”€â”€ Banner: Program yang sedang diedit â”€â”€
+            // Ã¢â€â‚¬Ã¢â€â‚¬ Banner: Program yang sedang diedit Ã¢â€â‚¬Ã¢â€â‚¬
             if (_selectedPatientProgram != null) ...[
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -1232,15 +1233,15 @@ p { font-size:14px; color:#475569; line-height:1.7; margin-bottom:10px; }
               ),
             ],
 
-            // â”€â”€ NUTRISI SECTION â”€â”€
+            // Ã¢â€â‚¬Ã¢â€â‚¬ NUTRISI SECTION Ã¢â€â‚¬Ã¢â€â‚¬
             _buildNutrisiSection(),
             const SizedBox(height: 24),
 
-            // â”€â”€ CAPAIAN GIZI SECTION â”€â”€
+            // Ã¢â€â‚¬Ã¢â€â‚¬ CAPAIAN GIZI SECTION Ã¢â€â‚¬Ã¢â€â‚¬
             _buildCapaianGiziSection(),
             const SizedBox(height: 24),
             
-            // â”€â”€ RIWAYAT CATATAN MAKANAN â”€â”€
+            // Ã¢â€â‚¬Ã¢â€â‚¬ RIWAYAT CATATAN MAKANAN Ã¢â€â‚¬Ã¢â€â‚¬
             _buildRiwayatMakanSection(),
             const SizedBox(height: 12),
             SizedBox(
@@ -1290,7 +1291,7 @@ p { font-size:14px; color:#475569; line-height:1.7; margin-bottom:10px; }
             ),
             const SizedBox(height: 12),
 
-            // ── Tombol Regenerate Dokumen Informed Consent ──
+            // â”€â”€ Tombol Regenerate Dokumen Informed Consent â”€â”€
             if (widget.pasien['inform_consent_signed'] == true)
               SizedBox(
                 width: double.infinity,
@@ -1334,7 +1335,7 @@ p { font-size:14px; color:#475569; line-height:1.7; margin-bottom:10px; }
             ),
             const SizedBox(height: 24),
 
-            // â”€â”€ Ubah Status â”€â”€
+            // Ã¢â€â‚¬Ã¢â€â‚¬ Ubah Status Ã¢â€â‚¬Ã¢â€â‚¬
             _buildSectionLabel('Ubah Status Pasien'),
             const SizedBox(height: 8),
             _buildStatusButtons(),
@@ -1345,9 +1346,9 @@ p { font-size:14px; color:#475569; line-height:1.7; margin-bottom:10px; }
     );
   }
 
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
   // WIDGET BUILDERS
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
   Widget _buildPasienCard() {
     return Container(
@@ -1486,7 +1487,7 @@ p { font-size:14px; color:#475569; line-height:1.7; margin-bottom:10px; }
           ),
         ),
         const SizedBox(height: 12),
-        // â”€â”€ Informed Consent Card â”€â”€
+        // Ã¢â€â‚¬Ã¢â€â‚¬ Informed Consent Card Ã¢â€â‚¬Ã¢â€â‚¬
         _buildConsentCard(hasConsent, base64Sig, filePath, signedAt),
       ],
     );
@@ -1670,7 +1671,7 @@ p { font-size:14px; color:#475569; line-height:1.7; margin-bottom:10px; }
                         children: [
                           Text('Informed Consent Monitoring Diet',
                               style: GoogleFonts.manrope(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.white)),
-                          Text('Informed Consent â€” ${widget.pasien['name'] ?? ''}',
+                          Text('Informed Consent Ã¢â‚¬â€ ${widget.pasien['name'] ?? ''}',
                               style: GoogleFonts.manrope(fontSize: 11, color: Colors.white.withValues(alpha: 0.85))),
                         ],
                       ),
@@ -1685,7 +1686,7 @@ p { font-size:14px; color:#475569; line-height:1.7; margin-bottom:10px; }
                 ),
               ),
 
-              // Body â€” dokumen lengkap
+              // Body Ã¢â‚¬â€ dokumen lengkap
               Flexible(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.all(20),
@@ -1842,7 +1843,7 @@ p { font-size:14px; color:#475569; line-height:1.7; margin-bottom:10px; }
                         children: [
                           const Icon(Icons.info_outline, size: 13, color: AppColors.textMuted),
                           const SizedBox(width: 4),
-                          Text('Tanda tangan digital pasien â€” ${widget.pasien['name'] ?? ''}',
+                          Text('Tanda tangan digital pasien Ã¢â‚¬â€ ${widget.pasien['name'] ?? ''}',
                               style: GoogleFonts.manrope(fontSize: 11, color: AppColors.textMuted)),
                         ],
                       ),
@@ -1851,7 +1852,7 @@ p { font-size:14px; color:#475569; line-height:1.7; margin-bottom:10px; }
                 ),
               ),
 
-              // Footer â€” tombol download
+              // Footer Ã¢â‚¬â€ tombol download
               Container(
                 padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
                 decoration: const BoxDecoration(
@@ -2140,8 +2141,8 @@ p { font-size:14px; color:#475569; line-height:1.7; margin-bottom:10px; }
                 Expanded(
                   child: Text(
                     _missedDays >= 3
-                        ? '⚠️ Pasien tidak mengisi catatan makan selama $_missedDays hari terakhir. Segera hubungi pasien.'
-                        : '⚠️ Pasien tidak mengisi catatan makan selama $_missedDays hari terakhir.',
+                        ? 'âš ï¸ Pasien tidak mengisi catatan makan selama $_missedDays hari terakhir. Segera hubungi pasien.'
+                        : 'âš ï¸ Pasien tidak mengisi catatan makan selama $_missedDays hari terakhir.',
                     style: GoogleFonts.manrope(fontSize: 12, color: const Color(0xFF92400E), fontWeight: FontWeight.w600),
                   ),
                 ),
@@ -2449,9 +2450,9 @@ p { font-size:14px; color:#475569; line-height:1.7; margin-bottom:10px; }
     );
   }
 
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
   // HELPER WIDGETS
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
   Widget _buildSectionLabel(String label) => Text(label,
       style: GoogleFonts.manrope(
@@ -2545,7 +2546,7 @@ p { font-size:14px; color:#475569; line-height:1.7; margin-bottom:10px; }
     );
   }
 
-  // â”€â”€ PATIENT PROGRAMS SECTION â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // Ã¢â€â‚¬Ã¢â€â‚¬ PATIENT PROGRAMS SECTION Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
   Widget _buildPatientProgramsSection() {
     return Column(
@@ -3009,7 +3010,7 @@ p { font-size:14px; color:#475569; line-height:1.7; margin-bottom:10px; }
                     await FirebaseNotificationService.createNotification(
                       userId: patientId,
                       role: 'pasien',
-                      title: 'ðŸŒ¿ Program Diet Baru Ditambahkan',
+                      title: 'Ã°Å¸Å’Â¿ Program Diet Baru Ditambahkan',
                       message: 'Ahli Gizi $agName telah menambahkan program diet baru "$pName" untuk Anda. '
                           'Buka beranda untuk melihat detail program.',
                       type: 'info',

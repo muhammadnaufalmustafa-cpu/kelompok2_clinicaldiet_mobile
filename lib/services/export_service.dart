@@ -5,6 +5,7 @@ import 'package:excel/excel.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import '../utils/age_calculator.dart';
+import '../services/notification_service.dart';
 
 class ExportService {
   /// Hitung status gizi berdasarkan IMT
@@ -147,6 +148,25 @@ class ExportService {
         final filePath = '${directory.path}/$fileName';
         final file = File(filePath);
         await file.writeAsBytes(fileBytes);
+
+        if (Platform.isAndroid) {
+          try {
+            final downloadDir = Directory('/storage/emulated/0/Download');
+            if (await downloadDir.exists()) {
+              final downloadFile = File('${downloadDir.path}/$fileName');
+              await downloadFile.writeAsBytes(fileBytes);
+            }
+          } catch (_) {}
+        }
+
+        try {
+          await NotificationService().showInstantNotification(
+            id: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+            title: 'Unduhan Berhasil 📊',
+            body: 'Laporan $fileName berhasil disimpan di folder Download.',
+          );
+        } catch (_) {}
+
         await Share.shareXFiles(
           [XFile(file.path)],
           subject: 'Laporan Pasien',

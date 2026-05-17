@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../theme/app_theme.dart';
@@ -327,6 +327,7 @@ class _AhliGiziEdukasiScreenState extends State<AhliGiziEdukasiScreen>
                 leafletContent: leafletContentCtrl.text,
                 leafletUrl: leafletUrlCtrl.text,
               );
+              if (!ctx.mounted) return;
               Navigator.pop(ctx);
               _loadData();
             },

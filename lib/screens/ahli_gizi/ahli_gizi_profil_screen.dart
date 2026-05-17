@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../theme/app_theme.dart';
 import '../../services/auth_service.dart';
@@ -85,7 +85,7 @@ class _AhliGiziProfilScreenState extends State<AhliGiziProfilScreen> {
                         noStr: noStrCtrl.text,
                         spesialisasi: spesialisasiCtrl.text,
                       );
-                      if (mounted) Navigator.pop(ctx);
+                      if (!ctx.mounted) return; Navigator.pop(ctx);
                       _loadUser();
                     },
                     style: ElevatedButton.styleFrom(
@@ -139,7 +139,7 @@ class _AhliGiziProfilScreenState extends State<AhliGiziProfilScreen> {
                       email: emailCtrl.text,
                       password: passwordCtrl.text,
                     );
-                    if (mounted) Navigator.pop(ctx);
+                    if (!ctx.mounted) return; Navigator.pop(ctx);
                     _loadUser();
                   },
                   style: ElevatedButton.styleFrom(
@@ -229,7 +229,8 @@ class _AhliGiziProfilScreenState extends State<AhliGiziProfilScreen> {
                         leafletUrl: leafletUrlCtrl.text,
                       );
                       
-                      if (mounted) {
+                      if (!ctx.mounted || !mounted) return;
+                      {
                         Navigator.pop(ctx);
                         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                           content: Text(success ? 'Program terapi diet dan leaflet berhasil disimpan.' : 'Gagal menyimpan program terapi diet dan leaflet. Silakan coba lagi.'),
@@ -495,7 +496,7 @@ class _AhliGiziProfilScreenState extends State<AhliGiziProfilScreen> {
                   ),
                   const SizedBox(height: 24),
 
-                  // ─────────── SECTION: Ulasan dari Pasien ───────────
+                  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ SECTION: Ulasan dari Pasien â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
                   Padding(
                     padding: const EdgeInsets.only(bottom: 10),
                     child: Row(
@@ -517,7 +518,7 @@ class _AhliGiziProfilScreenState extends State<AhliGiziProfilScreen> {
                                 const Icon(Icons.star, color: Color(0xFFF59E0B), size: 14),
                                 const SizedBox(width: 4),
                                 Text(
-                                  '${_rating.toStringAsFixed(1)} · $_ratingCount ulasan',
+                                  '${_rating.toStringAsFixed(1)} Â· $_ratingCount ulasan',
                                   style: GoogleFonts.manrope(fontSize: 11, fontWeight: FontWeight.w700, color: const Color(0xFF92400E)),
                                 ),
                               ],
