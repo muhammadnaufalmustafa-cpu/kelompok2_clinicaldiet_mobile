@@ -13,7 +13,7 @@ void downloadFileOnWeb(String base64Data, String filename) {
 }
 
 /// Triggers a browser download of raw HTML content as an .html file.
-void downloadHtmlFileOnWeb(String htmlContent, String filename) {
+Future<void> downloadHtmlFileOnWeb(String htmlContent, String filename) async {
   final blob = html.Blob([htmlContent], 'text/html;charset=utf-8');
   final url = html.Url.createObjectUrlFromBlob(blob);
   final anchor = html.AnchorElement(href: url)

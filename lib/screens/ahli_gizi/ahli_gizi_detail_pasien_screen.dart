@@ -1,11 +1,16 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
 import '../../theme/app_theme.dart';
 import '../../services/auth_service.dart';
 import '../../services/web_download.dart';
@@ -13,6 +18,7 @@ import '../../utils/age_calculator.dart';
 import 'laporan_pasien_screen.dart';
 import 'laporan_harian_ag_screen.dart';
 import '../../services/firebase_notification_service.dart';
+import '../../services/notification_service.dart';
 import '../../services/export_service.dart';
 import 'package:intl/intl.dart';
 
@@ -247,25 +253,89 @@ class _AhliGiziDetailPasienScreenState
               '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')} WIB';
         } catch (_) {}
       }
+
+      // Load logo assets
       final logoNatunaData = await rootBundle.load('assets/images/logo_natuna.png');
-      final logoNatunaBase64 = base64Encode(logoNatunaData.buffer.asUint8List());
       final logoKarsData = await rootBundle.load('assets/images/logo_kars.png');
-      final logoKarsBase64 = base64Encode(logoKarsData.buffer.asUint8List());
-      final newDocBase64 = _generateConsentHtml(
-        patientName: name, patientRm: rm, signedDateStr: signedDateStr,
-        signatureBase64: signatureBase64, logoNatunaBase64: logoNatunaBase64,
-        logoKarsBase64: logoKarsBase64,
+      final logoNatunaBytes = logoNatunaData.buffer.asUint8List();
+      final logoKarsBytes = logoKarsData.buffer.asUint8List();
+
+      // Build PDF natively using pw package (pure Dart, no WebView needed)
+      final pdfBytes = await _generateConsentPdf(
+        patientName: name,
+        patientRm: rm,
+        signedDateStr: signedDateStr,
+        signatureBase64: signatureBase64,
+        logoNatunaBytes: logoNatunaBytes,
+        logoKarsBytes: logoKarsBytes,
       );
+
       await snapshot.docs.first.reference.update({
         'consent_regenerated_at': DateTime.now().toIso8601String(),
       });
-      final htmlContent = utf8.decode(base64Decode(newDocBase64));
-      downloadHtmlFileOnWeb(htmlContent, 'informed_consent_$rm.html');
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('✅ Dokumen consent diperbarui & diunduh!', style: GoogleFonts.manrope(fontWeight: FontWeight.w600)),
-        backgroundColor: AppColors.primary, behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      ));
+
+      // Save PDF to temp dir and share (works on mobile; web handled separately if needed)
+      final dir = await getTemporaryDirectory();
+      final file = File('${dir.path}/informed_consent_$rm.pdf');
+      await file.writeAsBytes(pdfBytes);
+
+      if (!kIsWeb) {
+        if (Platform.isAndroid) {
+          try {
+            // Simpan juga secara langsung ke folder Download publik Android
+            final downloadDir = Directory('/storage/emulated/0/Download');
+            if (await downloadDir.exists()) {
+              final downloadFile = File('${downloadDir.path}/Informed_Consent_$rm.pdf');
+              await downloadFile.writeAsBytes(pdfBytes);
+            }
+          } catch (_) {}
+        }
+
+        try {
+          await NotificationService().showInstantNotification(
+            id: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+            title: 'Unduhan Berhasil 📄',
+            body: 'File Informed_Consent_$rm.pdf berhasil disimpan di folder Download.',
+          );
+        } catch (_) {}
+
+        await Share.shareXFiles(
+          [XFile(file.path)],
+          text: 'Informed Consent - $name',
+        );
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('✅ Dokumen consent (PDF) berhasil diunduh!', style: GoogleFonts.manrope(fontWeight: FontWeight.w600)),
+          backgroundColor: AppColors.primary, behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ));
+
+        showDialog(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            title: Row(
+              children: [
+                const Icon(Icons.check_circle, color: AppColors.primary),
+                const SizedBox(width: 8),
+                Text('Berhasil Diunduh', style: GoogleFonts.manrope(fontWeight: FontWeight.w700, fontSize: 18)),
+              ],
+            ),
+            content: Text(
+              'Dokumen Informed Consent (PDF) berhasil disimpan ke folder Download di HP Anda dan siap dibagikan.',
+              style: GoogleFonts.manrope(fontSize: 14),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: Text('Tutup', style: GoogleFonts.manrope(color: AppColors.primary, fontWeight: FontWeight.w600)),
+              ),
+            ],
+          ),
+        );
+      }
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text('Gagal: $e', style: GoogleFonts.manrope()), backgroundColor: Colors.red,
@@ -273,6 +343,211 @@ class _AhliGiziDetailPasienScreenState
     } finally {
       if (mounted) setState(() => _isRegeneratingConsent = false);
     }
+  }
+
+  /// Generate PDF native menggunakan package pdf (pure Dart, tidak butuh WebView)
+  Future<List<int>> _generateConsentPdf({
+    required String patientName,
+    required String patientRm,
+    required String signedDateStr,
+    required String signatureBase64,
+    required Uint8List logoNatunaBytes,
+    required Uint8List logoKarsBytes,
+  }) async {
+    final doc = pw.Document();
+    final logoNatuna = pw.MemoryImage(Uint8List.fromList(logoNatunaBytes));
+    final logoKars = pw.MemoryImage(Uint8List.fromList(logoKarsBytes));
+    final sigBytes = base64Decode(signatureBase64);
+    final sigImage = pw.MemoryImage(sigBytes);
+
+    final PdfColor green = PdfColor.fromHex('#3B7A57');
+    final PdfColor greenLight = PdfColor.fromHex('#F0FDF4');
+    final PdfColor textDark = PdfColor.fromHex('#1E293B');
+    final PdfColor textGrey = PdfColor.fromHex('#64748B');
+    final PdfColor borderColor = PdfColor.fromHex('#E2E8F0');
+
+    const consentPoints = [
+      'Saya bersedia untuk mengisi catatan makan harian secara jujur dan tepat waktu.',
+      'Saya memahami bahwa apabila tidak mengisi catatan makan selama 3 (tiga) hari berturut-turut, saya akan dinyatakan GUGUR dari program dan tidak dapat menggunakan aplikasi hingga dikonfirmasi ulang oleh ahli gizi.',
+      'Saya bersedia memberikan data kesehatan yang akurat, termasuk berat badan dan tinggi badan secara berkala.',
+      'Saya memahami bahwa data saya akan digunakan untuk keperluan pemantauan gizi dan tidak akan disebarluaskan kepada pihak ketiga tanpa izin.',
+      'Saya berhak untuk mengundurkan diri dari program dengan memberitahukan ahli gizi terlebih dahulu.',
+      'Saya memahami bahwa rekomendasi dalam aplikasi ini bersifat edukatif dan tidak menggantikan konsultasi medis langsung.',
+    ];
+
+    doc.addPage(
+      pw.MultiPage(
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(40),
+        build: (pw.Context context) => [
+          // KOP SURAT
+          pw.Row(
+            crossAxisAlignment: pw.CrossAxisAlignment.center,
+            children: [
+              pw.Image(logoNatuna, height: 60),
+              pw.Expanded(
+                child: pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.center,
+                  children: [
+                    pw.Text('PEMERINTAH KABUPATEN NATUNA', style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold, color: textDark)),
+                    pw.Text('DINAS KESEHATAN', style: pw.TextStyle(fontSize: 10, color: textDark)),
+                    pw.Text('UPTD RUMAH SAKIT UMUM DAERAH NATUNA', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold, color: textDark)),
+                    pw.SizedBox(height: 2),
+                    pw.Text('Jalan H. Ali Murtopo, Kabupaten Natuna, Kepulauan Riau, 29783', style: pw.TextStyle(fontSize: 8, color: textGrey)),
+                    pw.Text('Telp. (0773) 3211378 | rsud.natunakab.go.id', style: pw.TextStyle(fontSize: 8, color: textGrey)),
+                  ],
+                ),
+              ),
+              pw.Image(logoKars, height: 60),
+            ],
+          ),
+          pw.Divider(thickness: 2, color: textDark),
+          pw.SizedBox(height: 16),
+
+          // JUDUL
+          pw.Center(
+            child: pw.Text(
+              'INFORMED CONSENT MONITORING DIET',
+              style: pw.TextStyle(fontSize: 13, fontWeight: pw.FontWeight.bold, color: textDark, decoration: pw.TextDecoration.underline),
+              textAlign: pw.TextAlign.center,
+            ),
+          ),
+          pw.SizedBox(height: 16),
+
+          // DATA PASIEN
+          pw.Container(
+            padding: const pw.EdgeInsets.all(12),
+            decoration: pw.BoxDecoration(
+              color: greenLight,
+              border: pw.Border.all(color: PdfColor.fromHex('#BBF0D4')),
+              borderRadius: pw.BorderRadius.circular(8),
+            ),
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Text('DATA PASIEN', style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold, color: green, letterSpacing: 1.2)),
+                pw.SizedBox(height: 6),
+                pw.Row(children: [pw.SizedBox(width: 140, child: pw.Text('Nama Lengkap', style: pw.TextStyle(fontSize: 11, color: textGrey))), pw.Text(': $patientName', style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold, color: textDark))]),
+                pw.SizedBox(height: 3),
+                pw.Row(children: [pw.SizedBox(width: 140, child: pw.Text('No. Rekam Medis', style: pw.TextStyle(fontSize: 11, color: textGrey))), pw.Text(': $patientRm', style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold, color: textDark))]),
+                pw.SizedBox(height: 3),
+                pw.Row(children: [pw.SizedBox(width: 140, child: pw.Text('Tanggal Tanda Tangan', style: pw.TextStyle(fontSize: 11, color: textGrey))), pw.Text(': $signedDateStr', style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold, color: textDark))]),
+              ],
+            ),
+          ),
+          pw.SizedBox(height: 14),
+
+          // ISI CONSENT
+          pw.Container(
+            padding: const pw.EdgeInsets.all(12),
+            decoration: pw.BoxDecoration(
+              border: pw.Border.all(color: borderColor),
+              borderRadius: pw.BorderRadius.circular(8),
+            ),
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Text(
+                  'Saya dengan ini menyatakan bahwa saya telah memahami dan menyetujui untuk mengikuti Program Diet Klinik yang diselenggarakan oleh Nak Sihat.',
+                  style: pw.TextStyle(fontSize: 11, color: textGrey, lineSpacing: 3),
+                ),
+                pw.SizedBox(height: 6),
+                pw.Text(
+                  'Saya memahami bahwa program ini melibatkan pemantauan asupan makanan, berat badan, tinggi badan, dan parameter gizi lainnya oleh ahli gizi yang telah ditunjuk.',
+                  style: pw.TextStyle(fontSize: 11, color: textGrey, lineSpacing: 3),
+                ),
+                pw.SizedBox(height: 8),
+                ...consentPoints.asMap().entries.map((e) => pw.Padding(
+                  padding: const pw.EdgeInsets.only(bottom: 5),
+                  child: pw.Row(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      pw.SizedBox(width: 20, child: pw.Text('${e.key + 1}.', style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold, color: green))),
+                      pw.Expanded(child: pw.Text(e.value, style: pw.TextStyle(fontSize: 11, color: textGrey, lineSpacing: 2))),
+                    ],
+                  ),
+                )),
+                pw.SizedBox(height: 6),
+                pw.Text(
+                  'Dengan menandatangani dokumen ini, saya menyatakan bahwa saya telah membaca, memahami, dan menyetujui seluruh ketentuan di atas.',
+                  style: pw.TextStyle(fontSize: 11, color: textGrey, lineSpacing: 3),
+                ),
+              ],
+            ),
+          ),
+          pw.SizedBox(height: 12),
+
+          // PERNYATAAN PERSETUJUAN
+          pw.Container(
+            padding: const pw.EdgeInsets.all(10),
+            decoration: pw.BoxDecoration(
+              color: greenLight,
+              border: pw.Border.all(color: green, width: 1.5),
+              borderRadius: pw.BorderRadius.circular(8),
+            ),
+            child: pw.Row(
+              children: [
+                pw.Container(
+                  width: 18, height: 18,
+                  decoration: pw.BoxDecoration(color: green, borderRadius: pw.BorderRadius.circular(4)),
+                  child: pw.Center(child: pw.Text('V', style: pw.TextStyle(fontSize: 12, color: PdfColors.white, fontWeight: pw.FontWeight.bold))),
+                ),
+                pw.SizedBox(width: 8),
+                pw.Expanded(
+                  child: pw.Text(
+                    'Saya telah membaca dan menyetujui seluruh ketentuan di atas',
+                    style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold, color: PdfColor.fromHex('#166534')),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          pw.SizedBox(height: 14),
+
+          // TANDA TANGAN
+          pw.Text('TANDA TANGAN PASIEN', style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold, color: textGrey, letterSpacing: 1.2)),
+          pw.SizedBox(height: 6),
+          pw.Container(
+            padding: const pw.EdgeInsets.all(8),
+            decoration: pw.BoxDecoration(
+              border: pw.Border.all(color: green, width: 1.5),
+              borderRadius: pw.BorderRadius.circular(8),
+              color: PdfColors.white,
+            ),
+            child: pw.Image(sigImage, height: 100, fit: pw.BoxFit.contain),
+          ),
+          pw.SizedBox(height: 6),
+          pw.Center(child: pw.Text('Tanda tangan digital pasien - $patientName pada $signedDateStr', style: pw.TextStyle(fontSize: 9, color: textGrey))),
+          pw.SizedBox(height: 20),
+
+          // FOOTER
+          pw.Divider(color: borderColor),
+          pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+            children: [
+              pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Text('Ditandatangani secara digital oleh:', style: pw.TextStyle(fontSize: 9, color: textGrey)),
+                  pw.Text('$patientName  |  RM: $patientRm', style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold, color: textDark)),
+                  pw.Text('Tanggal: $signedDateStr', style: pw.TextStyle(fontSize: 9, color: textGrey)),
+                ],
+              ),
+              pw.Container(
+                padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: pw.BoxDecoration(
+                  color: PdfColor.fromHex('#DCFCE7'),
+                  border: pw.Border.all(color: PdfColor.fromHex('#86EFAC')),
+                  borderRadius: pw.BorderRadius.circular(20),
+                ),
+                child: pw.Text('Terverifikasi', style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold, color: PdfColor.fromHex('#16A34A'))),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+    return doc.save();
   }
 
   String _generateConsentHtml({

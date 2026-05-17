@@ -109,4 +109,21 @@ class NotificationService {
   Future<void> cancelAllNotifications() async {
     await flutterLocalNotificationsPlugin.cancelAll();
   }
+
+  Future<void> showInstantNotification({
+    required int id,
+    required String title,
+    required String body,
+  }) async {
+    const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+      'download_channel',
+      'Download Notifications',
+      channelDescription: 'Notifikasi status unduhan file',
+      importance: Importance.max,
+      priority: Priority.high,
+      icon: '@mipmap/ic_launcher',
+    );
+    const NotificationDetails details = NotificationDetails(android: androidDetails);
+    await flutterLocalNotificationsPlugin.show(id, title, body, details);
+  }
 }
