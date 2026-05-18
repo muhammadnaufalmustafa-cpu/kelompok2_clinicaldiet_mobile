@@ -37,13 +37,13 @@ class LaporanPasienScreen extends StatelessWidget {
                 width: 100,
                 height: 100,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFEF3C7),
+                  color: AppColors.accent.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(24),
                 ),
                 child: const Icon(
                   Icons.hourglass_top_rounded,
                   size: 52,
-                  color: Color(0xFFD97706),
+                  color: AppColors.accent,
                 ),
               ),
               const SizedBox(height: 24),
@@ -53,7 +53,7 @@ class LaporanPasienScreen extends StatelessWidget {
                   fontSize: 13,
                   fontWeight: FontWeight.w800,
                   letterSpacing: 2,
-                  color: const Color(0xFFD97706),
+                  color: AppColors.accent,
                 ),
               ),
               const SizedBox(height: 8),
@@ -71,15 +71,15 @@ class LaporanPasienScreen extends StatelessWidget {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFFF7ED),
+                  color: AppColors.accent.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: const Color(0xFFFED7AA)),
+                  border: Border.all(color: AppColors.accent.withValues(alpha: 0.3)),
                 ),
                 child: Text(
                   'TUNGGU FORMAT LAPORAN DARI MITRA\n\nFitur laporan bulanan sedang dalam tahap pengembangan dan menunggu format standar resmi dari mitra klinik. Fitur ini akan segera tersedia.',
                   style: GoogleFonts.manrope(
                     fontSize: 14,
-                    color: const Color(0xFF92400E),
+                    color: AppColors.textPrimary,
                     height: 1.6,
                   ),
                   textAlign: TextAlign.center,

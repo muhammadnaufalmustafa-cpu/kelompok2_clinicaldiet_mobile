@@ -427,8 +427,8 @@ class _LaporanHarianAGScreenState extends State<LaporanHarianAGScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF0284C7), Color(0xFF0369A1)],
+        gradient: LinearGradient(
+          colors: [AppColors.secondary, AppColors.secondary.withValues(alpha: 0.8)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -593,8 +593,8 @@ class _LaporanHarianAGScreenState extends State<LaporanHarianAGScreen> {
                               horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
                             color: isOk
-                                ? const Color(0xFFD1FAE5)
-                                : const Color(0xFFFEE2E2),
+                                ? AppColors.primaryLight
+                                : AppColors.red.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text('${(pct * 100).toInt()}%',
@@ -602,8 +602,8 @@ class _LaporanHarianAGScreenState extends State<LaporanHarianAGScreen> {
                                   fontSize: 10,
                                   fontWeight: FontWeight.w700,
                                   color: isOk
-                                      ? const Color(0xFF065F46)
-                                      : const Color(0xFF991B1B))),
+                                      ? AppColors.primaryDark
+                                      : AppColors.red)),
                         ),
                       ]),
                     );
@@ -694,7 +694,7 @@ class _LaporanHarianAGScreenState extends State<LaporanHarianAGScreen> {
                           style: GoogleFonts.manrope(
                               fontSize: 12,
                               fontWeight: FontWeight.w700,
-                              color: const Color(0xFF0284C7))),
+                              color: AppColors.secondary)),
                       const Spacer(),
                       if (bb != null && tb != null)
                         Text('BB: ${bb}kg · TB: ${tb}cm',
@@ -755,7 +755,7 @@ class _LaporanHarianAGScreenState extends State<LaporanHarianAGScreen> {
           style: GoogleFonts.manrope(fontWeight: FontWeight.w700),
         ),
         style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFF0284C7),
+          backgroundColor: AppColors.secondary,
           foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(vertical: 14),
           shape:

@@ -139,9 +139,9 @@ class _AhliGiziPasienScreenState extends State<AhliGiziPasienScreen> {
   Color _statusColor(String status) {
     switch (status) {
       case 'berhasil':
-        return const Color(0xFF0284C7);
+        return AppColors.secondary;
       case 'meninggal':
-        return const Color(0xFF6B7280);
+        return AppColors.textSecondary;
       default:
         return AppColors.primary;
     }
@@ -164,7 +164,7 @@ class _AhliGiziPasienScreenState extends State<AhliGiziPasienScreen> {
       ),
       body: _isLoading
           ? const Center(
-              child: CircularProgressIndicator(color: Color(0xFF0284C7)))
+              child: CircularProgressIndicator(color: AppColors.secondary))
           : Column(
               children: [
                 // ─────────── Panel Rekap Laporan Bulanan ───────────
@@ -172,15 +172,15 @@ class _AhliGiziPasienScreenState extends State<AhliGiziPasienScreen> {
                   margin: const EdgeInsets.fromLTRB(16, 16, 16, 4),
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF0284C7), Color(0xFF0369A1)],
+                    gradient: LinearGradient(
+                      colors: [AppColors.secondary, AppColors.secondary.withValues(alpha: 0.8)],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
                     borderRadius: BorderRadius.circular(18),
                     boxShadow: [
                       BoxShadow(
-                        color: const Color(0xFF0284C7).withValues(alpha: 0.3),
+                        color: AppColors.secondary.withValues(alpha: 0.3),
                         blurRadius: 12,
                         offset: const Offset(0, 6),
                       ),
@@ -245,7 +245,7 @@ class _AhliGiziPasienScreenState extends State<AhliGiziPasienScreen> {
                               child: DropdownButtonHideUnderline(
                                 child: DropdownButton<int>(
                                   value: _laporanMonth,
-                                  dropdownColor: const Color(0xFF0369A1),
+                                  dropdownColor: AppColors.secondary,
                                   iconEnabledColor: Colors.white,
                                   style: GoogleFonts.manrope(
                                       fontSize: 13,
@@ -267,7 +267,7 @@ class _AhliGiziPasienScreenState extends State<AhliGiziPasienScreen> {
                             DropdownButtonHideUnderline(
                               child: DropdownButton<int>(
                                 value: _laporanYear,
-                                dropdownColor: const Color(0xFF0369A1),
+                                dropdownColor: AppColors.secondary,
                                 iconEnabledColor: Colors.white,
                                 style: GoogleFonts.manrope(
                                     fontSize: 13,
@@ -297,16 +297,16 @@ class _AhliGiziPasienScreenState extends State<AhliGiziPasienScreen> {
                                   width: 18,
                                   height: 18,
                                   child: CircularProgressIndicator(
-                                      strokeWidth: 2, color: Color(0xFF0284C7)))
+                                      strokeWidth: 2, color: AppColors.secondary))
                               : const Icon(Icons.file_download_outlined,
-                                  size: 20, color: Color(0xFF0284C7)),
+                                  size: 20, color: AppColors.secondary),
                           label: Text(
                             _isExporting
                                 ? 'Membuat file Excel...'
                                 : 'Cetak Laporan Rekap (.xlsx)',
                             style: GoogleFonts.manrope(
                                 fontWeight: FontWeight.w700,
-                                color: const Color(0xFF0284C7),
+                                color: AppColors.secondary,
                                 fontSize: 14),
                           ),
                           style: ElevatedButton.styleFrom(
@@ -362,7 +362,7 @@ class _AhliGiziPasienScreenState extends State<AhliGiziPasienScreen> {
                                         horizontal: 14, vertical: 6),
                                     decoration: BoxDecoration(
                                       color: _filterStatus == s
-                                          ? const Color(0xFF0284C7)
+                                          ? AppColors.secondary
                                           : AppColors.background,
                                       borderRadius: BorderRadius.circular(20),
                                     ),
@@ -400,7 +400,7 @@ class _AhliGiziPasienScreenState extends State<AhliGiziPasienScreen> {
                         )
                       : RefreshIndicator(
                           onRefresh: _loadData,
-                          color: const Color(0xFF0284C7),
+                          color: AppColors.secondary,
                           child: ListView.builder(
                             padding: const EdgeInsets.all(16),
                             itemCount: _filtered.length,

@@ -2,20 +2,28 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class AppColors {
-  static const Color primary = Color(0xFF10B981);
-  static const Color primaryLight = Color(0xFFD1FAE5);
-  static const Color primaryDark = Color(0xFF059669);
-  static const Color background = Color(0xFFF4F6F8);
+  // New Palette
+  static const Color primary = Color(0xFF9FE465); // Hijau dari Figma
+  static const Color primaryDark = Color(0xFF81C748); 
+  static const Color primaryLight = Color(0xFFE1F7C6);
+  static const Color secondary = Color(0xFF3E6F95); // Biru Gelap
+  static const Color accent = Color(0xFFF7D060); // Kuning
+  
+  static const Color background = Color(0xFFFCFDF6); // Cream background
   static const Color surface = Colors.white;
+  
   static const Color textPrimary = Color(0xFF1A1A2E);
   static const Color textSecondary = Color(0xFF6B7280);
   static const Color textMuted = Color(0xFF9CA3AF);
+  
+  // Macros
   static const Color protein = Color(0xFFF59E0B);
   static const Color fat = Color(0xFFEF4444);
-  static const Color carb = Color(0xFF10B981);
-  static const Color divider = Color(0xFFE5E7EB);
+  static const Color carb = Color(0xFF9FE465);
+  static const Color divider = Color(0xFFF1F5F9);
   static const Color red = Color(0xFFEF4444);
 }
+
 
 ThemeData buildAppTheme() {
   return ThemeData(

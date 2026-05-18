@@ -23,11 +23,11 @@ class PendingApprovalScreen extends StatelessWidget {
                 width: 100,
                 height: 100,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFEF3C7),
+                  color: AppColors.accent.withValues(alpha: 0.2),
                   shape: BoxShape.circle,
                 ),
                 child: const Center(
-                  child: Icon(Icons.hourglass_empty_rounded, size: 50, color: Color(0xFFF59E0B)),
+                  child: Icon(Icons.hourglass_empty_rounded, size: 50, color: AppColors.accent),
                 ),
               ),
               const SizedBox(height: 28),
@@ -46,18 +46,18 @@ class PendingApprovalScreen extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFFFBEB),
+                  color: AppColors.accent.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: const Color(0xFFFDE68A)),
+                  border: Border.all(color: AppColors.accent.withValues(alpha: 0.5)),
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.info_outline, color: Color(0xFFD97706), size: 20),
+                    const Icon(Icons.info_outline, color: AppColors.accent, size: 20),
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
                         'Proses verifikasi biasanya memakan waktu 1x24 jam kerja.',
-                        style: GoogleFonts.manrope(fontSize: 13, color: const Color(0xFF92400E)),
+                        style: GoogleFonts.manrope(fontSize: 13, color: AppColors.textPrimary),
                       ),
                     ),
                   ],

@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../theme/app_theme.dart';
@@ -57,8 +57,8 @@ class _AhliGiziEdukasiScreenState extends State<AhliGiziEdukasiScreen>
                 fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
         bottom: TabBar(
           controller: _tabController,
-          indicatorColor: const Color(0xFF0284C7),
-          labelColor: const Color(0xFF0284C7),
+          indicatorColor: AppColors.secondary,
+          labelColor: AppColors.secondary,
           unselectedLabelColor: AppColors.textSecondary,
           labelStyle: GoogleFonts.manrope(fontWeight: FontWeight.w600, fontSize: 13),
           isScrollable: false,
@@ -80,7 +80,7 @@ class _AhliGiziEdukasiScreenState extends State<AhliGiziEdukasiScreen>
             ],
           ),
       floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: const Color(0xFF0284C7),
+        backgroundColor: AppColors.secondary,
         onPressed: () {
           // Both tabs now lead to the unified form
           _showUnifiedAddDialog();
@@ -114,12 +114,12 @@ class _AhliGiziEdukasiScreenState extends State<AhliGiziEdukasiScreen>
                 width: 48,
                 height: 48,
                 decoration: BoxDecoration(
-                  color: Color(l['colorVal'] as int? ?? 0xFFE0F2FE),
+                  color: l['colorVal'] != null ? Color(l['colorVal'] as int) : AppColors.secondary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
                   IconData(l['iconCode'] as int? ?? Icons.picture_as_pdf.codePoint, fontFamily: 'MaterialIcons'),
-                  color: const Color(0xFF0284C7),
+                  color: AppColors.secondary,
                   size: 24,
                 ),
               ),
@@ -138,7 +138,7 @@ class _AhliGiziEdukasiScreenState extends State<AhliGiziEdukasiScreen>
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.open_in_new, color: Color(0xFF0284C7), size: 18),
+                    icon: const Icon(Icons.open_in_new, color: AppColors.secondary, size: 18),
                     onPressed: () => _openUrl(l['url']),
                   ),
                   IconButton(
@@ -176,12 +176,12 @@ class _AhliGiziEdukasiScreenState extends State<AhliGiziEdukasiScreen>
                 width: 48,
                 height: 48,
                 decoration: BoxDecoration(
-                  color: Color(d['colorVal'] as int? ?? d['colorValue'] as int? ?? 0xFFE0F2FE),
+                  color: d['colorVal'] != null ? Color(d['colorVal'] as int) : d['colorValue'] != null ? Color(d['colorValue'] as int) : AppColors.secondary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
                   IconData(d['iconCode'] as int? ?? d['iconCodePoint'] as int? ?? Icons.restaurant_menu_outlined.codePoint, fontFamily: 'MaterialIcons'),
-                  color: const Color(0xFF0284C7),
+                  color: AppColors.secondary,
                   size: 24,
                 ),
               ),

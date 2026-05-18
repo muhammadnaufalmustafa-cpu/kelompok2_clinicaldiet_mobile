@@ -65,7 +65,7 @@ class _AdminMainScreenState extends State<AdminMainScreen>
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF16A34A),
+              backgroundColor: AppColors.primary,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             ),
             child: Text('Ya, Setujui', style: GoogleFonts.manrope(color: Colors.white, fontWeight: FontWeight.w700)),
@@ -78,7 +78,7 @@ class _AdminMainScreenState extends State<AdminMainScreen>
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(success ? '✅ ${ag['name']} berhasil disetujui.' : 'Gagal menyetujui.', style: GoogleFonts.manrope()),
-        backgroundColor: success ? const Color(0xFF16A34A) : Colors.red,
+        backgroundColor: success ? AppColors.primary : Colors.red,
       ));
       if (success) _loadData();
     }
@@ -155,7 +155,7 @@ class _AdminMainScreenState extends State<AdminMainScreen>
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF1E3A5F),
+        backgroundColor: AppColors.secondary,
         elevation: 0,
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -183,7 +183,7 @@ class _AdminMainScreenState extends State<AdminMainScreen>
           controller: _tabController,
           labelColor: Colors.white,
           unselectedLabelColor: Colors.white54,
-          indicatorColor: const Color(0xFF38BDF8),
+          indicatorColor: AppColors.primary,
           labelStyle: GoogleFonts.manrope(fontWeight: FontWeight.w700, fontSize: 13),
           tabs: [
             Tab(text: 'Menunggu (${_pending.length})'),
@@ -192,7 +192,7 @@ class _AdminMainScreenState extends State<AdminMainScreen>
         ),
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: Color(0xFF0284C7)))
+          ? const Center(child: CircularProgressIndicator(color: AppColors.secondary))
           : TabBarView(
               controller: _tabController,
               children: [
@@ -222,7 +222,7 @@ class _AdminMainScreenState extends State<AdminMainScreen>
     }
 
     return RefreshIndicator(
-      color: const Color(0xFF0284C7),
+      color: AppColors.secondary,
       onRefresh: _loadData,
       child: ListView.builder(
         physics: const AlwaysScrollableScrollPhysics(),
@@ -252,13 +252,13 @@ class _AdminMainScreenState extends State<AdminMainScreen>
                     width: 44,
                     height: 44,
                     decoration: BoxDecoration(
-                      color: const Color(0xFFE0F2FE),
+                      color: AppColors.secondary.withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
                     child: Center(
                       child: Text(
                         (ag['name'] as String? ?? 'A').substring(0, 1).toUpperCase(),
-                        style: GoogleFonts.manrope(fontSize: 18, fontWeight: FontWeight.w700, color: const Color(0xFF0284C7)),
+                        style: GoogleFonts.manrope(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.secondary),
                       ),
                     ),
                   ),
@@ -323,7 +323,7 @@ class _AdminMainScreenState extends State<AdminMainScreen>
                         icon: const Icon(Icons.check, size: 16, color: Colors.white),
                         label: Text('Setujui', style: GoogleFonts.manrope(fontWeight: FontWeight.w700, color: Colors.white, fontSize: 13)),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF16A34A),
+                          backgroundColor: AppColors.primary,
                           padding: const EdgeInsets.symmetric(vertical: 10),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                           elevation: 0,
@@ -367,7 +367,7 @@ class _AdminMainScreenState extends State<AdminMainScreen>
         label = 'DITOLAK';
         break;
       default:
-        color = const Color(0xFF16A34A);
+        color = AppColors.primary;
         label = 'AKTIF';
     }
     return Container(

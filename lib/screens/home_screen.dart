@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -630,21 +630,21 @@ class _HomeScreenState extends State<HomeScreen> {
         margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
-          color: AppColors.primaryLight,
+          color: Colors.white,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: AppColors.primary.withValues(alpha: 0.4)),
+          border: Border.all(color: AppColors.secondary.withValues(alpha: 0.4)),
         ),
         child: Row(
           children: [
-            const Icon(Icons.local_hospital_outlined, color: AppColors.primary, size: 18),
+            const Icon(Icons.local_hospital_outlined, color: AppColors.secondary, size: 18),
             const SizedBox(width: 8),
             Expanded(
               child: Text(prog['therapyProgramName'] as String? ?? '-',
-                style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.primaryDark)),
+                style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
             ),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-              decoration: BoxDecoration(color: AppColors.primary, borderRadius: BorderRadius.circular(8)),
+              decoration: BoxDecoration(color: AppColors.secondary, borderRadius: BorderRadius.circular(8)),
               child: Text('Aktif', style: GoogleFonts.manrope(fontSize: 10, fontWeight: FontWeight.w700, color: Colors.white)),
             ),
           ],
@@ -677,9 +677,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     margin: const EdgeInsets.only(right: 10),
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                     decoration: BoxDecoration(
-                      color: isSelected ? AppColors.primary : Colors.white,
+                      color: isSelected ? AppColors.secondary : Colors.white,
                       borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: isSelected ? AppColors.primary : AppColors.divider, width: isSelected ? 2 : 1),
+                      border: Border.all(color: isSelected ? AppColors.secondary : AppColors.divider, width: isSelected ? 2 : 1),
                     ),
                     child: Text(name, style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w700,
                       color: isSelected ? Colors.white : AppColors.textPrimary)),
@@ -1118,7 +1118,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildTopBar(BuildContext context) {
     final firstName = (_user?['name'] as String? ?? '').split(' ').first;
     return Container(
-      color: AppColors.surface,
+      color: AppColors.background,
       padding: EdgeInsets.only(
         top: MediaQuery.of(context).padding.top + 12,
         left: 20,
@@ -1132,7 +1132,7 @@ class _HomeScreenState extends State<HomeScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Halo, $firstName ðŸ‘‹',
+                'Halo, $firstName 👋',
                 style: GoogleFonts.manrope(
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
@@ -1199,15 +1199,11 @@ class _HomeScreenState extends State<HomeScreen> {
       margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF10B981), Color(0xFF059669)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        color: AppColors.secondary,
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF10B981).withValues(alpha: 0.3),
+            color: AppColors.secondary.withValues(alpha: 0.3),
             blurRadius: 15,
             offset: const Offset(0, 8),
           ),

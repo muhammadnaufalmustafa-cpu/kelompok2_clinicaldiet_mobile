@@ -78,13 +78,13 @@ class _AhliGiziMainScreenState extends State<AhliGiziMainScreen> {
                 const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
             decoration: BoxDecoration(
               color:
-                  isActive ? const Color(0xFFE0F2FE) : Colors.transparent,
+                  isActive ? AppColors.secondary.withValues(alpha: 0.1) : Colors.transparent,
               borderRadius: BorderRadius.circular(20),
             ),
             child: Icon(
               isActive ? activeIcon : inactiveIcon,
               color: isActive
-                  ? const Color(0xFF0284C7)
+                  ? AppColors.secondary
                   : AppColors.textMuted,
               size: 22,
             ),
@@ -97,7 +97,7 @@ class _AhliGiziMainScreenState extends State<AhliGiziMainScreen> {
               fontWeight:
                   isActive ? FontWeight.w600 : FontWeight.w500,
               color: isActive
-                  ? const Color(0xFF0284C7)
+                  ? AppColors.secondary
                   : AppColors.textMuted,
             ),
           ),

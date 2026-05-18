@@ -1,4 +1,4 @@
-﻿import 'dart:convert';
+import 'dart:convert';
 import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -746,7 +746,7 @@ class _AhliGiziDetailPasienScreenState
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           title: Row(
             children: [
-              const Icon(Icons.assignment_turned_in_outlined, color: Color(0xFF0284C7), size: 22),
+              const Icon(Icons.assignment_turned_in_outlined, color: AppColors.secondary, size: 22),
               const SizedBox(width: 8),
               Text('Evaluasi Akhir Program', style: GoogleFonts.manrope(fontWeight: FontWeight.w700, fontSize: 16)),
             ],
@@ -758,10 +758,10 @@ class _AhliGiziDetailPasienScreenState
               children: [
                 Text(
                   'Sebelum menyelesaikan program, isi evaluasi akhir untuk dokumentasi laporan.',
-                  style: GoogleFonts.manrope(fontSize: 13, color: const Color(0xFF64748B), height: 1.5),
+                  style: GoogleFonts.manrope(fontSize: 13, color: AppColors.textSecondary, height: 1.5),
                 ),
                 const SizedBox(height: 16),
-                Text('Outcome Program', style: GoogleFonts.manrope(fontSize: 12, fontWeight: FontWeight.w700, color: const Color(0xFF475569))),
+                Text('Outcome Program', style: GoogleFonts.manrope(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
                 const SizedBox(height: 8),
                 ...outcomes.map((o) => GestureDetector(
                   onTap: () => setDialogState(() => selectedOutcome = o),
@@ -769,10 +769,10 @@ class _AhliGiziDetailPasienScreenState
                     margin: const EdgeInsets.only(bottom: 6),
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                     decoration: BoxDecoration(
-                      color: selectedOutcome == o ? const Color(0xFFE0F2FE) : const Color(0xFFF8FAFC),
+                      color: selectedOutcome == o ? AppColors.secondary.withValues(alpha: 0.1) : AppColors.surface,
                       borderRadius: BorderRadius.circular(10),
                       border: Border.all(
-                        color: selectedOutcome == o ? const Color(0xFF0284C7) : const Color(0xFFE2E8F0),
+                        color: selectedOutcome == o ? AppColors.secondary : AppColors.divider,
                         width: selectedOutcome == o ? 1.5 : 1,
                       ),
                     ),
@@ -780,17 +780,17 @@ class _AhliGiziDetailPasienScreenState
                       children: [
                         Icon(
                           selectedOutcome == o ? Icons.radio_button_checked : Icons.radio_button_unchecked,
-                          color: selectedOutcome == o ? const Color(0xFF0284C7) : const Color(0xFF94A3B8),
+                          color: selectedOutcome == o ? AppColors.secondary : AppColors.textMuted,
                           size: 18,
                         ),
                         const SizedBox(width: 8),
-                        Text(o, style: GoogleFonts.manrope(fontSize: 13, color: selectedOutcome == o ? const Color(0xFF0284C7) : const Color(0xFF334155), fontWeight: selectedOutcome == o ? FontWeight.w600 : FontWeight.w400)),
+                        Text(o, style: GoogleFonts.manrope(fontSize: 13, color: selectedOutcome == o ? AppColors.secondary : AppColors.textPrimary, fontWeight: selectedOutcome == o ? FontWeight.w600 : FontWeight.w400)),
                       ],
                     ),
                   ),
                 )),
                 const SizedBox(height: 12),
-                Text('Evaluasi & Kesimpulan', style: GoogleFonts.manrope(fontSize: 12, fontWeight: FontWeight.w700, color: const Color(0xFF475569))),
+                Text('Evaluasi & Kesimpulan', style: GoogleFonts.manrope(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
                 const SizedBox(height: 8),
                 TextField(
                   controller: evaluasiCtrl,
@@ -798,29 +798,29 @@ class _AhliGiziDetailPasienScreenState
                   style: GoogleFonts.manrope(fontSize: 13),
                   decoration: InputDecoration(
                     hintText: 'Contoh: Pasien berhasil mencapai target BB ideal. Kepatuhan diet 90%. Disarankan tetap menjaga pola makan...',
-                    hintStyle: GoogleFonts.manrope(fontSize: 12, color: const Color(0xFF94A3B8)),
+                    hintStyle: GoogleFonts.manrope(fontSize: 12, color: AppColors.textMuted),
                     filled: true,
-                    fillColor: const Color(0xFFF8FAFC),
+                    fillColor: AppColors.surface,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                      borderSide: const BorderSide(color: AppColors.divider),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: Color(0xFF0284C7), width: 1.5),
+                      borderSide: const BorderSide(color: AppColors.secondary, width: 1.5),
                     ),
                     contentPadding: const EdgeInsets.all(12),
                   ),
                 ),
                 const SizedBox(height: 4),
-                Text('* Minimal 10 karakter', style: GoogleFonts.manrope(fontSize: 11, color: const Color(0xFF94A3B8))),
+                Text('* Minimal 10 karakter', style: GoogleFonts.manrope(fontSize: 11, color: AppColors.textMuted)),
               ],
             ),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: Text('Batal', style: GoogleFonts.manrope(color: const Color(0xFF64748B))),
+              child: Text('Batal', style: GoogleFonts.manrope(color: AppColors.textSecondary)),
             ),
             StatefulBuilder(
               builder: (ctx2, _) => ElevatedButton.icon(
@@ -842,7 +842,7 @@ class _AhliGiziDetailPasienScreenState
                 icon: const Icon(Icons.check_circle_outline, color: Colors.white, size: 18),
                 label: Text('Konfirmasi Selesai', style: GoogleFonts.manrope(fontWeight: FontWeight.w700, color: Colors.white, fontSize: 13)),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF0284C7),
+                  backgroundColor: AppColors.secondary,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   elevation: 0,
                 ),
@@ -1006,11 +1006,11 @@ class _AhliGiziDetailPasienScreenState
   Color get _statusColor {
     switch (_status) {
       case 'berhasil':
-        return const Color(0xFF0284C7);
+        return AppColors.secondary;
       case 'meninggal':
-        return const Color(0xFF6B7280);
+        return AppColors.textSecondary;
       case 'dropout':
-        return const Color(0xFFDC2626);
+        return AppColors.red;
       default:
         return AppColors.primary;
     }
@@ -1083,13 +1083,13 @@ class _AhliGiziDetailPasienScreenState
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 margin: const EdgeInsets.only(bottom: 16),
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF4F46E5), Color(0xFF7C3AED)],
+                  gradient: LinearGradient(
+                    colors: [AppColors.secondary, AppColors.secondary.withValues(alpha: 0.8)],
                     begin: Alignment.centerLeft,
                     end: Alignment.centerRight,
                   ),
                   borderRadius: BorderRadius.circular(14),
-                  boxShadow: [BoxShadow(color: const Color(0xFF4F46E5).withValues(alpha: 0.25), blurRadius: 10, offset: const Offset(0, 4))],
+                  boxShadow: [BoxShadow(color: AppColors.secondary.withValues(alpha: 0.25), blurRadius: 10, offset: const Offset(0, 4))],
                 ),
                 child: Row(
                   children: [
@@ -1193,7 +1193,7 @@ class _AhliGiziDetailPasienScreenState
                     style: GoogleFonts.manrope(fontWeight: FontWeight.w700, fontSize: 13, color: Colors.white),
                   ),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF3B7A57),
+                    backgroundColor: AppColors.secondary,
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                     elevation: 0,
@@ -1212,7 +1212,7 @@ class _AhliGiziDetailPasienScreenState
                 icon: const Icon(Icons.bar_chart_rounded, size: 18, color: Colors.white),
                 label: Text('Laporan Harian', style: GoogleFonts.manrope(fontWeight: FontWeight.w700, fontSize: 13, color: Colors.white)),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF0284C7),
+                  backgroundColor: AppColors.secondary,
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                   elevation: 0,
@@ -1323,7 +1323,7 @@ class _AhliGiziDetailPasienScreenState
       },
       child: Container(
         padding: const EdgeInsets.all(6),
-        decoration: BoxDecoration(color: const Color(0xFF25D366), borderRadius: BorderRadius.circular(8)),
+        decoration: BoxDecoration(color: AppColors.primary, borderRadius: BorderRadius.circular(8)),
         child: const Icon(Icons.chat, size: 16, color: Colors.white),
       ),
     ) : null);
@@ -1385,18 +1385,18 @@ class _AhliGiziDetailPasienScreenState
       return Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: const Color(0xFFFEF3C7),
+          color: AppColors.accent.withValues(alpha: 0.2),
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: const Color(0xFFFCD34D)),
+          border: Border.all(color: AppColors.accent.withValues(alpha: 0.5)),
         ),
         child: Row(
           children: [
-            const Icon(Icons.warning_amber_rounded, color: Color(0xFFD97706), size: 20),
+            const Icon(Icons.warning_amber_rounded, color: AppColors.accent, size: 20),
             const SizedBox(width: 10),
             Expanded(
               child: Text(
                 'Pasien belum menandatangani informed consent.',
-                style: GoogleFonts.manrope(fontSize: 13, color: const Color(0xFF92400E), fontWeight: FontWeight.w500),
+                style: GoogleFonts.manrope(fontSize: 13, color: AppColors.textPrimary, fontWeight: FontWeight.w500),
               ),
             ),
           ],
@@ -1449,15 +1449,15 @@ class _AhliGiziDetailPasienScreenState
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFDCFCE7),
+                  color: AppColors.primary.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.verified, color: Color(0xFF16A34A), size: 14),
+                    const Icon(Icons.verified, color: AppColors.primaryDark, size: 14),
                     const SizedBox(width: 4),
-                    Text('Ditandatangani', style: GoogleFonts.manrope(fontSize: 11, fontWeight: FontWeight.w700, color: const Color(0xFF16A34A))),
+                    Text('Ditandatangani', style: GoogleFonts.manrope(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.primaryDark)),
                   ],
                 ),
               ),
@@ -1585,18 +1585,18 @@ class _AhliGiziDetailPasienScreenState
                           width: double.infinity,
                           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFDCFCE7),
+                            color: AppColors.primary.withValues(alpha: 0.2),
                             borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: const Color(0xFF86EFAC)),
+                            border: Border.all(color: AppColors.primary.withValues(alpha: 0.5)),
                           ),
                           child: Row(
                             children: [
-                              const Icon(Icons.verified, color: Color(0xFF16A34A), size: 18),
+                              const Icon(Icons.verified, color: AppColors.primaryDark, size: 18),
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
                                   'Disetujui & ditandatangani pada: $signedDate',
-                                  style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w700, color: const Color(0xFF16A34A)),
+                                  style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.primaryDark),
                                 ),
                               ),
                             ],
@@ -1608,9 +1608,9 @@ class _AhliGiziDetailPasienScreenState
                       Container(
                         padding: const EdgeInsets.all(14),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFF1FAF5),
+                          color: AppColors.surface,
                           borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: const Color(0xFFBBF0D4)),
+                          border: Border.all(color: AppColors.divider),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1637,7 +1637,7 @@ class _AhliGiziDetailPasienScreenState
                       Container(
                         padding: const EdgeInsets.all(14),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFFAFAFA),
+                          color: AppColors.surface,
                           borderRadius: BorderRadius.circular(10),
                           border: Border.all(color: AppColors.divider),
                         ),
@@ -1683,7 +1683,7 @@ class _AhliGiziDetailPasienScreenState
                       Container(
                         padding: const EdgeInsets.all(14),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFF0FDF4),
+                          color: AppColors.primaryLight,
                           borderRadius: BorderRadius.circular(10),
                           border: Border.all(color: AppColors.primary.withValues(alpha: 0.5), width: 1.5),
                         ),
@@ -1729,7 +1729,7 @@ class _AhliGiziDetailPasienScreenState
                         children: [
                           const Icon(Icons.info_outline, size: 13, color: AppColors.textMuted),
                           const SizedBox(width: 4),
-                          Text('Tanda tangan digital pasien ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â ${widget.pasien['name'] ?? ''}',
+                          Text('Tanda tangan digital pasien — ${widget.pasien['name'] ?? ''}',
                               style: GoogleFonts.manrope(fontSize: 11, color: AppColors.textMuted)),
                         ],
                       ),
@@ -1738,11 +1738,11 @@ class _AhliGiziDetailPasienScreenState
                 ),
               ),
 
-              // Footer ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â tombol download
+              // Footer — tombol download
               Container(
                 padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
                 decoration: const BoxDecoration(
-                  border: Border(top: BorderSide(color: Color(0xFFE2E8F0))),
+                  border: Border(top: BorderSide(color: AppColors.divider)),
                 ),
                 child: Row(
                   children: [
@@ -1932,13 +1932,13 @@ class _AhliGiziDetailPasienScreenState
           Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: Colors.orange.withValues(alpha: 0.1),
+              color: AppColors.accent.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.orange.withValues(alpha: 0.4)),
+              border: Border.all(color: AppColors.accent.withValues(alpha: 0.3)),
             ),
             child: Text(
               'Pilih dan simpan target gizi terlebih dahulu, lalu isi aktualisasi di sini.',
-              style: GoogleFonts.manrope(fontSize: 12, color: Colors.orange[800]),
+              style: GoogleFonts.manrope(fontSize: 12, color: AppColors.accent),
             ),
           )
         else
@@ -2016,20 +2016,20 @@ class _AhliGiziDetailPasienScreenState
             margin: const EdgeInsets.only(bottom: 10),
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             decoration: BoxDecoration(
-              color: const Color(0xFFFFF7ED),
+              color: AppColors.accent.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFFFED7AA)),
+              border: Border.all(color: AppColors.accent.withValues(alpha: 0.3)),
             ),
             child: Row(
               children: [
-                const Icon(Icons.warning_amber_rounded, color: Color(0xFFD97706), size: 22),
+                const Icon(Icons.warning_amber_rounded, color: AppColors.accent, size: 22),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
                     _missedDays >= 3
                         ? 'Ã¢Å¡Â Ã¯Â¸Â Pasien tidak mengisi catatan makan selama $_missedDays hari terakhir. Segera hubungi pasien.'
                         : 'Ã¢Å¡Â Ã¯Â¸Â Pasien tidak mengisi catatan makan selama $_missedDays hari terakhir.',
-                    style: GoogleFonts.manrope(fontSize: 12, color: const Color(0xFF92400E), fontWeight: FontWeight.w600),
+                    style: GoogleFonts.manrope(fontSize: 12, color: AppColors.textPrimary, fontWeight: FontWeight.w600),
                   ),
                 ),
               ],
@@ -2278,7 +2278,7 @@ class _AhliGiziDetailPasienScreenState
             const SizedBox(width: 8),
             Expanded(
                 child: _buildStatusButton(
-                    'Berhasil', 'berhasil', const Color(0xFF0284C7))),
+                    'Berhasil', 'berhasil', AppColors.secondary)),
           ],
         ),
         const SizedBox(height: 8),
@@ -2286,11 +2286,11 @@ class _AhliGiziDetailPasienScreenState
           children: [
             Expanded(
                 child: _buildStatusButton(
-                    'Meninggal', 'meninggal', const Color(0xFF6B7280))),
+                    'Meninggal', 'meninggal', AppColors.textSecondary)),
             const SizedBox(width: 8),
             Expanded(
                 child: _buildStatusButton(
-                    'Dropout', 'dropout', const Color(0xFFDC2626))),
+                    'Dropout', 'dropout', AppColors.red)),
           ],
         ),
       ],
@@ -2459,7 +2459,7 @@ class _AhliGiziDetailPasienScreenState
             width: double.infinity,
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: const Color(0xFFF1F5F9),
+              color: AppColors.surface,
               borderRadius: BorderRadius.circular(14),
               border: Border.all(color: AppColors.divider),
             ),
@@ -2488,8 +2488,8 @@ class _AhliGiziDetailPasienScreenState
                     String statusLabel;
                     switch (status) {
                       case 'active': statusColor = AppColors.primary; statusLabel = 'Aktif'; break;
-                      case 'completed': statusColor = const Color(0xFF0284C7); statusLabel = 'Selesai'; break;
-                      default: statusColor = const Color(0xFF6B7280); statusLabel = 'Nonaktif';
+                      case 'completed': statusColor = AppColors.secondary; statusLabel = 'Selesai'; break;
+                      default: statusColor = AppColors.textSecondary; statusLabel = 'Nonaktif';
                     }
                     return GestureDetector(
                       onTap: () => _selectProgram(program),
@@ -2562,8 +2562,8 @@ class _AhliGiziDetailPasienScreenState
       children: [
         for (final s in [
           {'status': 'active', 'label': 'Aktif', 'color': AppColors.primary},
-          {'status': 'completed', 'label': 'Selesai', 'color': const Color(0xFF0284C7)},
-          {'status': 'inactive', 'label': 'Nonaktif', 'color': const Color(0xFF6B7280)},
+          {'status': 'completed', 'label': 'Selesai', 'color': AppColors.secondary},
+          {'status': 'inactive', 'label': 'Nonaktif', 'color': AppColors.textSecondary},
         ]) ...[
           Expanded(
             child: GestureDetector(
@@ -2595,8 +2595,8 @@ class _AhliGiziDetailPasienScreenState
           ),
           if (s != [
             {'status': 'active', 'label': 'Aktif', 'color': AppColors.primary},
-            {'status': 'completed', 'label': 'Selesai', 'color': const Color(0xFF0284C7)},
-            {'status': 'inactive', 'label': 'Nonaktif', 'color': const Color(0xFF6B7280)},
+            {'status': 'completed', 'label': 'Selesai', 'color': AppColors.secondary},
+            {'status': 'inactive', 'label': 'Nonaktif', 'color': AppColors.textSecondary},
           ].last) const SizedBox(width: 8),
         ],
       ],

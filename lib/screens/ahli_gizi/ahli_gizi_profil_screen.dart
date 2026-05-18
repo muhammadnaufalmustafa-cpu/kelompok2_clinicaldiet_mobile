@@ -381,7 +381,7 @@ class _AhliGiziProfilScreenState extends State<AhliGiziProfilScreen> {
                     width: 90,
                     height: 90,
                     decoration: BoxDecoration(
-                      color: const Color(0xFFE0F2FE),
+                      color: AppColors.secondary.withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                       border: Border.all(color: Colors.white, width: 4),
                       boxShadow: [
@@ -391,7 +391,7 @@ class _AhliGiziProfilScreenState extends State<AhliGiziProfilScreen> {
                     child: Center(
                       child: Text(
                         (_user?['name'] as String? ?? 'A').substring(0, 1).toUpperCase(),
-                        style: GoogleFonts.manrope(fontSize: 36, fontWeight: FontWeight.w700, color: const Color(0xFF0284C7)),
+                        style: GoogleFonts.manrope(fontSize: 36, fontWeight: FontWeight.w700, color: AppColors.secondary),
                       ),
                     ),
                   ),
@@ -404,7 +404,7 @@ class _AhliGiziProfilScreenState extends State<AhliGiziProfilScreen> {
                   const SizedBox(height: 4),
                   Text(
                     _user?['spesialisasi'] ?? 'Ahli Gizi Klinis',
-                    style: GoogleFonts.manrope(fontSize: 14, fontWeight: FontWeight.w500, color: const Color(0xFF0284C7)),
+                    style: GoogleFonts.manrope(fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.secondary),
                   ),
                   const SizedBox(height: 8),
                   Text(
@@ -415,7 +415,7 @@ class _AhliGiziProfilScreenState extends State<AhliGiziProfilScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.star, color: Color(0xFFF59E0B), size: 20),
+                      const Icon(Icons.star, color: AppColors.accent, size: 20),
                       const SizedBox(width: 6),
                       Text(_rating.toStringAsFixed(1), style: GoogleFonts.manrope(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
                       Text(' ($_ratingCount ulasan)', style: GoogleFonts.manrope(fontSize: 13, color: AppColors.textSecondary)),
@@ -510,16 +510,16 @@ class _AhliGiziProfilScreenState extends State<AhliGiziProfilScreen> {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFFEF3C7),
+                              color: AppColors.accent.withValues(alpha: 0.2),
                               borderRadius: BorderRadius.circular(20),
                             ),
                             child: Row(
                               children: [
-                                const Icon(Icons.star, color: Color(0xFFF59E0B), size: 14),
+                                const Icon(Icons.star, color: AppColors.accent, size: 14),
                                 const SizedBox(width: 4),
                                 Text(
                                   '${_rating.toStringAsFixed(1)} Â· $_ratingCount ulasan',
-                                  style: GoogleFonts.manrope(fontSize: 11, fontWeight: FontWeight.w700, color: const Color(0xFF92400E)),
+                                  style: GoogleFonts.manrope(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
                                 ),
                               ],
                             ),
@@ -603,14 +603,14 @@ class _AhliGiziProfilScreenState extends State<AhliGiziProfilScreen> {
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFEF3C7),
+                  color: AppColors.accent.withValues(alpha: 0.2),
                   shape: BoxShape.circle,
                 ),
                 child: Center(
                   child: Text(
                     name.isNotEmpty ? name[0].toUpperCase() : 'P',
                     style: GoogleFonts.manrope(
-                        fontSize: 16, fontWeight: FontWeight.w700, color: const Color(0xFFD97706)),
+                        fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.accent),
                   ),
                 ),
               ),
@@ -637,7 +637,7 @@ class _AhliGiziProfilScreenState extends State<AhliGiziProfilScreen> {
                     Row(
                       children: List.generate(5, (i) => Icon(
                         i < rating.round() ? Icons.star : Icons.star_border,
-                        color: const Color(0xFFF59E0B),
+                        color: AppColors.accent,
                         size: 16,
                       )),
                     ),

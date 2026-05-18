@@ -68,14 +68,14 @@ class _AhliGiziDashboardScreenState extends State<AhliGiziDashboardScreen> {
     if (_isLoading) {
       return const Scaffold(
         body: Center(
-            child: CircularProgressIndicator(color: Color(0xFF0284C7))),
+            child: CircularProgressIndicator(color: AppColors.secondary)),
       );
     }
 
     return Scaffold(
       backgroundColor: AppColors.background,
       body: RefreshIndicator(
-        color: const Color(0xFF0284C7),
+        color: AppColors.secondary,
         onRefresh: _loadData,
         child: CustomScrollView(
           slivers: [
@@ -150,11 +150,7 @@ class _AhliGiziDashboardScreenState extends State<AhliGiziDashboardScreen> {
                     Container(
                       padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFF0284C7), Color(0xFF0369A1)],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
+                        color: AppColors.secondary,
                         borderRadius: BorderRadius.circular(16),
                       ),
                       child: Column(
@@ -197,7 +193,7 @@ class _AhliGiziDashboardScreenState extends State<AhliGiziDashboardScreen> {
                         Expanded(
                             child: _buildStatCard(
                                 'Berhasil', _berhasilCount,
-                                const Color(0xFF0284C7),
+                                AppColors.secondary,
                                 Icons.check_circle_outline)),
                       ],
                     ),
@@ -207,13 +203,13 @@ class _AhliGiziDashboardScreenState extends State<AhliGiziDashboardScreen> {
                         Expanded(
                             child: _buildStatCard(
                                 'Meninggal', _meninggalCount,
-                                const Color(0xFF6B7280),
+                                AppColors.textSecondary,
                                 Icons.info_outline)),
                         const SizedBox(width: 8),
                         Expanded(
                             child: _buildStatCard(
                                 'Gagal/Drop', _dropoutCount,
-                                const Color(0xFFDC2626),
+                                AppColors.red,
                                 Icons.cancel_outlined)),
                       ],
                     ),
@@ -291,13 +287,13 @@ class _AhliGiziDashboardScreenState extends State<AhliGiziDashboardScreen> {
                               BarChartRodData(toY: _aktifCount.toDouble(), color: AppColors.primary, width: 22, borderRadius: BorderRadius.circular(4)),
                             ]),
                             BarChartGroupData(x: 1, barRods: [
-                              BarChartRodData(toY: _berhasilCount.toDouble(), color: const Color(0xFF0284C7), width: 22, borderRadius: BorderRadius.circular(4)),
+                              BarChartRodData(toY: _berhasilCount.toDouble(), color: AppColors.secondary, width: 22, borderRadius: BorderRadius.circular(4)),
                             ]),
                             BarChartGroupData(x: 2, barRods: [
-                              BarChartRodData(toY: _meninggalCount.toDouble(), color: const Color(0xFF6B7280), width: 22, borderRadius: BorderRadius.circular(4)),
+                              BarChartRodData(toY: _meninggalCount.toDouble(), color: AppColors.textSecondary, width: 22, borderRadius: BorderRadius.circular(4)),
                             ]),
                             BarChartGroupData(x: 3, barRods: [
-                              BarChartRodData(toY: _dropoutCount.toDouble(), color: const Color(0xFFDC2626), width: 22, borderRadius: BorderRadius.circular(4)),
+                              BarChartRodData(toY: _dropoutCount.toDouble(), color: AppColors.red, width: 22, borderRadius: BorderRadius.circular(4)),
                             ]),
                           ],
                         ),
@@ -518,7 +514,7 @@ class _AhliGiziDashboardScreenState extends State<AhliGiziDashboardScreen> {
                     Text(r['patientName'] ?? 'Pasien', style: GoogleFonts.manrope(fontWeight: FontWeight.w600, fontSize: 13)),
                     Row(
                       children: [
-                        const Icon(Icons.star, color: Color(0xFFF59E0B), size: 14),
+                        const Icon(Icons.star, color: AppColors.accent, size: 14),
                         const SizedBox(width: 4),
                         Text(rating.toStringAsFixed(1), style: GoogleFonts.manrope(fontWeight: FontWeight.w700, fontSize: 12)),
                       ],

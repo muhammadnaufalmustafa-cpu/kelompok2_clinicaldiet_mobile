@@ -1,4 +1,4 @@
-﻿import 'dart:io';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
@@ -1088,11 +1088,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
                           height: 88,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            gradient: const LinearGradient(
-                              colors: [Color(0xFF6EE7B7), Color(0xFF10B981)],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
+                            color: AppColors.secondary,
                             border: Border.all(
                                 color: AppColors.primaryLight, width: 3),
                           ),
@@ -1289,10 +1285,10 @@ class _ProfilScreenState extends State<ProfilScreen> {
                       width: double.infinity,
                       child: OutlinedButton.icon(
                         onPressed: _showAhliGiziCV,
-                        icon: const Icon(Icons.badge_outlined, size: 18, color: AppColors.primary),
-                        label: Text('Lihat Profil & CV Ahli Gizi', style: GoogleFonts.manrope(fontWeight: FontWeight.w600, color: AppColors.primary)),
+                        icon: const Icon(Icons.badge_outlined, size: 18, color: AppColors.secondary),
+                        label: Text('Lihat Profil & CV Ahli Gizi', style: GoogleFonts.manrope(fontWeight: FontWeight.w600, color: AppColors.secondary)),
                         style: OutlinedButton.styleFrom(
-                          side: const BorderSide(color: AppColors.primary),
+                          side: const BorderSide(color: AppColors.secondary),
                           padding: const EdgeInsets.symmetric(vertical: 12),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                         ),

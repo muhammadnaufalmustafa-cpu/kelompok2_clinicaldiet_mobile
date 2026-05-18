@@ -89,9 +89,9 @@ class _RegisterAhliGiziScreenState extends State<RegisterAhliGiziScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF0F4F8),
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: const Color(0xFFF0F4F8),
+        backgroundColor: AppColors.background,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new,
@@ -111,18 +111,18 @@ class _RegisterAhliGiziScreenState extends State<RegisterAhliGiziScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: const Color(0xFFE0F2FE),
+                color: AppColors.secondary.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   const Icon(Icons.medical_services_outlined,
-                      color: Color(0xFF0284C7), size: 16),
+                      color: AppColors.secondary, size: 16),
                   const SizedBox(width: 6),
                   Text('Portal Tenaga Kesehatan',
                       style: GoogleFonts.manrope(
-                          color: const Color(0xFF0284C7),
+                          color: AppColors.secondary,
                           fontWeight: FontWeight.w600,
                           fontSize: 12)),
                 ],
@@ -198,7 +198,7 @@ class _RegisterAhliGiziScreenState extends State<RegisterAhliGiziScreen> {
               child: ElevatedButton(
                 onPressed: _isLoading ? null : _register,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF0284C7),
+                  backgroundColor: AppColors.secondary,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
@@ -240,7 +240,7 @@ class _RegisterAhliGiziScreenState extends State<RegisterAhliGiziScreen> {
         const SizedBox(height: 8),
         Container(
           decoration: BoxDecoration(
-            color: const Color(0xFFF3F4F6),
+            color: AppColors.surface,
             borderRadius: BorderRadius.circular(10),
             border: Border.all(
                 color: AppColors.divider.withValues(alpha: 0.5)),

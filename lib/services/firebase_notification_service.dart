@@ -1,4 +1,4 @@
-﻿import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class FirebaseNotificationService {
   static final FirebaseFirestore _db = FirebaseFirestore.instance;
@@ -117,7 +117,7 @@ class FirebaseNotificationService {
     await createNotification(
       userId: uid,
       role: 'ahli_gizi',
-      title: 'ðŸ‘¤ Pasien Baru Bergabung',
+      title: '👤 Pasien Baru Bergabung',
       message: 'Pasien baru $pasienName (RM: $pasienRm) telah memilih Anda sebagai ahli gizi pendampingnya.',
       type: 'new_patient',
       relatedId: pasienRm,
@@ -142,7 +142,7 @@ class FirebaseNotificationService {
     await createNotification(
       userId: patientId,
       role: 'pasien',
-      title: 'ðŸ“‹ Status Anda Diperbarui',
+      title: '📋 Status Anda Diperbarui',
       message: 'Ahli Gizi $ahliGiziName telah mengubah status Anda menjadi: "$statusLabel".',
       type: 'status_change',
     );
@@ -201,7 +201,7 @@ class FirebaseNotificationService {
     await createNotification(
       userId: uid,
       role: 'ahli_gizi',
-      title: 'ðŸ¥— Pasien Ubah Pilihan Diet',
+      title: '🥗 Pasien Ubah Pilihan Diet',
       message: 'Pasien $pasienName (RM: $pasienRm) menambahkan program diet: "$dietName".',
       type: 'diet_change',
       relatedId: pasienRm,

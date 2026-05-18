@@ -105,7 +105,7 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF0F4F8),
+      backgroundColor: AppColors.background,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
@@ -247,7 +247,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         child: Text(
                           'Lupa Kata Sandi?',
                           style: GoogleFonts.manrope(
-                            color: AppColors.primary,
+                            color: AppColors.secondary,
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
                           ),
@@ -263,7 +263,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       child: ElevatedButton(
                         onPressed: _isLoading ? null : _login,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
+                          backgroundColor: AppColors.secondary,
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 15),
                           shape: RoundedRectangleBorder(
@@ -311,7 +311,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       TextSpan(
                         text: 'Daftar di sini',
                         style: GoogleFonts.manrope(
-                          color: AppColors.primary,
+                          color: AppColors.secondary,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -338,7 +338,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       TextSpan(
                         text: 'Klik di sini',
                         style: GoogleFonts.manrope(
-                          color: const Color(0xFF0284C7),
+                          color: AppColors.secondary,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
