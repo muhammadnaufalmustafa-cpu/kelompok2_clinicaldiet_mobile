@@ -368,7 +368,7 @@ class _LaporanHarianScreenState extends State<LaporanHarianScreen> {
                       GoogleFonts.manrope(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
                       children: [
                         TextSpan(
-                          text: '${rod.toY.toStringAsFixed(1)}',
+                          text: rod.toY.toStringAsFixed(1),
                           style: GoogleFonts.manrope(color: rod.color, fontSize: 12, fontWeight: FontWeight.w600),
                         ),
                       ],

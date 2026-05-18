@@ -50,8 +50,8 @@ class _RegisterAhliGiziScreenState extends State<RegisterAhliGiziScreen> {
       _showSnackBar('Kata sandi tidak cocok.', isError: true);
       return;
     }
-    if (password.length < 6) {
-      _showSnackBar('Kata sandi minimal 6 karakter.', isError: true);
+    if (password.length < 8) {
+      _showSnackBar('Kata sandi minimal 8 karakter.', isError: true);
       return;
     }
 

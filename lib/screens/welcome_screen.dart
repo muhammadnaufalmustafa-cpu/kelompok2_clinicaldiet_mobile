@@ -204,8 +204,9 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                                 final hasDiet = (dietTypes is List && dietTypes.isNotEmpty) ||
                                     dietType.isNotEmpty;
                                 String label;
-                                if (!hasAhliGizi) label = 'PILIH AHLI GIZI';
-                                else if (!consentSigned) label = 'TANDA TANGAN CONSENT';
+                                if (!hasAhliGizi) {
+                                  label = 'PILIH AHLI GIZI';
+                                } else if (!consentSigned) label = 'TANDA TANGAN CONSENT';
                                 else if (!hasDiet) label = 'PILIH JENIS DIET';
                                 else label = 'MASUK KE DASHBOARD';
                                 return Text(label,

@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -53,17 +53,17 @@ class _HomeScreenState extends State<HomeScreen> {
   String _ahliGiziName = ''; // nama ahli gizi aktif
   Map<String, dynamic>? _selectedAhliGizi;
   bool _isLoading = true;
-  int _dietPageIndex = 0;
+  final int _dietPageIndex = 0;
   final PageController _dietPageCtrl = PageController();
   // Item gizi yang dipilih pasien untuk ditampilkan di card utama (maks 4)
   List<String> _pinnedNutrients = [];
 
-  // ── Patient Therapy Programs ──
+  // â”€â”€ Patient Therapy Programs â”€â”€
   List<Map<String, dynamic>> _patientPrograms = [];
   String? _selectedPatientProgramId;
   Map<String, dynamic>? _selectedNutritionTarget; // nutritionTargets doc
 
-  // ── Realtime stream ──
+  // â”€â”€ Realtime stream â”€â”€
   StreamSubscription<QuerySnapshot>? _programsStreamSub;
 
   @override
@@ -178,7 +178,7 @@ class _HomeScreenState extends State<HomeScreen> {
     Map<String, dynamic>? selectedNutritionTarget;
 
     if (user != null && user['rm'] != null) {
-      final rm = user['rm'] as String;
+      final rm = user['rm'] as String? ?? '';
       final uid = user['uid'] as String? ?? '';
       nutrisi = await AuthService.getNutrisiPasien(rm);
       nutrisiPerDiet = await AuthService.getAllNutrisiPasien(rm);
@@ -239,7 +239,7 @@ class _HomeScreenState extends State<HomeScreen> {
         try {
           final ag = allAG.firstWhere((a) => a['nip'] == nip);
           selectedAhliGizi = ag;
-          ahliGiziName = ag['name'] as String? ?? '';
+
         } catch (_) {}
       }
 
@@ -275,7 +275,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (mounted) setState(() => _pinnedNutrients = pinned);
   }
 
-  // ── Getters nutrisi (mengutamakan program baru jika ada) ──
+  // â”€â”€ Getters nutrisi (mengutamakan program baru jika ada) â”€â”€
   Map<String, dynamic>? get _currentDietNutrisi {
     if (_nutrisiPerDiet.isEmpty) return _nutrisi;
     if (_dietPageIndex >= _nutrisiPerDiet.length) return _nutrisiPerDiet.first;
@@ -283,7 +283,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Map<String, dynamic> get _targetNutrients {
-    // Prioritas: nutritionTargets (program baru) → legacy nutrition_plans
+    // Prioritas: nutritionTargets (program baru) â†’ legacy nutrition_plans
     if (_selectedNutritionTarget != null) {
       final items = (_selectedNutritionTarget!['nutrientItems'] as Map?)?.cast<String, dynamic>() ?? {};
       return items;
@@ -323,7 +323,7 @@ class _HomeScreenState extends State<HomeScreen> {
   double get _kaloriAktual => (_targetNutrients['Energi (kkal)']?['aktual'] as num?)?.toDouble() ?? 0;
   double get _kaloriPercent => _kaloriTarget > 0 ? (_kaloriAktual / _kaloriTarget).clamp(0.0, 1.0) : 0.0;
 
-  // ── BB/TB dari histori terakhir ──
+  // â”€â”€ BB/TB dari histori terakhir â”€â”€
   double get _bbTerakhir {
     if (_bbHistory.isNotEmpty) {
       return double.tryParse(_bbHistory.first['weight']?.toString() ?? '') ?? 0.0;
@@ -424,13 +424,13 @@ class _HomeScreenState extends State<HomeScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildTopBar(context),
-                  // ── BB/TB Harian ──
+                  // â”€â”€ BB/TB Harian â”€â”€
                   _buildBBTBCard(),
-                  // ── Program Terapi Diet Selector ──
+                  // â”€â”€ Program Terapi Diet Selector â”€â”€
                   _buildProgramSelector(),
-                  // ── Periode Program Terapi Diet ──
+                  // â”€â”€ Periode Program Terapi Diet â”€â”€
                   _buildProgramPeriod(),
-                  // ── Kartu Ahli Gizi Utama ──
+                  // â”€â”€ Kartu Ahli Gizi Utama â”€â”€
                   if (_selectedAhliGizi != null) _buildAhliGiziCard(context),
                   if (_kaloriTarget > 0)
                     _buildNutritionSummary()
@@ -440,7 +440,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     _buildNutritionSummary()
                   else if (_currentDietNutrisi != null && _kaloriTarget == 0)
                     _buildNoDataState(),
-                  // ── Catatan Makan Terakhir ──
+                  // â”€â”€ Catatan Makan Terakhir â”€â”€
                   if (_lastMealLog != null) _buildLastMealCard(),
                   _buildReminderCard(context),
                   const SizedBox(height: 16),
@@ -491,7 +491,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // ─────────────────────────────────────────────────────────────────────────
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   Widget _buildNoDataState() {
     return Container(
@@ -547,7 +547,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // ── Program Selector (Pasien hanya bisa lihat, tidak tambah) ──────────────
+  // â”€â”€ Program Selector (Pasien hanya bisa lihat, tidak tambah) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   Widget _buildProgramSelector() {
     final activePrograms = _patientPrograms.where((p) => p['status'] == 'active').toList();
 
@@ -586,7 +586,7 @@ class _HomeScreenState extends State<HomeScreen> {
         );
       }
 
-      // Ada diet lama → tampilkan sebagai chip read-only
+      // Ada diet lama â†’ tampilkan sebagai chip read-only
       return Container(
         margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
         child: Column(
@@ -652,7 +652,7 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
 
-    // Multiple programs — show horizontal chip selector
+    // Multiple programs â€” show horizontal chip selector
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
       child: Column(
@@ -806,7 +806,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // ── BB/TB Card ──────────────────────────────────────────────────────────────
+  // â”€â”€ BB/TB Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   Widget _buildBBTBCard() {
     final ageInfo = _computeAge(_user?['birthdate']?.toString() ?? '');
@@ -977,11 +977,11 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // ── Diet Swipeable Section ─────────────────────────────────────────
+  // â”€â”€ Diet Swipeable Section â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 
-  // ── Catatan Makan Terakhir ──────────────────────────────────────────
+  // â”€â”€ Catatan Makan Terakhir â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   Widget _buildLastMealCard() {
     final log = _lastMealLog!;
     final date = DateTime.tryParse(log['date'] ?? '') ?? DateTime.now();
@@ -1031,7 +1031,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       Row(
                         children: [
                           Text(dateStr, style: GoogleFonts.manrope(fontSize: 11, color: AppColors.textSecondary)),
-                          if (log['diet_type'] != null && (log['diet_type'] as String).isNotEmpty) ...[
+                          if (log['diet_type'] != null && (log['diet_type'] as String? ?? '').isNotEmpty) ...[
                             const SizedBox(width: 6),
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
@@ -1056,7 +1056,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(color: AppColors.primaryLight, borderRadius: BorderRadius.circular(8)),
                     child: Text(
-                      '${bb.toStringAsFixed(1)} kg • ${tb.toStringAsFixed(0)} cm',
+                      '${bb.toStringAsFixed(1)} kg â€¢ ${tb.toStringAsFixed(0)} cm',
                       style: GoogleFonts.manrope(fontSize: 10, fontWeight: FontWeight.w700, color: AppColors.primaryDark),
                     ),
                   ),
@@ -1069,8 +1069,8 @@ class _HomeScreenState extends State<HomeScreen> {
             padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
             child: Column(
               children: sessions.map((s) {
-                final meal = s['meal'] as String;
-                final jam = s['jam'] as String;
+                final meal = s['meal'] as String? ?? '';
+                final jam = s['jam'] as String? ?? '';
                 if (meal.isEmpty) return const SizedBox.shrink();
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 8),
@@ -1092,7 +1092,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           children: [
                             Row(
                               children: [
-                                Text(s['label'] as String, style: GoogleFonts.manrope(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.textSecondary)),
+                                Text(s['label'] as String? ?? '', style: GoogleFonts.manrope(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.textSecondary)),
                                 if (jam.isNotEmpty) ...[
                                   const SizedBox(width: 6),
                                   Text(jam, style: GoogleFonts.manrope(fontSize: 10, color: AppColors.textMuted)),
@@ -1132,7 +1132,7 @@ class _HomeScreenState extends State<HomeScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Halo, $firstName 👋',
+                'Halo, $firstName ðŸ‘‹',
                 style: GoogleFonts.manrope(
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
@@ -1638,7 +1638,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                   );
-                }).toList(),
+                }),
               ],
             ),
           ),
@@ -1854,9 +1854,9 @@ class _HomeScreenState extends State<HomeScreen> {
   // Kode lama dihapus
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Animated Nutrient Item Widget (Scale animation on tap)
-// ─────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 class _AnimatedNutrientItem extends StatefulWidget {
   final String nutrientKey;
   final double target;

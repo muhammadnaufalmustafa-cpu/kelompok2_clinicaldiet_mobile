@@ -148,8 +148,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
       _showSnackBar('Kata sandi tidak cocok.', isError: true);
       return;
     }
-    if (password.length < 6) {
-      _showSnackBar('Kata sandi minimal 6 karakter.', isError: true);
+    if (password.length < 8) {
+      _showSnackBar('Kata sandi minimal 8 karakter.', isError: true);
       return;
     }
     
@@ -258,7 +258,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     fontSize: 14, color: AppColors.textSecondary)),
             const SizedBox(height: 24),
 
-            // ── Identitas Utama ──
+            // â”€â”€ Identitas Utama â”€â”€
             _sectionLabel('DATA IDENTITAS UTAMA'),
             const SizedBox(height: 10),
             _buildTextField(
@@ -392,7 +392,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             ),
             const SizedBox(height: 20),
 
-            // ── Identitas Tambahan ──
+            // â”€â”€ Identitas Tambahan â”€â”€
             _sectionLabel('DATA IDENTITAS TAMBAHAN (Opsional)'),
             const SizedBox(height: 10),
             _buildTextField(
@@ -462,13 +462,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
 
 
-            // ── Kata Sandi ──
+            // â”€â”€ Kata Sandi â”€â”€
             _sectionLabel('KATA SANDI'),
             const SizedBox(height: 10),
             _buildTextField(
               controller: _passController,
               label: 'Kata Sandi *',
-              hint: '••••••••',
+              hint: 'â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢',
               prefixIcon: Icons.lock_outline,
               obscure: _obscurePass,
               suffix: GestureDetector(
@@ -486,7 +486,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             _buildTextField(
               controller: _confirmPassController,
               label: 'Konfirmasi Kata Sandi *',
-              hint: '••••••••',
+              hint: 'â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢',
               prefixIcon: Icons.lock_outline,
               obscure: _obscureConfirmPass,
               suffix: GestureDetector(
@@ -503,7 +503,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             ),
             const SizedBox(height: 20),
             
-            // ── CAPTCHA Sederhana ──
+            // â”€â”€ CAPTCHA Sederhana â”€â”€
             _sectionLabel('VERIFIKASI KEAMANAN'),
             const SizedBox(height: 10),
             Row(
@@ -731,7 +731,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 color: AppColors.divider.withValues(alpha: 0.5)),
           ),
           child: DropdownButtonFormField<String>(
-            value: value,
+            initialValue: value,
             isExpanded: true,
             style: GoogleFonts.manrope(fontSize: 15, color: AppColors.textPrimary),
             decoration: InputDecoration(

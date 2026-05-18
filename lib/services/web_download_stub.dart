@@ -21,7 +21,7 @@ Future<void> downloadHtmlFileOnWeb(String htmlContent, String filename) async {
     // Change extension to .pdf if it ends with .html
     String pdfFilename = filename;
     if (filename.toLowerCase().endsWith('.html')) {
-      pdfFilename = filename.substring(0, filename.length - 5) + '.pdf';
+      pdfFilename = '${filename.substring(0, filename.length - 5)}.pdf';
     } else if (!filename.toLowerCase().endsWith('.pdf')) {
       pdfFilename += '.pdf';
     }

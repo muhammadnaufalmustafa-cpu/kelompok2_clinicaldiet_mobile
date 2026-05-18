@@ -118,7 +118,7 @@ class _LoginScreenState extends State<LoginScreen> {
               Image.asset(
                 'assets/images/logo.png',
                 height: 56,
-                errorBuilder: (_, __, ___) => Row(
+                errorBuilder: (_, _, _) => Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     const Icon(

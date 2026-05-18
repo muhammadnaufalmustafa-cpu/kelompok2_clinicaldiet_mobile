@@ -5,7 +5,6 @@ import '../../services/auth_service.dart';
 import '../../utils/age_calculator.dart';
 import 'ahli_gizi_detail_pasien_screen.dart';
 import '../../services/export_service.dart';
-import 'package:intl/intl.dart';
 
 class AhliGiziPasienScreen extends StatefulWidget {
   const AhliGiziPasienScreen({super.key});

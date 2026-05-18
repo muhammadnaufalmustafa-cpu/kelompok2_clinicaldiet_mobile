@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../theme/app_theme.dart';
 import '../../services/auth_service.dart';
@@ -417,7 +417,7 @@ class _AhliGiziProfilScreenState extends State<AhliGiziProfilScreen> {
                     children: [
                       const Icon(Icons.star, color: Color(0xFFF59E0B), size: 20),
                       const SizedBox(width: 6),
-                      Text('${_rating.toStringAsFixed(1)}', style: GoogleFonts.manrope(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
+                      Text(_rating.toStringAsFixed(1), style: GoogleFonts.manrope(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
                       Text(' ($_ratingCount ulasan)', style: GoogleFonts.manrope(fontSize: 13, color: AppColors.textSecondary)),
                     ],
                   ),

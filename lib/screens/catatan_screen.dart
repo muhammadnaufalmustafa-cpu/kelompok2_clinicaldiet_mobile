@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_theme.dart';
@@ -8,16 +8,16 @@ import '../utils/age_calculator.dart';
 import '../widgets/notification_bell.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-// â”€â”€â”€ Daftar lengkap URT sesuai referensi ahli gizi â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Daftar lengkap URT sesuai referensi ahli gizi Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 const List<String> kDaftarURT = [
   '1 centong rice cooker', '1 centong plastik', '1 sdm', '1 sds',
   '1 sd sayur', '1 piring', '1 mangkok', '1 cup',
   '1 bh besar', '1 bh sdg', '1 bh kcl', '1 bh',
-  'Â½ bh', 'Â¼ bh', '1 iris', '1 ptg',
+  'Ã‚Â½ bh', 'Ã‚Â¼ bh', '1 iris', '1 ptg',
   '1 ptg bsr', '1 ptg sdg', '1 ptg kcl', '1 ptg segitiga',
   '1 ptg kotak', '1 ptg bundar', '1 ptg dadu',
   '1 ptg bag. kepala', '1 ptg bag. badan', '1 ptg bag. ekor',
-  'Â½ ptg presto', '1 lembar ada pinggiran', '1 lembar tanpa pinggiran',
+  'Ã‚Â½ ptg presto', '1 lembar ada pinggiran', '1 lembar tanpa pinggiran',
   '1 lembar kuning', '1 bonggol', '1 bks', '1 kotak',
   '1 botol', '1 botol besar', '1 botol kcl', '1 gelas',
   '1 pcs', '1 pcs sdg', '1 pcs kcl',
@@ -46,6 +46,7 @@ class CatatanScreen extends StatefulWidget {
 
 class _CatatanScreenState extends State<CatatanScreen> {
   bool _isLoading = false;
+  bool _isLoadingData = true;
   bool _isLocked = true;
   List<String> _dietList = [];
   String? _selectedDietType;
@@ -178,9 +179,10 @@ class _CatatanScreenState extends State<CatatanScreen> {
         });
       }
     }
+    if (mounted) setState(() => _isLoadingData = false);
   }
 
-  /// Hanya me-refresh target nutrisi + catatan program â€” tidak mengubah state lainnya
+  /// Hanya me-refresh target nutrisi + catatan program Ã¢â‚¬â€ tidak mengubah state lainnya
   Future<void> _loadNutrientsForProgram(String programId) async {
     // Ambil target nutrisi
     final target = await AuthService.getNutritionTarget(programId);
@@ -240,12 +242,15 @@ class _CatatanScreenState extends State<CatatanScreen> {
   @override
   void dispose() {
     _programsStreamSub?.cancel();
-    _bbCtrl.dispose(); _tbCtrl.dispose();
-    _pagiCtrl.dispose(); _selinganPagiCtrl.dispose();
-    _siangCtrl.dispose(); _selinganSoreCtrl.dispose(); _malamCtrl.dispose();
+    _bbCtrl.dispose();
+    _tbCtrl.dispose();
+    _pagiCtrl.dispose();
+    _selinganPagiCtrl.dispose();
+    _siangCtrl.dispose();
+    _selinganSoreCtrl.dispose();
+    _malamCtrl.dispose();
     super.dispose();
   }
-
   /// Realtime listener: update daftar program + dropdown saat ada perubahan
   /// dari sisi ahli gizi, tanpa perlu reload manual.
   Future<void> _startProgramsStream() async {
@@ -307,6 +312,7 @@ class _CatatanScreenState extends State<CatatanScreen> {
         // Update daftar dropdown jika ada program baru
         if (newDietList.isNotEmpty) _dietList = newDietList;
         if (active.isEmpty) _isLocked = true;
+        _isLoadingData = false;
       });
       if (programToLoad != null) {
         _loadNutrientsForProgram(programToLoad!);
@@ -325,7 +331,7 @@ class _CatatanScreenState extends State<CatatanScreen> {
     final picked = await showTimePicker(
       context: context,
       initialTime: TimeOfDay.now(),
-      helpText: 'Jam makan â€“ $session',
+      helpText: 'Jam makan Ã¢â‚¬â€œ $session',
       builder: (context, child) => MediaQuery(
         data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true),
         child: child!,
@@ -352,7 +358,7 @@ class _CatatanScreenState extends State<CatatanScreen> {
     ));
   }
 
-  // â”€â”€ URT Picker (Bottom Sheet) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // Ã¢â€â‚¬Ã¢â€â‚¬ URT Picker (Bottom Sheet) Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
   Future<void> _showURTPicker(TextEditingController targetCtrl) async {
     String query = '';
     await showModalBottomSheet(
@@ -528,7 +534,7 @@ class _CatatanScreenState extends State<CatatanScreen> {
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Catatan makan berhasil disimpan! âœ…', style: GoogleFonts.manrope(fontWeight: FontWeight.w600)),
+            content: Text('Catatan makan berhasil disimpan! Ã¢Å“â€¦', style: GoogleFonts.manrope(fontWeight: FontWeight.w600)),
             backgroundColor: AppColors.primary,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -549,7 +555,7 @@ class _CatatanScreenState extends State<CatatanScreen> {
             await FirebaseNotificationService.createNotification(
               userId: agUid,
               role: 'ahli_gizi',
-              title: 'ðŸ—’ï¸ Catatan Makan Baru',
+              title: 'Ã°Å¸â€”â€™Ã¯Â¸Â Catatan Makan Baru',
               message: '$patientName telah mengisi catatan makan harian ($dietName) pada $tgl. '
                   'Silakan buka riwayat pasien untuk melihat detailnya.',
               type: 'log',
@@ -586,7 +592,20 @@ class _CatatanScreenState extends State<CatatanScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  if (_isLocked)
+                  if (_isLoadingData)
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 20),
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(12), border: Border.all(color: AppColors.divider)),
+                      child: Row(
+                        children: [
+                          const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)),
+                          const SizedBox(width: 16),
+                          Text('Memuat program terapi dan target diet...', style: GoogleFonts.manrope(fontSize: 13, color: AppColors.textSecondary)),
+                        ],
+                      ),
+                    )
+                  else if (_isLocked)
                     Container(
                       margin: const EdgeInsets.only(bottom: 20),
                       padding: const EdgeInsets.all(12),
@@ -635,7 +654,7 @@ class _CatatanScreenState extends State<CatatanScreen> {
                     const SizedBox(height: 12),
                     if (_dietList.length > 1)
                       DropdownButtonFormField<String>(
-                        value: _selectedDietType,
+                        initialValue: _selectedDietType,
                         decoration: InputDecoration(
                           filled: true,
                           fillColor: const Color(0xFFEEF2FF),
@@ -956,8 +975,9 @@ class _CatatanScreenState extends State<CatatanScreen> {
 
     final double imt = weight / ((height / 100) * (height / 100));
     String imtKategori = 'Normal';
-    if (imt < 18.5) imtKategori = 'Kurus';
-    else if (imt < 25.1) imtKategori = 'Normal';
+    if (imt < 18.5) {
+      imtKategori = 'Kurus';
+    } else if (imt < 25.1) imtKategori = 'Normal';
     else if (imt < 27.1) imtKategori = 'Gemuk';
     else imtKategori = 'Obesitas';
 
