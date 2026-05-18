@@ -1056,7 +1056,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(color: AppColors.primaryLight, borderRadius: BorderRadius.circular(8)),
                     child: Text(
-                      '${bb.toStringAsFixed(1)} kg â€¢ ${tb.toStringAsFixed(0)} cm',
+                      '${bb.toStringAsFixed(1)} kg • ${tb.toStringAsFixed(0)} cm',
                       style: GoogleFonts.manrope(fontSize: 10, fontWeight: FontWeight.w700, color: AppColors.primaryDark),
                     ),
                   ),

@@ -232,7 +232,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           children: [
             const Icon(Icons.assignment_ind, color: AppColors.primaryDark),
             const SizedBox(width: 8),
-            Text('Nak Sihat',
+            Text('Naksihat',
                 style: GoogleFonts.manrope(
                   fontSize: 18,
                   fontWeight: FontWeight.w600,
@@ -468,7 +468,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             _buildTextField(
               controller: _passController,
               label: 'Kata Sandi *',
-              hint: 'â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢',
+              hint: '••••••••',
               prefixIcon: Icons.lock_outline,
               obscure: _obscurePass,
               suffix: GestureDetector(
@@ -486,7 +486,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             _buildTextField(
               controller: _confirmPassController,
               label: 'Konfirmasi Kata Sandi *',
-              hint: 'â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢',
+              hint: '••••••••',
               prefixIcon: Icons.lock_outline,
               obscure: _obscureConfirmPass,
               suffix: GestureDetector(

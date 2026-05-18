@@ -1,5 +1,8 @@
+import 'dart:io';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../theme/app_theme.dart';
 import '../../services/auth_service.dart';
 import '../login_screen.dart';
@@ -13,6 +16,173 @@ class AhliGiziProfilScreen extends StatefulWidget {
 
 class _AhliGiziProfilScreenState extends State<AhliGiziProfilScreen> {
   Map<String, dynamic>? _user;
+  final ImagePicker _picker = ImagePicker();
+  bool _isUploadingPhoto = false;
+
+  Future<void> _processImage(ImageSource source) async {
+    try {
+      final XFile? image = await _picker.pickImage(
+        source: source,
+        maxWidth: 300,
+        maxHeight: 300,
+        imageQuality: 50,
+      );
+      if (image != null && _user != null) {
+        setState(() {
+          _isUploadingPhoto = true;
+        });
+        
+        final nip = _user!['nip'];
+        final error = await AuthService.updateProfilePhoto(nip, image.path, false);
+        
+        await _loadUser();
+        
+        if (mounted) {
+          setState(() {
+            _isUploadingPhoto = false;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(error == null ? 'Foto profil berhasil diperbarui.' : error, style: GoogleFonts.manrope()),
+            backgroundColor: error == null ? AppColors.primary : Colors.red,
+            duration: const Duration(seconds: 4),
+          ));
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isUploadingPhoto = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Gagal mengambil foto: $e', style: GoogleFonts.manrope()),
+          backgroundColor: Colors.red,
+        ));
+      }
+    }
+  }
+
+  Future<void> _removePhoto() async {
+    setState(() => _isUploadingPhoto = true);
+    final error = await AuthService.removeProfilePhoto(false);
+    await _loadUser();
+    if (mounted) {
+      setState(() => _isUploadingPhoto = false);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(error == null ? 'Foto profil berhasil dihapus.' : error, style: GoogleFonts.manrope()),
+        backgroundColor: error == null ? Colors.green : Colors.red,
+      ));
+    }
+  }
+
+  void _showPreview(String? base64Str, String? urlStr) {
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.transparent,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            InteractiveViewer(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: (base64Str != null && base64Str.isNotEmpty)
+                    ? Image.memory(base64Decode(base64Str), fit: BoxFit.contain)
+                    : (urlStr != null && urlStr.isNotEmpty)
+                        ? (urlStr.startsWith('http') ? Image.network(urlStr, fit: BoxFit.contain) : Image.file(File(urlStr), fit: BoxFit.contain))
+                        : Container(color: Colors.white, padding: const EdgeInsets.all(40), child: Text((_user?['name'] as String? ?? 'A').substring(0, 1).toUpperCase(), style: GoogleFonts.manrope(fontSize: 100, fontWeight: FontWeight.w700, color: AppColors.secondary))),
+              ),
+            ),
+            Positioned(
+              top: 10,
+              right: 10,
+              child: IconButton(
+                icon: const Icon(Icons.close, color: Colors.white, size: 30),
+                onPressed: () => Navigator.pop(ctx),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showPhotoOptions() {
+    final profilePhotoBase64 = _user?['profile_photo_base64'] as String?;
+    final profilePhotoPath = _user?['profile_photo_path'] as String?;
+    final hasPhoto = (profilePhotoBase64 != null && profilePhotoBase64.isNotEmpty) || (profilePhotoPath != null && profilePhotoPath.isNotEmpty);
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Foto Profil', style: GoogleFonts.manrope(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
+            const SizedBox(height: 20),
+            if (hasPhoto)
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(color: Colors.blue.withValues(alpha: 0.1), shape: BoxShape.circle),
+                  child: const Icon(Icons.fullscreen, color: Colors.blue),
+                ),
+                title: Text('Lihat Foto', style: GoogleFonts.manrope(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _showPreview(profilePhotoBase64, profilePhotoPath);
+                },
+              ),
+            ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(color: AppColors.primaryLight.withValues(alpha: 0.2), shape: BoxShape.circle),
+                child: const Icon(Icons.camera_alt, color: AppColors.primary),
+              ),
+              title: Text('Kamera', style: GoogleFonts.manrope(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+              onTap: () {
+                Navigator.pop(ctx);
+                _processImage(ImageSource.camera);
+              },
+            ),
+            const SizedBox(height: 8),
+            ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(color: AppColors.secondary.withValues(alpha: 0.2), shape: BoxShape.circle),
+                child: const Icon(Icons.photo_library, color: AppColors.secondary),
+              ),
+              title: Text('Galeri', style: GoogleFonts.manrope(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+              onTap: () {
+                Navigator.pop(ctx);
+                _processImage(ImageSource.gallery);
+              },
+            ),
+            if (hasPhoto) ...[
+              const SizedBox(height: 8),
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(color: AppColors.red.withValues(alpha: 0.1), shape: BoxShape.circle),
+                  child: const Icon(Icons.delete_outline, color: AppColors.red),
+                ),
+                title: Text('Hapus Foto', style: GoogleFonts.manrope(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.red)),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _removePhoto();
+                },
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
 
   @override
   void initState() {
@@ -377,22 +547,54 @@ class _AhliGiziProfilScreenState extends State<AhliGiziProfilScreen> {
               padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
               child: Column(
                 children: [
-                  Container(
-                    width: 90,
-                    height: 90,
-                    decoration: BoxDecoration(
-                      color: AppColors.secondary.withValues(alpha: 0.1),
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 4),
-                      boxShadow: [
-                        BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, spreadRadius: 1),
+                  GestureDetector(
+                    onTap: _showPhotoOptions,
+                    child: Stack(
+                      children: [
+                        Container(
+                          width: 90,
+                          height: 90,
+                          decoration: BoxDecoration(
+                            color: AppColors.secondary.withValues(alpha: 0.1),
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 4),
+                            boxShadow: [
+                              BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, spreadRadius: 1),
+                            ],
+                          ),
+                          child: ClipOval(
+                            child: _isUploadingPhoto
+                                ? const Center(child: SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary)))
+                                : (_user?['profile_photo_base64'] != null && _user!['profile_photo_base64'].toString().isNotEmpty)
+                                    ? Image.memory(base64Decode(_user!['profile_photo_base64']), fit: BoxFit.cover, errorBuilder: (c,e,s) => Center(child: Text((_user?['name'] as String? ?? 'A').substring(0, 1).toUpperCase(), style: GoogleFonts.manrope(fontSize: 36, fontWeight: FontWeight.w700, color: AppColors.secondary))))
+                                    : (_user?['profile_photo_url'] != null || _user?['profile_photo_path'] != null) && (_user?['profile_photo_url'] ?? _user?['profile_photo_path']).isNotEmpty
+                                        ? ((_user?['profile_photo_url'] ?? _user?['profile_photo_path']).startsWith('http')
+                                            ? Image.network(_user?['profile_photo_url'] ?? _user?['profile_photo_path'], fit: BoxFit.cover, errorBuilder: (c,e,s) => Center(child: Text((_user?['name'] as String? ?? 'A').substring(0, 1).toUpperCase(), style: GoogleFonts.manrope(fontSize: 36, fontWeight: FontWeight.w700, color: AppColors.secondary))))
+                                            : Image.file(File(_user?['profile_photo_path']), fit: BoxFit.cover, errorBuilder: (c,e,s) => Center(child: Text((_user?['name'] as String? ?? 'A').substring(0, 1).toUpperCase(), style: GoogleFonts.manrope(fontSize: 36, fontWeight: FontWeight.w700, color: AppColors.secondary)))))
+                                        : Center(
+                                            child: Text(
+                                              (_user?['name'] as String? ?? 'A').substring(0, 1).toUpperCase(),
+                                              style: GoogleFonts.manrope(fontSize: 36, fontWeight: FontWeight.w700, color: AppColors.secondary),
+                                            ),
+                                          ),
+                          ),
+                        ),
+                        if (!_isUploadingPhoto)
+                          Positioned(
+                            bottom: 2,
+                            right: 2,
+                            child: Container(
+                              width: 26,
+                              height: 26,
+                              decoration: BoxDecoration(
+                                color: AppColors.primary,
+                                shape: BoxShape.circle,
+                                border: Border.all(color: Colors.white, width: 2),
+                              ),
+                              child: const Icon(Icons.camera_alt, color: Colors.white, size: 13),
+                            ),
+                          ),
                       ],
-                    ),
-                    child: Center(
-                      child: Text(
-                        (_user?['name'] as String? ?? 'A').substring(0, 1).toUpperCase(),
-                        style: GoogleFonts.manrope(fontSize: 36, fontWeight: FontWeight.w700, color: AppColors.secondary),
-                      ),
                     ),
                   ),
                   const SizedBox(height: 16),

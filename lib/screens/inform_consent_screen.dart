@@ -226,7 +226,7 @@ class _InformConsentScreenState extends State<InformConsentScreen> {
 
     <div class="section-label">Isi Persetujuan</div>
     <div class="consent-box">
-      <p>Saya dengan ini menyatakan bahwa saya telah memahami dan menyetujui untuk mengikuti Program Diet Klinik yang diselenggarakan oleh Nak Sihat.</p>
+      <p>Saya dengan ini menyatakan bahwa saya telah memahami dan menyetujui untuk mengikuti Program Diet Klinik yang diselenggarakan oleh Naksihat.</p>
       <p>Saya memahami bahwa program ini melibatkan pemantauan asupan makanan, berat badan, tinggi badan, dan parameter gizi lainnya oleh ahli gizi yang telah ditunjuk.</p>
       <div class="point-row"><span class="point-num">1.</span><span class="point-text">Saya bersedia untuk mengisi catatan makan harian secara jujur dan tepat waktu.</span></div>
       <div class="point-row"><span class="point-num">2.</span><span class="point-text">Saya memahami bahwa apabila tidak mengisi catatan makan selama 3 (tiga) hari berturut-turut, saya akan dinyatakan GUGUR dari program dan tidak dapat menggunakan aplikasi hingga dikonfirmasi ulang oleh ahli gizi.</span></div>
@@ -278,7 +278,7 @@ class _InformConsentScreenState extends State<InformConsentScreen> {
         automaticallyImplyLeading: false,
         title: Row(
           children: [
-            Image.asset('assets/images/logo.png', width: 28, height: 28),
+            Image.asset('assets/images/naksihat (logo).png', width: 28, height: 28),
             const SizedBox(width: 8),
             Text(
               'Inform Consent',
@@ -374,7 +374,7 @@ class _InformConsentScreenState extends State<InformConsentScreen> {
                         ),
                         const Divider(height: 20),
                         _consentParagraph(
-                          'Saya dengan ini menyatakan bahwa saya telah memahami dan menyetujui untuk mengikuti Program Diet Klinik yang diselenggarakan oleh Nak Sihat.',
+                          'Saya dengan ini menyatakan bahwa saya telah memahami dan menyetujui untuk mengikuti Program Diet Klinik yang diselenggarakan oleh Naksihat.',
                         ),
                         _consentParagraph(
                           'Saya memahami bahwa program ini melibatkan pemantauan asupan makanan, berat badan, tinggi badan, dan parameter gizi lainnya oleh ahli gizi yang telah ditunjuk.',

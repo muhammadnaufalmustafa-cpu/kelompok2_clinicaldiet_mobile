@@ -3,7 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 class FirebaseNotificationService {
   static final FirebaseFirestore _db = FirebaseFirestore.instance;
 
-  // â”€â”€ Buat Notifikasi Baru â”€â”€
+  // ── Buat Notifikasi Baru ──
   static Future<void> createNotification({
     required String userId,
     required String role, // 'pasien' atau 'ahli_gizi'
@@ -29,7 +29,7 @@ class FirebaseNotificationService {
     }
   }
 
-  // â”€â”€ Ambil Stream Notifikasi (Realtime) â”€â”€
+  // ── Ambil Stream Notifikasi (Realtime) ──
   static Stream<QuerySnapshot> getUserNotifications(String userId, String role) {
     return _db
         .collection('notifications')
@@ -38,7 +38,7 @@ class FirebaseNotificationService {
         .snapshots();
   }
 
-  // â”€â”€ Tandai Sudah Dibaca â”€â”€
+  // ── Tandai Sudah Dibaca ──
   static Future<void> markAsRead(String notificationId) async {
     try {
       await _db.collection('notifications').doc(notificationId).update({'isRead': true});
@@ -47,7 +47,7 @@ class FirebaseNotificationService {
     }
   }
 
-  // â”€â”€ Tandai Semua Sudah Dibaca â”€â”€
+  // ── Tandai Semua Sudah Dibaca ──
   static Future<void> markAllAsRead(String userId, String role) async {
     try {
       final unreadDocs = await _db
@@ -66,9 +66,9 @@ class FirebaseNotificationService {
     }
   }
 
-  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-  // â”€â”€ HELPER: Dapatkan UID Ahli Gizi dari NIP â”€â”€
-  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  // ════════════════════════════════════════════
+  // ── HELPER: Dapatkan UID Ahli Gizi dari NIP ──
+  // ════════════════════════════════════════════
   static Future<String?> _getAhliGiziUidByNip(String nip) async {
     try {
       final snap = await _db
@@ -82,9 +82,9 @@ class FirebaseNotificationService {
     return null;
   }
 
-  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-  // â”€â”€ NOTIFIKASI 1: Rating dikirim pasien â”€â”€
-  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  // ════════════════════════════════════════════════
+  // ── NOTIFIKASI 1: Rating dikirim pasien ──
+  // ════════════════════════════════════════════════
   static Future<void> notifyRatingReceived({
     required String ahliGiziNip,
     required String pasienName,
@@ -93,20 +93,20 @@ class FirebaseNotificationService {
   }) async {
     final uid = await _getAhliGiziUidByNip(ahliGiziNip);
     if (uid == null) return;
-    final stars = 'â­' * rating;
+    final stars = '⭐' * rating;
     await createNotification(
       userId: uid,
       role: 'ahli_gizi',
-      title: 'â­ Rating Baru dari Pasien',
+      title: '⭐ Rating Baru dari Pasien',
       message: 'Pasien $pasienName (RM: $pasienRm) memberikan rating $stars untuk Anda.',
       type: 'rating',
       relatedId: pasienRm,
     );
   }
 
-  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-  // â”€â”€ NOTIFIKASI 2: Pasien baru bergabung â”€â”€
-  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  // ════════════════════════════════════════════════
+  // ── NOTIFIKASI 2: Pasien baru bergabung ──
+  // ════════════════════════════════════════════════
   static Future<void> notifyNewPatientJoined({
     required String ahliGiziNip,
     required String pasienName,
@@ -124,9 +124,9 @@ class FirebaseNotificationService {
     );
   }
 
-  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-  // â”€â”€ NOTIFIKASI 3: Ahli Gizi ubah status pasien â”€â”€
-  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  // ══════════════════════════════════════════════════════
+  // ── NOTIFIKASI 3: Ahli Gizi ubah status pasien ──
+  // ══════════════════════════════════════════════════════
   static Future<void> notifyStatusChanged({
     required String patientId,
     required String newStatus,
@@ -148,9 +148,9 @@ class FirebaseNotificationService {
     );
   }
 
-  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-  // â”€â”€ NOTIFIKASI 4: Ahli Gizi simpan data (diagnosis / catatan) â”€â”€
-  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  // ══════════════════════════════════════════════════════════════
+  // ── NOTIFIKASI 4: Ahli Gizi simpan data (diagnosis / catatan) ──
+  // ══════════════════════════════════════════════════════════════
   static Future<void> notifyDataSaved({
     required String patientId,
     required String ahliGiziName,
@@ -159,15 +159,15 @@ class FirebaseNotificationService {
     await createNotification(
       userId: patientId,
       role: 'pasien',
-      title: 'ðŸ“ Data Klinis Diperbarui',
+      title: '📝 Data Klinis Diperbarui',
       message: 'Ahli Gizi $ahliGiziName telah memperbarui data klinis (diagnosis / catatan gizi) Anda.',
       type: 'data_update',
     );
   }
 
-  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-  // â”€â”€ NOTIFIKASI 5: Pasien update BB/TB â”€â”€
-  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  // ══════════════════════════════════════════════════════════════
+  // ── NOTIFIKASI 5: Pasien update BB/TB ──
+  // ══════════════════════════════════════════════════════════════
   static Future<void> notifyBBTBUpdated({
     required String ahliGiziNip,
     required String pasienName,
@@ -180,16 +180,16 @@ class FirebaseNotificationService {
     await createNotification(
       userId: uid,
       role: 'ahli_gizi',
-      title: 'âš–ï¸ Pasien Perbarui BB/TB',
+      title: '⚖️ Pasien Perbarui BB/TB',
       message: 'Pasien $pasienName (RM: $pasienRm) memperbarui data fisik: BB ${weight.toStringAsFixed(1)} kg | TB ${height.toStringAsFixed(0)} cm.',
       type: 'bbtb_update',
       relatedId: pasienRm,
     );
   }
 
-  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-  // â”€â”€ NOTIFIKASI 6: Pasien pilih/ubah jenis diet â”€â”€
-  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  // ══════════════════════════════════════════════════════════════
+  // ── NOTIFIKASI 6: Pasien pilih/ubah jenis diet ──
+  // ══════════════════════════════════════════════════════════════
   static Future<void> notifyDietChanged({
     required String ahliGiziNip,
     required String pasienName,
@@ -208,16 +208,25 @@ class FirebaseNotificationService {
     );
   }
 
-  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-  // â”€â”€ ALERT 7: Cek log pasien hari ini & kemarin (saat buka app) â”€â”€
-  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  // ══════════════════════════════════════════════════════════════════
+  // ── ALERT 7: Cek log pasien hari ini & kemarin (saat buka app) ──
+  // ══════════════════════════════════════════════════════════════════
   static Future<void> checkAndCreateDailyAlert(String patientRm, String patientId) async {
     try {
       if (patientId.isEmpty || patientRm.isEmpty) return;
+      
+      final userDoc = await _db.collection('users').doc(patientId).get();
+      if (!userDoc.exists) return;
+      
+      final createdAtTs = userDoc.data()?['createdAt'] as Timestamp?;
+      final userCreatedAt = createdAtTs?.toDate() ?? DateTime(2000);
+
       final now = DateTime.now();
+      final startOfDay = DateTime(now.year, now.month, now.day);
+      final startOfYesterday = startOfDay.subtract(const Duration(days: 1));
+
       final todayStr = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
-      final yesterday = now.subtract(const Duration(days: 1));
-      final yesterdayStr = '${yesterday.year}-${yesterday.month.toString().padLeft(2, '0')}-${yesterday.day.toString().padLeft(2, '0')}';
+      final yesterdayStr = '${startOfYesterday.year}-${startOfYesterday.month.toString().padLeft(2, '0')}-${startOfYesterday.day.toString().padLeft(2, '0')}';
 
       // Cek log hari ini
       final todayLogs = await _db
@@ -227,59 +236,65 @@ class FirebaseNotificationService {
           .limit(1)
           .get();
 
-      // Cek apakah sudah ada alert hari ini
-      final startOfDay = DateTime(now.year, now.month, now.day);
+      // Cek notifikasi yang sudah ada (hanya fetch alert)
       final notifQuery = await _db
           .collection('notifications')
           .where('userId', isEqualTo: patientId)
-          .where('type', isEqualTo: 'alert_log')
+          .where('type', whereIn: ['alert_log', 'alert_log_2days'])
           .get();
 
       bool alreadyNotifiedToday = notifQuery.docs.any((doc) {
+        final t = (doc['type'] as String?) ?? '';
         final createdAt = (doc['createdAt'] as Timestamp?)?.toDate();
-        return createdAt != null && createdAt.isAfter(startOfDay);
+        return t == 'alert_log' && createdAt != null && createdAt.isAfter(startOfDay);
       });
 
-      // Notif untuk pasien sendiri (jam >= 18.00 atau belum isi kemarin)
+      // Notif untuk pasien (jam >= 18.00)
       if (!alreadyNotifiedToday) {
-        if (todayLogs.docs.isEmpty && now.hour >= 18) {
-          await createNotification(
-            userId: patientId,
-            role: 'pasien',
-            title: 'ðŸ½ï¸ Pengingat Catatan Makan',
-            message: 'Anda belum mengisi catatan makan hari ini. Yuk isi sekarang agar ahli gizi bisa memantau perkembangan Anda!',
-            type: 'alert_log',
-          );
-        }
-      }
-
-      // Cek log kemarin â€” jika kosong, kirim alert tambahan ke pasien
-      if (todayLogs.docs.isEmpty) {
-        final yesterdayLogs = await _db
-            .collection('meal_logs')
-            .where('rm', isEqualTo: patientRm)
-            .where('date', isEqualTo: yesterdayStr)
-            .limit(1)
-            .get();
-
-        if (yesterdayLogs.docs.isEmpty) {
-          // Cek apakah sudah ada notif "2 hari tidak isi" dalam 24 jam terakhir
-          final missedNotif = notifQuery.docs.any((doc) {
-            final t = (doc['type'] as String?) ?? '';
-            final createdAt = (doc['createdAt'] as Timestamp?)?.toDate();
-            return t == 'alert_log_2days' &&
-                createdAt != null &&
-                createdAt.isAfter(now.subtract(const Duration(hours: 24)));
-          });
-
-          if (!missedNotif) {
+        // Jangan kirim alert_log jika user baru daftar hari ini
+        if (userCreatedAt.isBefore(startOfDay)) {
+          if (todayLogs.docs.isEmpty && now.hour >= 18) {
             await createNotification(
               userId: patientId,
               role: 'pasien',
-              title: 'âš ï¸ Catatan Makan Terlewat',
-              message: 'Anda belum mengisi catatan makan selama 2 hari. Segera isi agar ahli gizi dapat memantau kondisi Anda dengan baik.',
-              type: 'alert_log_2days',
+              title: '🍽️ Pengingat Catatan Makan',
+              message: 'Anda belum mengisi catatan makan hari ini. Yuk isi sekarang agar ahli gizi bisa memantau perkembangan Anda!',
+              type: 'alert_log',
             );
+          }
+        }
+      }
+
+      // Cek log kemarin – jika kosong, kirim alert tambahan ke pasien
+      if (todayLogs.docs.isEmpty) {
+        // Jangan kirim alert_log_2days jika user baru daftar hari ini atau kemarin
+        if (userCreatedAt.isBefore(startOfYesterday)) {
+          final yesterdayLogs = await _db
+              .collection('meal_logs')
+              .where('rm', isEqualTo: patientRm)
+              .where('date', isEqualTo: yesterdayStr)
+              .limit(1)
+              .get();
+
+          if (yesterdayLogs.docs.isEmpty) {
+            // Cek apakah sudah ada notif "2 hari tidak isi" hari ini
+            final missedNotif = notifQuery.docs.any((doc) {
+              final t = (doc['type'] as String?) ?? '';
+              final createdAt = (doc['createdAt'] as Timestamp?)?.toDate();
+              return t == 'alert_log_2days' &&
+                  createdAt != null &&
+                  createdAt.isAfter(startOfDay);
+            });
+
+            if (!missedNotif) {
+              await createNotification(
+                userId: patientId,
+                role: 'pasien',
+                title: '⚠️ Catatan Makan Terlewat',
+                message: 'Anda belum mengisi catatan makan selama 2 hari. Segera isi agar ahli gizi dapat memantau kondisi Anda dengan baik.',
+                type: 'alert_log_2days',
+              );
+            }
           }
         }
       }
@@ -288,9 +303,9 @@ class FirebaseNotificationService {
     }
   }
 
-  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-  // â”€â”€ ALERT 8: Ahli Gizi cek apakah pasien tidak isi log (buka detail) â”€â”€
-  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  // ════════════════════════════════════════════════════════════════════════
+  // ── ALERT 8: Ahli Gizi cek apakah pasien tidak isi log (buka detail) ──
+  // ════════════════════════════════════════════════════════════════════════
   static Future<Map<String, dynamic>> checkPatientMissedLogs({
     required String patientRm,
     required String patientId,
@@ -334,7 +349,7 @@ class FirebaseNotificationService {
           await createNotification(
             userId: ahliGiziId,
             role: 'ahli_gizi',
-            title: 'âš ï¸ Pasien Tidak Mengisi Log',
+            title: '⚠️ Pasien Tidak Mengisi Log',
             message: 'Pasien $patientName (RM: $patientRm) tidak mengisi catatan makan selama ${missedDays.length} hari terakhir.',
             type: 'alert_patient_log',
             relatedId: patientRm,

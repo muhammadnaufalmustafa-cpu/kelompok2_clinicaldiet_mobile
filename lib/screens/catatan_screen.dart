@@ -55,7 +55,6 @@ class _CatatanScreenState extends State<CatatanScreen> {
   StreamSubscription<QuerySnapshot>? _programsStreamSub; // realtime stream
   String _targetDietText = '';
   String _birthdate = '';
-  String _gender = '';
   String? _userId;
 
   final _bbCtrl = TextEditingController();
@@ -67,8 +66,6 @@ class _CatatanScreenState extends State<CatatanScreen> {
   final _malamCtrl = TextEditingController();
 
   Map<String, dynamic> _targetNutrients = {};
-  String _diagnosis = '';           // dari profil pasien (fallback)
-  String _diagnosisProgram = '';    // dari program yang dipilih (dinamis)
   String _catatanKlinis = '';       // dari profil pasien (fallback)
   String _catatanProgram = '';      // dari program yang dipilih (dinamis)
 
@@ -94,7 +91,6 @@ class _CatatanScreenState extends State<CatatanScreen> {
       setState(() {
         _targetDietText = user['target_diet'] as String? ?? '';
         _birthdate = user['birthdate'] as String? ?? '';
-        _gender = user['gender'] as String? ?? '';
         _userId = user['uid'] as String?;
 
         // BB/TB dari histori terakhir
@@ -135,13 +131,11 @@ class _CatatanScreenState extends State<CatatanScreen> {
         final programId = initialProgram['patientProgramId'] as String?;
         final programName = initialProgram['therapyProgramName'] as String? ?? '';
         final programNotes = initialProgram['notes'] as String? ?? '';
-        final programDiagnosis = initialProgram['diagnosis'] as String? ?? '';
         setState(() {
           _patientPrograms = activePrograms;
           _selectedPatientProgramId = programId;
           _selectedDietType = programName;
           _catatanProgram = programNotes;
-          _diagnosisProgram = programDiagnosis;
           _dietList = activePrograms
               .map((p) => p['therapyProgramName'] as String? ?? '')
               .where((n) => n.isNotEmpty)
@@ -165,16 +159,14 @@ class _CatatanScreenState extends State<CatatanScreen> {
         });
       }
 
-      // Ambil data diagnosis SEGAR dari Firestore (bukan hanya cache)
+      // Ambil data catatan klinis SEGAR dari Firestore (bukan hanya cache)
       final freshUser = await AuthService.getPasienByRm(rm);
       if (mounted && freshUser != null) {
         setState(() {
-          _diagnosis = freshUser['diagnosis'] as String? ?? user['diagnosis'] as String? ?? '-';
           _catatanKlinis = freshUser['catatan_klinis'] as String? ?? user['catatan_klinis'] as String? ?? '-';
         });
       } else if (mounted) {
         setState(() {
-          _diagnosis = user['diagnosis'] as String? ?? '-';
           _catatanKlinis = user['catatan_klinis'] as String? ?? '-';
         });
       }
@@ -206,7 +198,6 @@ class _CatatanScreenState extends State<CatatanScreen> {
     if (mounted) {
       setState(() {
         _catatanProgram = prog['notes'] as String? ?? '';
-        _diagnosisProgram = prog['diagnosis'] as String? ?? '';
       });
     }
   }
@@ -815,7 +806,7 @@ class _CatatanScreenState extends State<CatatanScreen> {
                 )
               else
                 const SizedBox(width: 34),
-              Text('Nak Sihat', style: GoogleFonts.manrope(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.primary)),
+              Text('Naksihat', style: GoogleFonts.manrope(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.primary)),
               NotificationBell(
                 userId: _userId,
                 role: 'pasien',
@@ -977,9 +968,13 @@ class _CatatanScreenState extends State<CatatanScreen> {
     String imtKategori = 'Normal';
     if (imt < 18.5) {
       imtKategori = 'Kurus';
-    } else if (imt < 25.1) imtKategori = 'Normal';
-    else if (imt < 27.1) imtKategori = 'Gemuk';
-    else imtKategori = 'Obesitas';
+    } else if (imt < 25.1) {
+      imtKategori = 'Normal';
+    } else if (imt < 27.1) {
+      imtKategori = 'Gemuk';
+    } else {
+      imtKategori = 'Obesitas';
+    }
 
     final ageMap = AgeCalculator.calculateAge(_birthdate);
     final int months = ageMap != null ? (ageMap['years']! * 12) + ageMap['months']! : 0;

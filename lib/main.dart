@@ -1,18 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'firebase_options.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'theme/app_theme.dart';
-import 'screens/login_screen.dart';
-import 'screens/main_screen.dart';
-import 'screens/inform_consent_screen.dart';
-import 'screens/pilih_jenis_diet_screen.dart';
-import 'screens/pilih_ahli_gizi_screen.dart';
-import 'screens/ahli_gizi/ahli_gizi_main_screen.dart';
-import 'services/auth_service.dart';
+import 'screens/splash_screen.dart';
 import 'services/notification_service.dart';
 
 void main() async {
@@ -29,87 +21,22 @@ void main() async {
     ),
   );
 
-  // 1. Ambil sesi login dasar
-  Map<String, dynamic>? user = await AuthService.getLoggedInUser();
-  
-  // 2. Jika login, ambil data TERBARU dari Firestore agar status & ahli gizi sinkron
-  if (user != null) {
-    final firebaseUser = FirebaseAuth.instance.currentUser;
-    if (firebaseUser != null) {
-      try {
-        final doc = await FirebaseFirestore.instance.collection('users').doc(firebaseUser.uid).get()
-            .timeout(const Duration(seconds: 10));
-        if (doc.exists) {
-          user = doc.data();
-        }
-      } catch (e) {
-        print('DEBUG_MAIN_ERROR: Gagal mengambil data terbaru di main: $e');
-      }
-    }
-  }
-
-  final role = user?['role'] as String?;
-  final status = user?['status'] as String?;
-
-  // Initialize Services
   await NotificationService().init();
-  await AuthService.initializeAppDataIfNeeded();
 
-  Widget homeWidget;
-  if (role == 'pasien') {
-    // Step 1: Cek apakah sudah pilih ahli gizi
-    final ahliGiziNip = (user?['ahli_gizi_nip'] ?? user?['selected_ahli_gizi_nip']) as String?;
-    final hasAhliGizi = ahliGiziNip != null && ahliGiziNip.isNotEmpty;
-
-    if (!hasAhliGizi) {
-      // Belum pilih ahli gizi → mulai dari sana
-      homeWidget = const PilihAhliGiziScreen();
-    } else {
-      final consentSigned = AuthService.isConsentSigned(user);
-      if (!consentSigned) {
-        // Step 2: Belum consent
-        homeWidget = const InformConsentScreen();
-      } else {
-        // Step 3: Cek sudah punya diet type?
-        final dietTypes = user?['diet_types'];
-        final dietType = user?['diet_type'] as String? ?? '';
-        final hasDiet = (dietTypes is List && dietTypes.isNotEmpty) ||
-            dietType.isNotEmpty;
-
-        if (!hasDiet) {
-          // Step 4: Belum pilih diet → arahkan ke pilih diet
-          homeWidget = const PilihJenisDietScreen(isFromProfil: false);
-        } else {
-          // Semua step selesai → masuk dashboard
-          homeWidget = const MainScreen();
-          if (status == 'aktif' || status == null) {
-            await NotificationService().scheduleMealNotifications();
-          } else {
-            await NotificationService().cancelAllNotifications();
-          }
-        }
-      }
-    }
-  } else if (role == 'ahli_gizi') {
-    homeWidget = const AhliGiziMainScreen();
-  } else {
-    homeWidget = const LoginScreen();
-  }
-
-  runApp(ClinicalDietApp(home: homeWidget));
+  runApp(const ClinicalDietApp());
 }
 
 class ClinicalDietApp extends StatelessWidget {
-  final Widget home;
-  const ClinicalDietApp({super.key, required this.home});
+  const ClinicalDietApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'ClinicalDiet',
+      title: 'Naksihat',
       debugShowCheckedModeBanner: false,
       theme: buildAppTheme(),
-      home: home,
+      home: const SplashScreen(),
     );
   }
 }
+

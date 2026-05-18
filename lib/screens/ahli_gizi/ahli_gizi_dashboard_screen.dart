@@ -87,7 +87,7 @@ class _AhliGiziDashboardScreenState extends State<AhliGiziDashboardScreen> {
               title: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Nak Sihat',
+                  Text('Naksihat',
                       style: GoogleFonts.manrope(
                           fontSize: 13, color: AppColors.textSecondary)),
                   Text(_user?['name'] ?? 'Ahli Gizi',

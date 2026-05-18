@@ -1,8 +1,10 @@
+import 'dart:io';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 
 class AuthService {
   static const String _usersKey = 'registered_users';
@@ -665,35 +667,94 @@ class AuthService {
     return true;
   }
 
-  static Future<bool> updateProfilePhoto(
+  static Future<String?> updateProfilePhoto(
     String id,
     String photoPath,
     bool isPasien,
   ) async {
-    final prefs = await SharedPreferences.getInstance();
-    final key = isPasien ? _usersKey : _ahliGiziKey;
-    final fieldId = isPasien ? 'rm' : 'nip';
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return 'Pengguna tidak terautentikasi';
 
-    final jsonStr = prefs.getString(key);
-    if (jsonStr == null) return false;
+      final file = File(photoPath);
+      if (!file.existsSync()) {
+        return 'File gambar tidak ditemukan di perangkat.';
+      }
 
-    final decoded = jsonDecode(jsonStr) as List;
-    final users = decoded.cast<Map<String, dynamic>>();
+      // 1. Baca file dan ubah ke Base64
+      final bytes = await file.readAsBytes();
+      final base64String = base64Encode(bytes);
+      
+      // Pastikan ukuran tidak lebih dari ~800KB (batas Firestore 1MB)
+      if (base64String.length > 800000) {
+         return 'Ukuran gambar terlalu besar. Silakan pilih gambar yang lebih kecil.';
+      }
 
-    final idx = users.indexWhere((u) => u[fieldId].toString() == id);
-    if (idx == -1) return false;
+      // 2. Update Firestore
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .update({'profile_photo_base64': base64String});
 
-    users[idx]['profile_photo_path'] = photoPath;
-    await prefs.setString(key, jsonEncode(_makeEncodable(users)));
-
-    final loggedIn = await getLoggedInUser();
-    if (loggedIn != null && loggedIn[fieldId] == id) {
-      await prefs.setString(
-        _loggedInUserKey,
-        jsonEncode(_makeEncodable(users[idx])),
-      );
+      // 3. Update SharedPreferences Session
+      final prefs = await SharedPreferences.getInstance();
+      
+      final freshData =
+          (await FirebaseFirestore.instance
+                  .collection('users')
+                  .doc(user.uid)
+                  .get())
+              .data();
+              
+      if (freshData != null) {
+        await prefs.setString(
+          _loggedInUserKey,
+          jsonEncode(_makeEncodable(freshData)),
+        );
+      }
+      
+      return null;
+    } catch (e) {
+      if (e.toString().contains('unauthorized')) {
+        return 'Gagal: Akses Firebase Storage ditolak. Pastikan aturan keamanan (Security Rules) Storage Anda mengizinkan upload.';
+      }
+      return 'Terjadi kesalahan sistem: $e';
     }
-    return true;
+  }
+
+  static Future<String?> removeProfilePhoto(bool isPasien) async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return 'Pengguna tidak terautentikasi';
+
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .update({
+            'profile_photo_base64': FieldValue.delete(),
+            'profile_photo_path': FieldValue.delete(),
+          });
+
+      final prefs = await SharedPreferences.getInstance();
+      
+      final freshData =
+          (await FirebaseFirestore.instance
+                  .collection('users')
+                  .doc(user.uid)
+                  .get())
+              .data();
+              
+      if (freshData != null) {
+        await prefs.setString(
+          _loggedInUserKey,
+          jsonEncode(_makeEncodable(freshData)),
+        );
+      }
+      
+      return null;
+    } catch (e) {
+      return 'Gagal menghapus foto: $e';
+    }
   }
 
   static Future<void> updatePasienStatus(String rm, String status) async {

@@ -1,5 +1,5 @@
 name: clinical_diet
-description: "Nak Sihat - Aplikasi Monitoring Diet Klinis"
+description: "Naksihat - Aplikasi Monitoring Diet Klinis"
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -52,6 +52,7 @@ dependencies:
   cloud_firestore: ^6.3.0
   pdf: ^3.12.0
   printing: ^5.14.3
+  firebase_storage: ^13.4.1
 
 dev_dependencies:
   flutter_test:
@@ -69,11 +70,12 @@ dev_dependencies:
 flutter_launcher_icons:
   android: true
   ios: false
-  image_path: "assets/images/logo.png"
+  image_path: "assets/images/naksihat (logo).png"
 
 flutter_native_splash:
   color: "#FFFFFF"
-  image: "assets/images/logo.png"
+  background_image: "assets/images/Splash Screen Naksihat.png"
+  fullscreen: true
   android: true
   ios: false
 

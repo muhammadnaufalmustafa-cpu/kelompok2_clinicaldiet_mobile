@@ -448,7 +448,7 @@ class _AhliGiziDetailPasienScreenState
               crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
                 pw.Text(
-                  'Saya dengan ini menyatakan bahwa saya telah memahami dan menyetujui untuk mengikuti Program Diet Klinik yang diselenggarakan oleh Nak Sihat.',
+                  'Saya dengan ini menyatakan bahwa saya telah memahami dan menyetujui untuk mengikuti Program Diet Klinik yang diselenggarakan oleh Naksihat.',
                   style: pw.TextStyle(fontSize: 11, color: textGrey, lineSpacing: 3),
                 ),
                 pw.SizedBox(height: 6),
@@ -1645,7 +1645,7 @@ class _AhliGiziDetailPasienScreenState
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Saya dengan ini menyatakan bahwa saya telah memahami dan menyetujui untuk mengikuti Program Diet Klinik yang diselenggarakan oleh Nak Sihat.',
+                              'Saya dengan ini menyatakan bahwa saya telah memahami dan menyetujui untuk mengikuti Program Diet Klinik yang diselenggarakan oleh Naksihat.',
                               style: GoogleFonts.manrope(fontSize: 13, color: AppColors.textSecondary, height: 1.6),
                             ),
                             const SizedBox(height: 8),
@@ -2027,8 +2027,8 @@ class _AhliGiziDetailPasienScreenState
                 Expanded(
                   child: Text(
                     _missedDays >= 3
-                        ? 'Ã¢Å¡Â Ã¯Â¸Â Pasien tidak mengisi catatan makan selama $_missedDays hari terakhir. Segera hubungi pasien.'
-                        : 'Ã¢Å¡Â Ã¯Â¸Â Pasien tidak mengisi catatan makan selama $_missedDays hari terakhir.',
+                        ? '⚠️ Pasien tidak mengisi catatan makan selama $_missedDays hari terakhir. Segera hubungi pasien.'
+                        : '⚠️ Pasien tidak mengisi catatan makan selama $_missedDays hari terakhir.',
                     style: GoogleFonts.manrope(fontSize: 12, color: AppColors.textPrimary, fontWeight: FontWeight.w600),
                   ),
                 ),
@@ -2936,5 +2936,6 @@ class _AhliGiziDetailPasienScreenState
     notesCtrl.dispose();
   }
 }
+
 
 

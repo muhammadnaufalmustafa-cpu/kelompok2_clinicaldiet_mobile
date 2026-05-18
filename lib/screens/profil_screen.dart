@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
@@ -56,28 +57,171 @@ class _ProfilScreenState extends State<ProfilScreen> {
     }
   }
 
-  Future<void> _pickImage() async {
+  bool _isUploadingPhoto = false;
+
+  Future<void> _processImage(ImageSource source) async {
     try {
-      final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+      final XFile? image = await _picker.pickImage(
+        source: source,
+        maxWidth: 300,
+        maxHeight: 300,
+        imageQuality: 50,
+      );
       if (image != null && _user != null) {
+        setState(() {
+          _isUploadingPhoto = true;
+        });
+        
         final rm = _user!['rm'];
-        await AuthService.updateProfilePhoto(rm, image.path, true);
+        final error = await AuthService.updateProfilePhoto(rm, image.path, true);
+        
         await _loadUser();
+        
         if (mounted) {
+          setState(() {
+            _isUploadingPhoto = false;
+          });
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text('Foto profil berhasil diperbarui.', style: GoogleFonts.manrope()),
-            backgroundColor: AppColors.primary,
+            content: Text(error == null ? 'Foto profil berhasil diperbarui.' : error, style: GoogleFonts.manrope()),
+            backgroundColor: error == null ? AppColors.primary : Colors.red,
+            duration: const Duration(seconds: 4),
           ));
         }
       }
     } catch (e) {
       if (mounted) {
+        setState(() {
+          _isUploadingPhoto = false;
+        });
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text('Gagal mengambil foto: $e', style: GoogleFonts.manrope()),
           backgroundColor: Colors.red,
         ));
       }
     }
+  }
+
+  Future<void> _removePhoto() async {
+    setState(() => _isUploadingPhoto = true);
+    final error = await AuthService.removeProfilePhoto(true);
+    await _loadUser();
+    if (mounted) {
+      setState(() => _isUploadingPhoto = false);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(error == null ? 'Foto profil berhasil dihapus.' : error, style: GoogleFonts.manrope()),
+        backgroundColor: error == null ? Colors.green : Colors.red,
+      ));
+    }
+  }
+
+  void _showPreview(String? base64Str, String? urlStr) {
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.transparent,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            InteractiveViewer(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: (base64Str != null && base64Str.isNotEmpty)
+                    ? Image.memory(base64Decode(base64Str), fit: BoxFit.contain)
+                    : (urlStr != null && urlStr.isNotEmpty)
+                        ? (urlStr.startsWith('http') ? Image.network(urlStr, fit: BoxFit.contain) : Image.file(File(urlStr), fit: BoxFit.contain))
+                        : Container(color: Colors.white, padding: const EdgeInsets.all(40), child: const Icon(Icons.person, size: 100, color: AppColors.textMuted)),
+              ),
+            ),
+            Positioned(
+              top: 10,
+              right: 10,
+              child: IconButton(
+                icon: const Icon(Icons.close, color: Colors.white, size: 30),
+                onPressed: () => Navigator.pop(ctx),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showPhotoOptions() {
+    final profilePhotoBase64 = _user?['profile_photo_base64'] as String?;
+    final profilePhotoPath = _user?['profile_photo_path'] as String?;
+    final hasPhoto = (profilePhotoBase64 != null && profilePhotoBase64.isNotEmpty) || (profilePhotoPath != null && profilePhotoPath.isNotEmpty);
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Foto Profil', style: GoogleFonts.manrope(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
+            const SizedBox(height: 20),
+            if (hasPhoto)
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(color: Colors.blue.withValues(alpha: 0.1), shape: BoxShape.circle),
+                  child: const Icon(Icons.fullscreen, color: Colors.blue),
+                ),
+                title: Text('Lihat Foto', style: GoogleFonts.manrope(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _showPreview(profilePhotoBase64, profilePhotoPath);
+                },
+              ),
+            ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(color: AppColors.primaryLight.withValues(alpha: 0.2), shape: BoxShape.circle),
+                child: const Icon(Icons.camera_alt, color: AppColors.primary),
+              ),
+              title: Text('Kamera', style: GoogleFonts.manrope(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+              onTap: () {
+                Navigator.pop(ctx);
+                _processImage(ImageSource.camera);
+              },
+            ),
+            const SizedBox(height: 8),
+            ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(color: AppColors.secondary.withValues(alpha: 0.2), shape: BoxShape.circle),
+                child: const Icon(Icons.photo_library, color: AppColors.secondary),
+              ),
+              title: Text('Galeri', style: GoogleFonts.manrope(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+              onTap: () {
+                Navigator.pop(ctx);
+                _processImage(ImageSource.gallery);
+              },
+            ),
+            if (hasPhoto) ...[
+              const SizedBox(height: 8),
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(color: AppColors.red.withValues(alpha: 0.1), shape: BoxShape.circle),
+                  child: const Icon(Icons.delete_outline, color: AppColors.red),
+                ),
+                title: Text('Hapus Foto', style: GoogleFonts.manrope(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.red)),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _removePhoto();
+                },
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
   }
 
   Future<void> _launchWhatsApp() async {
@@ -1034,6 +1178,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
     }
 
     final profilePhoto = _user?['profile_photo_path'] as String?;
+    final profilePhotoBase64 = _user?['profile_photo_base64'] as String?;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -1050,13 +1195,13 @@ class _ProfilScreenState extends State<ProfilScreen> {
                 Row(
                   children: [
                     Image.asset(
-                      'assets/images/logo.png',
+                      'assets/images/naksihat (logo).png',
                       width: 30,
                       height: 30,
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      'Nak Sihat',
+                      'Naksihat',
                       style: GoogleFonts.manrope(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
@@ -1080,7 +1225,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
               child: Column(
                 children: [
                   GestureDetector(
-                    onTap: _pickImage,
+                    onTap: _showPhotoOptions,
                     child: Stack(
                       children: [
                         Container(
@@ -1093,26 +1238,33 @@ class _ProfilScreenState extends State<ProfilScreen> {
                                 color: AppColors.primaryLight, width: 3),
                           ),
                           child: ClipOval(
-                            child: profilePhoto != null && profilePhoto.isNotEmpty
-                                ? Image.file(File(profilePhoto), fit: BoxFit.cover)
-                                : const Icon(Icons.person, color: Colors.white, size: 48),
+                            child: _isUploadingPhoto
+                                ? const Center(child: SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)))
+                                : (profilePhotoBase64 != null && profilePhotoBase64.isNotEmpty)
+                                    ? Image.memory(base64Decode(profilePhotoBase64), fit: BoxFit.cover, errorBuilder: (c,e,s) => const Icon(Icons.person, color: Colors.white, size: 48))
+                                    : (profilePhoto != null && profilePhoto.isNotEmpty
+                                        ? (profilePhoto.startsWith('http')
+                                            ? Image.network(profilePhoto, fit: BoxFit.cover, errorBuilder: (c,e,s) => const Icon(Icons.person, color: Colors.white, size: 48))
+                                            : Image.file(File(profilePhoto), fit: BoxFit.cover, errorBuilder: (c,e,s) => const Icon(Icons.person, color: Colors.white, size: 48)))
+                                        : const Icon(Icons.person, color: Colors.white, size: 48)),
                           ),
                         ),
-                        Positioned(
-                          bottom: 2,
-                          right: 2,
-                          child: Container(
-                            width: 26,
-                            height: 26,
-                            decoration: BoxDecoration(
-                              color: AppColors.primary,
-                              shape: BoxShape.circle,
-                              border: Border.all(color: Colors.white, width: 2),
+                        if (!_isUploadingPhoto)
+                          Positioned(
+                            bottom: 2,
+                            right: 2,
+                            child: Container(
+                              width: 26,
+                              height: 26,
+                              decoration: BoxDecoration(
+                                color: AppColors.primary,
+                                shape: BoxShape.circle,
+                                border: Border.all(color: Colors.white, width: 2),
+                              ),
+                              child: const Icon(Icons.camera_alt,
+                                  color: Colors.white, size: 13),
                             ),
-                            child: const Icon(Icons.camera_alt,
-                                color: Colors.white, size: 13),
                           ),
-                        ),
                       ],
                     ),
                   ),

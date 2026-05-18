@@ -937,7 +937,7 @@ class _ArticleDetailScreen extends StatelessWidget {
                           size: 14, color: AppColors.primary),
                       const SizedBox(width: 4),
                       Text(
-                        'Ahli Gizi Nak Sihat',
+                        'Ahli Gizi Naksihat',
                         style: GoogleFonts.manrope(
                             fontSize: 12, color: AppColors.primary),
                       ),

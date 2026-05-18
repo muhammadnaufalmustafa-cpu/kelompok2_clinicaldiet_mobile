@@ -128,7 +128,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      'Nak Sihat',
+                      'Naksihat',
                       style: GoogleFonts.manrope(
                         fontSize: 24,
                         fontWeight: FontWeight.w800,
