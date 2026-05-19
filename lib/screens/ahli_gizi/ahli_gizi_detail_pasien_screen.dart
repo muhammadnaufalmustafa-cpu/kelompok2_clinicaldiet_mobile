@@ -886,7 +886,8 @@ class _AhliGiziDetailPasienScreenState
         String therapyProgramId = _selectedPatientProgram!['therapyProgramId'] as String? ?? '';
         
         // [BARU] Jika ini program virtual dari onboarding, buat program aslinya dulu
-        if (patientProgramId == 'initial_onboarding') {
+        if (patientProgramId.startsWith('initial_onboarding')) {
+          final String oldProgramId = patientProgramId;
           final currentUser = await AuthService.getLoggedInUser();
           final String createdBy = currentUser?['uid'] ?? 'unknown_ag';
           
@@ -904,7 +905,7 @@ class _AhliGiziDetailPasienScreenState
               setState(() {
                 _selectedPatientProgram = newProg;
                 // Update list programs juga agar tidak duplikat
-                _patientPrograms = _patientPrograms.where((p) => p['patientProgramId'] != 'initial_onboarding').toList();
+                _patientPrograms = _patientPrograms.where((p) => p['patientProgramId'] != oldProgramId).toList();
                 _patientPrograms.insert(0, newProg);
               });
             }
@@ -941,7 +942,7 @@ class _AhliGiziDetailPasienScreenState
       // 2b. Simpan diagnosis ke program yang aktif (per-program)
       if (_selectedPatientProgram != null) {
         final pid = _selectedPatientProgram!['patientProgramId'] as String?;
-        if (pid != null && pid != 'initial_onboarding') {
+        if (pid != null && !pid.startsWith('initial_onboarding')) {
           await AuthService.updateProgramDiagnosis(
             patientProgramId: pid,
             diagnosis: _diagnosisCtrl.text,
@@ -2770,7 +2771,7 @@ class _AhliGiziDetailPasienScreenState
               onPressed: selectedStartDate == null ? null : () async {
                 Navigator.pop(ctx);
                 final patientProgramId = program['patientProgramId'] as String? ?? '';
-                if (patientProgramId == 'initial_onboarding') {
+                if (patientProgramId.startsWith('initial_onboarding')) {
                    // Cannot edit virtual program period
                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Silakan simpan data terlebih dahulu sebelum mengatur periode.')));
                    return;
