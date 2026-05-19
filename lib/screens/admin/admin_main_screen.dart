@@ -150,6 +150,43 @@ class _AdminMainScreenState extends State<AdminMainScreen>
     }
   }
 
+  Future<void> _promoteToAdmin(Map<String, dynamic> ag) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text('Jadikan Admin', style: GoogleFonts.manrope(fontWeight: FontWeight.w700)),
+        content: Text(
+          'Apakah Anda yakin ingin mempromosikan ${ag['name']} (NIP: ${ag['nip']}) menjadi Admin? Setelah menjadi Admin, akun ini tidak dapat diubah kembali menjadi Ahli Gizi.',
+          style: GoogleFonts.manrope(fontSize: 14),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text('Batal', style: GoogleFonts.manrope(color: AppColors.textSecondary)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.secondary,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            child: Text('Ya, Jadikan Admin', style: GoogleFonts.manrope(color: Colors.white, fontWeight: FontWeight.w700)),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true) return;
+    final success = await AuthService.promoteToAdmin(ag['uid'] as String);
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(success ? '✅ ${ag['name']} berhasil dijadikan Admin.' : 'Gagal mempromosikan.', style: GoogleFonts.manrope()),
+        backgroundColor: success ? AppColors.secondary : Colors.red,
+      ));
+      if (success) _loadData();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -331,6 +368,23 @@ class _AdminMainScreenState extends State<AdminMainScreen>
                       ),
                     ),
                   ],
+                ),
+              ],
+              if (!showActions && status == 'approved') ...[
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () => _promoteToAdmin(ag),
+                    icon: const Icon(Icons.admin_panel_settings, size: 16, color: Colors.white),
+                    label: Text('Jadikan Admin', style: GoogleFonts.manrope(fontWeight: FontWeight.w700, color: Colors.white, fontSize: 13)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.secondary,
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      elevation: 0,
+                    ),
+                  ),
                 ),
               ],
             ],

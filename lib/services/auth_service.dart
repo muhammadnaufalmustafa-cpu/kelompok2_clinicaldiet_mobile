@@ -471,7 +471,29 @@ class AuthService {
 
   // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-  static Future<Map<String, dynamic>> resetPassword({
+    static Future<bool> promoteToAdmin(String uid) async {
+    try {
+      await FirebaseFirestore.instance.collection('users').doc(uid).update({
+        'role': 'admin',
+        'promoted_to_admin_at': FieldValue.serverTimestamp(),
+      });
+      await FirebaseFirestore.instance.collection('notifications').add({
+        'userId': uid,
+        'role': 'admin',
+        'title': '👑 Akun Anda Dipromosikan!',
+        'message': 'Selamat! Akun Anda telah dipromosikan menjadi Admin.',
+        'type': 'role_promoted',
+        'isRead': false,
+        'relatedId': '',
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+static Future<Map<String, dynamic>> resetPassword({
     required String email,
     required String newPassword,
   }) async {
