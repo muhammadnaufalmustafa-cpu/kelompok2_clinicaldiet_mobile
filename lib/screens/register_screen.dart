@@ -258,7 +258,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     fontSize: 14, color: AppColors.textSecondary)),
             const SizedBox(height: 24),
 
-            // â”€â”€ Identitas Utama â”€â”€
+            // -- Identitas Utama --
             _sectionLabel('DATA IDENTITAS UTAMA'),
             const SizedBox(height: 10),
             _buildTextField(
@@ -392,7 +392,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             ),
             const SizedBox(height: 20),
 
-            // â”€â”€ Identitas Tambahan â”€â”€
+            // -- Identitas Tambahan --
             _sectionLabel('DATA IDENTITAS TAMBAHAN (Opsional)'),
             const SizedBox(height: 10),
             _buildTextField(
@@ -462,7 +462,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
 
 
-            // â”€â”€ Kata Sandi â”€â”€
+            // -- Kata Sandi --
             _sectionLabel('KATA SANDI'),
             const SizedBox(height: 10),
             _buildTextField(
@@ -503,7 +503,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             ),
             const SizedBox(height: 20),
             
-            // â”€â”€ CAPTCHA Sederhana â”€â”€
+            // -- CAPTCHA Sederhana --
             _sectionLabel('VERIFIKASI KEAMANAN'),
             const SizedBox(height: 10),
             Row(

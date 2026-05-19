@@ -243,7 +243,7 @@ class _InformConsentScreenState extends State<InformConsentScreen> {
           <path d="M2 7L5.5 10.5L12 3.5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
       </div>
-      <div class="agreement-text">âœ” Saya telah membaca dan menyetujui seluruh ketentuan di atas</div>
+      <div class="agreement-text">- Saya telah membaca dan menyetujui seluruh ketentuan di atas</div>
     </div>
 
     <div class="signature-section">
@@ -260,7 +260,7 @@ class _InformConsentScreenState extends State<InformConsentScreen> {
         <div><strong>$patientName</strong> &nbsp;|&nbsp; RM: $patientRm</div>
         <div>Tanggal: $signedDateStr</div>
       </div>
-      <div class="verified-badge">âœ“ Terverifikasi</div>
+      <div class="verified-badge">-“ Terverifikasi</div>
     </div>
   </div>
 </body>

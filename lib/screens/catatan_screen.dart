@@ -8,16 +8,16 @@ import '../utils/age_calculator.dart';
 import '../widgets/notification_bell.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Daftar lengkap URT sesuai referensi ahli gizi Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+// ------- Daftar lengkap URT sesuai referensi ahli gizi -------------------------------------------------------------------------------
 const List<String> kDaftarURT = [
   '1 centong rice cooker', '1 centong plastik', '1 sdm', '1 sds',
   '1 sd sayur', '1 piring', '1 mangkok', '1 cup',
   '1 bh besar', '1 bh sdg', '1 bh kcl', '1 bh',
-  'Ã‚Â½ bh', 'Ã‚Â¼ bh', '1 iris', '1 ptg',
+  ' bh', ' bh', '1 iris', '1 ptg',
   '1 ptg bsr', '1 ptg sdg', '1 ptg kcl', '1 ptg segitiga',
   '1 ptg kotak', '1 ptg bundar', '1 ptg dadu',
   '1 ptg bag. kepala', '1 ptg bag. badan', '1 ptg bag. ekor',
-  'Ã‚Â½ ptg presto', '1 lembar ada pinggiran', '1 lembar tanpa pinggiran',
+  ' ptg presto', '1 lembar ada pinggiran', '1 lembar tanpa pinggiran',
   '1 lembar kuning', '1 bonggol', '1 bks', '1 kotak',
   '1 botol', '1 botol besar', '1 botol kcl', '1 gelas',
   '1 pcs', '1 pcs sdg', '1 pcs kcl',
@@ -174,7 +174,7 @@ class _CatatanScreenState extends State<CatatanScreen> {
     if (mounted) setState(() => _isLoadingData = false);
   }
 
-  /// Hanya me-refresh target nutrisi + catatan program Ã¢â‚¬â€ tidak mengubah state lainnya
+  /// Hanya me-refresh target nutrisi + catatan program --- tidak mengubah state lainnya
   Future<void> _loadNutrientsForProgram(String programId) async {
     // Ambil target nutrisi
     final target = await AuthService.getNutritionTarget(programId);
@@ -322,7 +322,7 @@ class _CatatanScreenState extends State<CatatanScreen> {
     final picked = await showTimePicker(
       context: context,
       initialTime: TimeOfDay.now(),
-      helpText: 'Jam makan Ã¢â‚¬â€œ $session',
+      helpText: 'Jam makan ---œ $session',
       builder: (context, child) => MediaQuery(
         data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true),
         child: child!,
@@ -349,7 +349,7 @@ class _CatatanScreenState extends State<CatatanScreen> {
     ));
   }
 
-  // Ã¢â€â‚¬Ã¢â€â‚¬ URT Picker (Bottom Sheet) Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+  // ---- URT Picker (Bottom Sheet) ----------------------------------------------------------------------------------------------------------------------------------------
   Future<void> _showURTPicker(TextEditingController targetCtrl) async {
     String query = '';
     await showModalBottomSheet(

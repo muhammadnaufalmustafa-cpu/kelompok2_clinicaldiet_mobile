@@ -58,12 +58,12 @@ class _HomeScreenState extends State<HomeScreen> {
   // Item gizi yang dipilih pasien untuk ditampilkan di card utama (maks 4)
   List<String> _pinnedNutrients = [];
 
-  // â”€â”€ Patient Therapy Programs â”€â”€
+  // -- Patient Therapy Programs --
   List<Map<String, dynamic>> _patientPrograms = [];
   String? _selectedPatientProgramId;
   Map<String, dynamic>? _selectedNutritionTarget; // nutritionTargets doc
 
-  // â”€â”€ Realtime stream â”€â”€
+  // -- Realtime stream --
   StreamSubscription<QuerySnapshot>? _programsStreamSub;
 
   @override
@@ -275,7 +275,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (mounted) setState(() => _pinnedNutrients = pinned);
   }
 
-  // â”€â”€ Getters nutrisi (mengutamakan program baru jika ada) â”€â”€
+  // -- Getters nutrisi (mengutamakan program baru jika ada) --
   Map<String, dynamic>? get _currentDietNutrisi {
     if (_nutrisiPerDiet.isEmpty) return _nutrisi;
     if (_dietPageIndex >= _nutrisiPerDiet.length) return _nutrisiPerDiet.first;
@@ -283,7 +283,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Map<String, dynamic> get _targetNutrients {
-    // Prioritas: nutritionTargets (program baru) â†’ legacy nutrition_plans
+    // Prioritas: nutritionTargets (program baru)  legacy nutrition_plans
     if (_selectedNutritionTarget != null) {
       final items = (_selectedNutritionTarget!['nutrientItems'] as Map?)?.cast<String, dynamic>() ?? {};
       return items;
@@ -323,7 +323,7 @@ class _HomeScreenState extends State<HomeScreen> {
   double get _kaloriAktual => (_targetNutrients['Energi (kkal)']?['aktual'] as num?)?.toDouble() ?? 0;
   double get _kaloriPercent => _kaloriTarget > 0 ? (_kaloriAktual / _kaloriTarget).clamp(0.0, 1.0) : 0.0;
 
-  // â”€â”€ BB/TB dari histori terakhir â”€â”€
+  // -- BB/TB dari histori terakhir --
   double get _bbTerakhir {
     if (_bbHistory.isNotEmpty) {
       return double.tryParse(_bbHistory.first['weight']?.toString() ?? '') ?? 0.0;
@@ -424,13 +424,13 @@ class _HomeScreenState extends State<HomeScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildTopBar(context),
-                  // â”€â”€ BB/TB Harian â”€â”€
+                  // -- BB/TB Harian --
                   _buildBBTBCard(),
-                  // â”€â”€ Program Terapi Diet Selector â”€â”€
+                  // -- Program Terapi Diet Selector --
                   _buildProgramSelector(),
-                  // â”€â”€ Periode Program Terapi Diet â”€â”€
+                  // -- Periode Program Terapi Diet --
                   _buildProgramPeriod(),
-                  // â”€â”€ Kartu Ahli Gizi Utama â”€â”€
+                  // -- Kartu Ahli Gizi Utama --
                   if (_selectedAhliGizi != null) _buildAhliGiziCard(context),
                   if (_kaloriTarget > 0)
                     _buildNutritionSummary()
@@ -440,7 +440,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     _buildNutritionSummary()
                   else if (_currentDietNutrisi != null && _kaloriTarget == 0)
                     _buildNoDataState(),
-                  // â”€â”€ Catatan Makan Terakhir â”€â”€
+                  // -- Catatan Makan Terakhir --
                   if (_lastMealLog != null) _buildLastMealCard(),
                   _buildReminderCard(context),
                   const SizedBox(height: 16),
@@ -491,7 +491,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // -------------------------------------------------------------------------
 
   Widget _buildNoDataState() {
     return Container(
@@ -547,7 +547,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // â”€â”€ Program Selector (Pasien hanya bisa lihat, tidak tambah) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // -- Program Selector (Pasien hanya bisa lihat, tidak tambah) --------------
   Widget _buildProgramSelector() {
     final activePrograms = _patientPrograms.where((p) => p['status'] == 'active').toList();
 
@@ -586,7 +586,7 @@ class _HomeScreenState extends State<HomeScreen> {
         );
       }
 
-      // Ada diet lama â†’ tampilkan sebagai chip read-only
+      // Ada diet lama  tampilkan sebagai chip read-only
       return Container(
         margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
         child: Column(
@@ -652,7 +652,7 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
 
-    // Multiple programs â€” show horizontal chip selector
+    // Multiple programs - show horizontal chip selector
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
       child: Column(
@@ -806,7 +806,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // â”€â”€ BB/TB Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // -- BB/TB Card --------------------------------------------------------------
 
   Widget _buildBBTBCard() {
     final ageInfo = _computeAge(_user?['birthdate']?.toString() ?? '');
@@ -977,11 +977,11 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // â”€â”€ Diet Swipeable Section â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // -- Diet Swipeable Section -----------------------------------------
 
 
 
-  // â”€â”€ Catatan Makan Terakhir â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // -- Catatan Makan Terakhir ------------------------------------------
   Widget _buildLastMealCard() {
     final log = _lastMealLog!;
     final date = DateTime.tryParse(log['date'] ?? '') ?? DateTime.now();
@@ -1850,9 +1850,9 @@ class _HomeScreenState extends State<HomeScreen> {
   // Kode lama dihapus
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// -----------------------------------------------------------------------------
 // Animated Nutrient Item Widget (Scale animation on tap)
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// -----------------------------------------------------------------------------
 class _AnimatedNutrientItem extends StatefulWidget {
   final String nutrientKey;
   final double target;

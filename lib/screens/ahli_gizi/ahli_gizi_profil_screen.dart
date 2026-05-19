@@ -698,7 +698,7 @@ class _AhliGiziProfilScreenState extends State<AhliGiziProfilScreen> {
                   ),
                   const SizedBox(height: 24),
 
-                  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ SECTION: Ulasan dari Pasien â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+                  // ----------- SECTION: Ulasan dari Pasien -----------
                   Padding(
                     padding: const EdgeInsets.only(bottom: 10),
                     child: Row(
