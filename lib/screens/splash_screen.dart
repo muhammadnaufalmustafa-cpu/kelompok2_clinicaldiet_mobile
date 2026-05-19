@@ -106,7 +106,7 @@ class _SplashScreenState extends State<SplashScreen> {
         backgroundColor: Colors.white,
         body: SizedBox.expand(
           child: Image.asset(
-            'assets/images/naksihat (logo - revisi).png',
+            'assets/images/naksihat (logo - revisi fikss).png',
             fit: BoxFit.cover,
           ),
         ),
