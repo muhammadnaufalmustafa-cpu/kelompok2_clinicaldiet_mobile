@@ -190,7 +190,7 @@ class AuthService {
             await FirebaseFirestore.instance.collection('notifications').add({
               'userId': adminUid,
               'role': 'admin',
-              'title': '-°---Ëœ Pendaftaran Ahli Gizi Baru',
+              'title': '🔔 Pendaftaran Ahli Gizi Baru',
               'message':
                   '$name (NIP: $nip) mendaftar dan menunggu verifikasi Anda.',
               'type': 'new_ahligizi_request',
@@ -430,7 +430,7 @@ class AuthService {
       await FirebaseFirestore.instance.collection('notifications').add({
         'userId': uid,
         'role': 'ahli_gizi',
-        'title': '---…-¦ Akun Anda Disetujui!',
+        'title': '🎉 Akun Anda Disetujui!',
         'message':
             'Selamat! Akun Anda telah diverifikasi. Anda sekarang bisa login.',
         'type': 'account_approved',

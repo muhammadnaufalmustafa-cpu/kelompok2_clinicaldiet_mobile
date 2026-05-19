@@ -880,7 +880,7 @@ class _AhliGiziDetailPasienScreenState
         }
       });
 
-      // 1a. Jika ada program terpilih â€” save ke nutritionTargets (collection baru)
+      // 1a. Jika ada program terpilih — save ke nutritionTargets (collection baru)
       if (_selectedPatientProgram != null) {
         String patientProgramId = _selectedPatientProgram!['patientProgramId'] as String? ?? '';
         String therapyProgramId = _selectedPatientProgram!['therapyProgramId'] as String? ?? '';
@@ -1573,7 +1573,7 @@ class _AhliGiziDetailPasienScreenState
                 ),
               ),
 
-              // Body â€” dokumen lengkap
+              // Body — dokumen lengkap
               Flexible(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.all(20),
@@ -1730,7 +1730,7 @@ class _AhliGiziDetailPasienScreenState
                         children: [
                           const Icon(Icons.info_outline, size: 13, color: AppColors.textMuted),
                           const SizedBox(width: 4),
-                          Text('Tanda tangan digital pasien â€” ${widget.pasien['name'] ?? ''}',
+                          Text('Tanda tangan digital pasien — ${widget.pasien['name'] ?? ''}',
                               style: GoogleFonts.manrope(fontSize: 11, color: AppColors.textMuted)),
                         ],
                       ),
@@ -1739,7 +1739,7 @@ class _AhliGiziDetailPasienScreenState
                 ),
               ),
 
-              // Footer â€” tombol download
+              // Footer — tombol download
               Container(
                 padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
                 decoration: const BoxDecoration(
@@ -2028,8 +2028,8 @@ class _AhliGiziDetailPasienScreenState
                 Expanded(
                   child: Text(
                     _missedDays >= 3
-                        ? 'âš ï¸Â Pasien tidak mengisi catatan makan selama $_missedDays hari terakhir. Segera hubungi pasien.'
-                        : 'âš ï¸Â Pasien tidak mengisi catatan makan selama $_missedDays hari terakhir.',
+                        ? '⚠️ Pasien tidak mengisi catatan makan selama $_missedDays hari terakhir. Segera hubungi pasien.'
+                        : '⚠️ Pasien tidak mengisi catatan makan selama $_missedDays hari terakhir.',
                     style: GoogleFonts.manrope(fontSize: 12, color: AppColors.textPrimary, fontWeight: FontWeight.w600),
                   ),
                 ),
