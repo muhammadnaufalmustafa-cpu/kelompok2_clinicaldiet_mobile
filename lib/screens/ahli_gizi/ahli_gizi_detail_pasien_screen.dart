@@ -35,16 +35,16 @@ class _AhliGiziDetailPasienScreenState
   bool _isRegeneratingConsent = false;
   int _missedDays = 0; // jumlah hari tidak isi log
 
-  // --------- Patient Therapy Programs ---------
+  // ---Â---Â--- Patient Therapy Programs ---Â---Â---
   List<Map<String, dynamic>> _patientPrograms = [];
   Map<String, dynamic>? _selectedPatientProgram;
   bool _isLoadingPrograms = false;
   List<Map<String, dynamic>> _availableTherapyPrograms = [];
 
-  // --------- Existing controllers ---------
+  // ---Â---Â--- Existing controllers ---Â---Â---
   final _targetCtrl = TextEditingController();
 
-  // --------- Clinical Inputs ---------
+  // ---Â---Â--- Clinical Inputs ---Â---Â---
   final _diagnosisCtrl = TextEditingController();
   final _catatanNutrisiCtrl = TextEditingController();
   final _customDietCtrl = TextEditingController();
@@ -87,7 +87,7 @@ class _AhliGiziDetailPasienScreenState
     'K58.9 - Irritable Bowel Syndrome (IBS) tanpa Diare',
   ];
 
-  // --------- Dynamic Nutrition Target controllers & state ---------
+  // ---Â---Â--- Dynamic Nutrition Target controllers & state ---Â---Â---
   final Map<String, TextEditingController> _targetCtrls = {};
   final Map<String, TextEditingController> _aktualCtrls = {};
   final Map<String, bool> _checkedNutrients = {};
@@ -208,7 +208,7 @@ class _AhliGiziDetailPasienScreenState
     super.dispose();
   }
 
-  // ---- Regenerate Informed Consent (oleh Ahli Gizi) ----
+  // -Â---Â Regenerate Informed Consent (oleh Ahli Gizi) -Â---Â
   Future<void> _regenerateConsent() async {
     final rm = widget.pasien['rm'] as String? ?? '';
     final name = widget.pasien['name'] as String? ?? '-';
@@ -880,7 +880,7 @@ class _AhliGiziDetailPasienScreenState
         }
       });
 
-      // 1a. Jika ada program terpilih — save ke nutritionTargets (collection baru)
+      // 1a. Jika ada program terpilih - save ke nutritionTargets (collection baru)
       if (_selectedPatientProgram != null) {
         String patientProgramId = _selectedPatientProgram!['patientProgramId'] as String? ?? '';
         String therapyProgramId = _selectedPatientProgram!['therapyProgramId'] as String? ?? '';
@@ -1038,17 +1038,17 @@ class _AhliGiziDetailPasienScreenState
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // --------- Info Pasien ---------
+            // ---Â---Â--- Info Pasien ---Â---Â---
             _buildPasienCard(),
             const SizedBox(height: 12),
             _buildInfoGrid(),
             const SizedBox(height: 16),
 
-            // --------- Program Terapi Diet Pasien ---------
+            // ---Â---Â--- Program Terapi Diet Pasien ---Â---Â---
             _buildPatientProgramsSection(),
             const SizedBox(height: 24),
 
-            // --------- Clinical Info ---------
+            // ---Â---Â--- Clinical Info ---Â---Â---
             _buildSectionLabel('Kondisi Klinis Pasien'),
             const SizedBox(height: 8),
             Container(
@@ -1066,7 +1066,7 @@ class _AhliGiziDetailPasienScreenState
             ),
             const SizedBox(height: 24),
 
-            // --------- Terapi Diet Selection (hanya tampil jika belum ada program dipilih) ---------
+            // ---Â---Â--- Terapi Diet Selection (hanya tampil jika belum ada program dipilih) ---Â---Â---
             if (_selectedPatientProgram == null) ...[
               _buildSectionLabel('Pilih Terapi Diet'),
               const SizedBox(height: 8),
@@ -1078,7 +1078,7 @@ class _AhliGiziDetailPasienScreenState
               const SizedBox(height: 24),
             ],
 
-            // --------- Banner: Program yang sedang diedit ---------
+            // ---Â---Â--- Banner: Program yang sedang diedit ---Â---Â---
             if (_selectedPatientProgram != null) ...[
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -1120,15 +1120,15 @@ class _AhliGiziDetailPasienScreenState
               ),
             ],
 
-            // --------- NUTRISI SECTION ---------
+            // ---Â---Â--- NUTRISI SECTION ---Â---Â---
             _buildNutrisiSection(),
             const SizedBox(height: 24),
 
-            // --------- CAPAIAN GIZI SECTION ---------
+            // ---Â---Â--- CAPAIAN GIZI SECTION ---Â---Â---
             _buildCapaianGiziSection(),
             const SizedBox(height: 24),
             
-            // --------- RIWAYAT CATATAN MAKANAN ---------
+            // ---Â---Â--- RIWAYAT CATATAN MAKANAN ---Â---Â---
             _buildRiwayatMakanSection(),
             const SizedBox(height: 12),
             SizedBox(
@@ -1177,31 +1177,6 @@ class _AhliGiziDetailPasienScreenState
               ),
             ),
             const SizedBox(height: 12),
-
-            // ---- Tombol Regenerate Dokumen Informed Consent ----
-            if (widget.pasien['inform_consent_signed'] == true)
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: _isRegeneratingConsent ? null : _regenerateConsent,
-                  icon: _isRegeneratingConsent
-                      ? const SizedBox(
-                          width: 18, height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                      : const Icon(Icons.description_outlined, size: 18, color: Colors.white),
-                  label: Text(
-                    _isRegeneratingConsent ? 'Memperbarui & mengunduh...' : 'Unduh Informed Consent (Terbaru)',
-                    style: GoogleFonts.manrope(fontWeight: FontWeight.w700, fontSize: 13, color: Colors.white),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.secondary,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                    elevation: 0,
-                  ),
-                ),
-              ),
-            const SizedBox(height: 12),
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
@@ -1222,7 +1197,7 @@ class _AhliGiziDetailPasienScreenState
             ),
             const SizedBox(height: 24),
 
-            // --------- Ubah Status ---------
+            // ---Â---Â--- Ubah Status ---Â---Â---
             _buildSectionLabel('Ubah Status Pasien'),
             const SizedBox(height: 8),
             _buildStatusButtons(),
@@ -1233,9 +1208,9 @@ class _AhliGiziDetailPasienScreenState
     );
   }
 
-  // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+  // ---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---
   // WIDGET BUILDERS
-  // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+  // ---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---
 
   Widget _buildPasienCard() {
     return Container(
@@ -1374,7 +1349,7 @@ class _AhliGiziDetailPasienScreenState
           ),
         ),
         const SizedBox(height: 12),
-        // --------- Informed Consent Card ---------
+        // ---Â---Â--- Informed Consent Card ---Â---Â---
         _buildConsentCard(hasConsent, base64Sig, filePath, signedAt),
       ],
     );
@@ -1573,7 +1548,7 @@ class _AhliGiziDetailPasienScreenState
                 ),
               ),
 
-              // Body — dokumen lengkap
+              // Body - dokumen lengkap
               Flexible(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.all(20),
@@ -1730,7 +1705,7 @@ class _AhliGiziDetailPasienScreenState
                         children: [
                           const Icon(Icons.info_outline, size: 13, color: AppColors.textMuted),
                           const SizedBox(width: 4),
-                          Text('Tanda tangan digital pasien — ${widget.pasien['name'] ?? ''}',
+                          Text('Tanda tangan digital pasien - ${widget.pasien['name'] ?? ''}',
                               style: GoogleFonts.manrope(fontSize: 11, color: AppColors.textMuted)),
                         ],
                       ),
@@ -1739,7 +1714,7 @@ class _AhliGiziDetailPasienScreenState
                 ),
               ),
 
-              // Footer — tombol download
+              // Footer - tombol download
               Container(
                 padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
                 decoration: const BoxDecoration(
@@ -2028,8 +2003,8 @@ class _AhliGiziDetailPasienScreenState
                 Expanded(
                   child: Text(
                     _missedDays >= 3
-                        ? '⚠️ Pasien tidak mengisi catatan makan selama $_missedDays hari terakhir. Segera hubungi pasien.'
-                        : '⚠️ Pasien tidak mengisi catatan makan selama $_missedDays hari terakhir.',
+                        ? 'Pasien tidak mengisi catatan makan selama $_missedDays hari terakhir. Segera hubungi pasien.'
+                        : 'Pasien tidak mengisi catatan makan selama $_missedDays hari terakhir.',
                     style: GoogleFonts.manrope(fontSize: 12, color: AppColors.textPrimary, fontWeight: FontWeight.w600),
                   ),
                 ),
@@ -2337,9 +2312,9 @@ class _AhliGiziDetailPasienScreenState
     );
   }
 
-  // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+  // ---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---
   // HELPER WIDGETS
-  // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+  // ---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---
 
   Widget _buildSectionLabel(String label) => Text(label,
       style: GoogleFonts.manrope(
@@ -2433,7 +2408,7 @@ class _AhliGiziDetailPasienScreenState
     );
   }
 
-  // --------- PATIENT PROGRAMS SECTION ------------------------------------------------------------------------------------------------------------------------------------------
+  // ---Â---Â--- PATIENT PROGRAMS SECTION ---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---
 
   Widget _buildPatientProgramsSection() {
     return Column(

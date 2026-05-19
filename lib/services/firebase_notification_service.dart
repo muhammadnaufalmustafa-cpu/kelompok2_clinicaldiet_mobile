@@ -290,7 +290,7 @@ class FirebaseNotificationService {
               await createNotification(
                 userId: patientId,
                 role: 'pasien',
-                title: '⚠️ Catatan Makan Terlewat',
+                title: 'Catatan Makan Terlewat',
                 message: 'Anda belum mengisi catatan makan selama 2 hari. Segera isi agar ahli gizi dapat memantau kondisi Anda dengan baik.',
                 type: 'alert_log_2days',
               );
@@ -349,7 +349,7 @@ class FirebaseNotificationService {
           await createNotification(
             userId: ahliGiziId,
             role: 'ahli_gizi',
-            title: '⚠️ Pasien Tidak Mengisi Log',
+            title: 'Pasien Tidak Mengisi Log',
             message: 'Pasien $patientName (RM: $patientRm) tidak mengisi catatan makan selama ${missedDays.length} hari terakhir.',
             type: 'alert_patient_log',
             relatedId: patientRm,
