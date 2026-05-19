@@ -9,7 +9,6 @@ import 'ahli_gizi/register_ahli_gizi_screen.dart';
 import 'lupa_kata_sandi_screen.dart';
 import 'admin/admin_main_screen.dart';
 import 'admin/pending_approval_screen.dart';
-import 'admin/register_admin_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -331,33 +330,6 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: Text.rich(
                   TextSpan(
                     text: 'Daftar sebagai ahli gizi? ',
-                    style: GoogleFonts.manrope(
-                      color: AppColors.textSecondary,
-                      fontSize: 13,
-                    ),
-                    children: [
-                      TextSpan(
-                        text: 'Klik di sini',
-                        style: GoogleFonts.manrope(
-                          color: AppColors.secondary,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 10),
-              GestureDetector(
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const RegisterAdminScreen(),
-                  ),
-                ),
-                child: Text.rich(
-                  TextSpan(
-                    text: 'Daftar sebagai admin? ',
                     style: GoogleFonts.manrope(
                       color: AppColors.textSecondary,
                       fontSize: 13,
