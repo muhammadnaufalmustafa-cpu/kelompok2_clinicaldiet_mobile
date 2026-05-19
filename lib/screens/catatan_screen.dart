@@ -525,7 +525,7 @@ class _CatatanScreenState extends State<CatatanScreen> {
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Catatan makan berhasil disimpan! Ã¢Å“â€¦', style: GoogleFonts.manrope(fontWeight: FontWeight.w600)),
+            content: Text('Catatan makan berhasil disimpan!', style: GoogleFonts.manrope(fontWeight: FontWeight.w600)),
             backgroundColor: AppColors.primary,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -546,7 +546,7 @@ class _CatatanScreenState extends State<CatatanScreen> {
             await FirebaseNotificationService.createNotification(
               userId: agUid,
               role: 'ahli_gizi',
-              title: 'Ã°Å¸â€”â€™Ã¯Â¸Â Catatan Makan Baru',
+              title: 'Catatan Makan Baru',
               message: '$patientName telah mengisi catatan makan harian ($dietName) pada $tgl. '
                   'Silakan buka riwayat pasien untuk melihat detailnya.',
               type: 'log',

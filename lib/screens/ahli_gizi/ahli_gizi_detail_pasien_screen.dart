@@ -292,7 +292,7 @@ class _AhliGiziDetailPasienScreenState
         try {
           await NotificationService().showInstantNotification(
             id: DateTime.now().millisecondsSinceEpoch ~/ 1000,
-            title: 'Unduhan Berhasil Ã°Å¸â€œâ€ž',
+            title: 'Unduhan Berhasil',
             body: 'File Informed_Consent_$rm.pdf berhasil disimpan di folder Download.',
           );
         } catch (_) {}
@@ -305,7 +305,7 @@ class _AhliGiziDetailPasienScreenState
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('Ã¢Å“â€¦ Dokumen consent (PDF) berhasil diunduh!', style: GoogleFonts.manrope(fontWeight: FontWeight.w600)),
+          content: Text('Dokumen consent (PDF) berhasil diunduh!', style: GoogleFonts.manrope(fontWeight: FontWeight.w600)),
           backgroundColor: AppColors.primary, behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ));
@@ -880,7 +880,7 @@ class _AhliGiziDetailPasienScreenState
         }
       });
 
-      // 1a. Jika ada program terpilih ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ save ke nutritionTargets (collection baru)
+      // 1a. Jika ada program terpilih — save ke nutritionTargets (collection baru)
       if (_selectedPatientProgram != null) {
         String patientProgramId = _selectedPatientProgram!['patientProgramId'] as String? ?? '';
         String therapyProgramId = _selectedPatientProgram!['therapyProgramId'] as String? ?? '';
@@ -974,7 +974,7 @@ class _AhliGiziDetailPasienScreenState
         await FirebaseNotificationService.createNotification(
           userId: patientId,
           role: 'pasien',
-          title: 'ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã¢â‚¬Â¹ Target Nutrisi Diperbarui',
+          title: 'Target Nutrisi Diperbarui',
           message: 'Ahli Gizi $agName telah memperbarui target nutrisi untuk program "$progName". '
               'Silakan cek tab Catatan Makan untuk melihat target terbaru Anda.',
           type: 'target',
@@ -984,7 +984,7 @@ class _AhliGiziDetailPasienScreenState
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('Data pasien berhasil disimpan! ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“',
+        content: Text('Data pasien berhasil disimpan!',
             style: GoogleFonts.manrope(fontWeight: FontWeight.w600)),
         backgroundColor: AppColors.primary,
         behavior: SnackBarBehavior.floating,
@@ -1558,7 +1558,7 @@ class _AhliGiziDetailPasienScreenState
                         children: [
                           Text('Informed Consent Monitoring Diet',
                               style: GoogleFonts.manrope(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.white)),
-                          Text('Informed Consent ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â ${widget.pasien['name'] ?? ''}',
+                          Text('Informed Consent - ${widget.pasien['name'] ?? ''}',
                               style: GoogleFonts.manrope(fontSize: 11, color: Colors.white.withValues(alpha: 0.85))),
                         ],
                       ),
@@ -1573,7 +1573,7 @@ class _AhliGiziDetailPasienScreenState
                 ),
               ),
 
-              // Body ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â dokumen lengkap
+              // Body — dokumen lengkap
               Flexible(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.all(20),
@@ -2897,7 +2897,7 @@ class _AhliGiziDetailPasienScreenState
                     await FirebaseNotificationService.createNotification(
                       userId: patientId,
                       role: 'pasien',
-                      title: 'ÃƒÂ°Ã…Â¸Ã…â€™Ã‚Â¿ Program Diet Baru Ditambahkan',
+                      title: 'Program Diet Baru Ditambahkan',
                       message: 'Ahli Gizi $agName telah menambahkan program diet baru "$pName" untuk Anda. '
                           'Buka beranda untuk melihat detail program.',
                       type: 'info',
