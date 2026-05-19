@@ -119,7 +119,74 @@ class AuthService {
 
   // ------------------------------------------------------------------------------------ REGISTRASI AHLI GIZI ---------------------------------------------------------------------------
 
-  static Future<Map<String, dynamic>> registerAhliGizi({
+    static Future<Map<String, dynamic>> registerAdmin({
+    required String name,
+    required String username,
+    required String email,
+    required String phone,
+    required String password,
+    required String nip,
+  }) async {
+    try {
+      final usersRef = FirebaseFirestore.instance.collection('users');
+
+      // 1. Cek duplikasi Username
+      final usernameCheck = await usersRef
+          .where('username', isEqualTo: username)
+          .get()
+          .timeout(
+            const Duration(seconds: 10),
+            onTimeout: () => throw 'Koneksi lambat (Timeout) saat mengecek Username.',
+          );
+      if (usernameCheck.docs.isNotEmpty) {
+        return {'success': false, 'message': 'Username sudah digunakan!'};
+      }
+
+      // 2. Buat akun di Firebase Auth
+      final userCredential = await FirebaseAuth.instance
+          .createUserWithEmailAndPassword(email: email, password: password)
+          .timeout(
+            const Duration(seconds: 15),
+            onTimeout: () => throw 'Koneksi lambat (Timeout) saat membuat akun di Firebase Auth.',
+          );
+
+      final uid = userCredential.user!.uid;
+
+      // 3. Simpan data Admin
+      final newAdmin = {
+        'uid': uid,
+        'role': 'admin',
+        'name': name,
+        'username': username,
+        'email': email,
+        'phone': phone,
+        'nip': nip,
+        'created_at': FieldValue.serverTimestamp(),
+      };
+
+      await usersRef
+          .doc(uid)
+          .set(newAdmin)
+          .timeout(
+            const Duration(seconds: 10),
+            onTimeout: () => throw 'Koneksi lambat (Timeout) saat menyimpan data Admin.',
+          );
+
+      return {'success': true, 'message': 'Registrasi Admin berhasil!'};
+    } on FirebaseAuthException catch (e) {
+      String msg = 'Terjadi kesalahan saat registrasi.';
+      if (e.code == 'weak-password') {
+        msg = 'Kata sandi minimal 6 karakter.';
+      } else if (e.code == 'email-already-in-use') {
+        msg = 'Email sudah terdaftar.';
+      }
+      return {'success': false, 'message': msg};
+    } catch (e) {
+      return {'success': false, 'message': 'Error: $e'};
+    }
+  }
+
+static Future<Map<String, dynamic>> registerAhliGizi({
     required String name,
     required String nip,
     required String email,
