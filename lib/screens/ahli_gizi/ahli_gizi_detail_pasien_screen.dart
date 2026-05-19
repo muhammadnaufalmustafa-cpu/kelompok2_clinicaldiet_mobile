@@ -867,6 +867,7 @@ class _AhliGiziDetailPasienScreenState
           ],
         ),
       ),
+    );
   }
 
   Future<void> _saveAll() async {
