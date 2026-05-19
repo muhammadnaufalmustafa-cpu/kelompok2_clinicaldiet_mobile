@@ -685,12 +685,12 @@ class _AhliGiziDetailPasienScreenState
   }
 
   Future<void> _updateStatus(String newStatus) async {
-    // Jika status "berhasil" wajib isi evaluasi akhir dulu
-    if (newStatus == 'berhasil') {
-      await _showEvaluasiAkhirDialog();
+    if (newStatus == 'aktif') {
+      await _doUpdateStatus(newStatus, evaluasiAkhir: null);
       return;
     }
-    await _doUpdateStatus(newStatus, evaluasiAkhir: null);
+    // Jika status "berhasil", "meninggal", atau "dropout"
+    await _showEvaluasiAkhirDialog(newStatus);
   }
 
   Future<void> _doUpdateStatus(String newStatus, {String? evaluasiAkhir, String? outcomeType}) async {
@@ -725,18 +725,34 @@ class _AhliGiziDetailPasienScreenState
     if (mounted) {
       setState(() => _status = newStatus);
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('Status pasien diperbarui: $newStatus.',
-            style: GoogleFonts.manrope()),
+        content: Text('Status pasien diperbarui: ${newStatus.toUpperCase()}.',
+            style: GoogleFonts.manrope(fontWeight: FontWeight.w600)),
         backgroundColor: AppColors.primary,
         behavior: SnackBarBehavior.floating,
       ));
     }
   }
 
-  Future<void> _showEvaluasiAkhirDialog() async {
+  Future<void> _showEvaluasiAkhirDialog(String status) async {
     final evaluasiCtrl = TextEditingController();
-    String selectedOutcome = 'Tercapai';
-    final outcomes = ['Tercapai', 'Belum Tercapai', 'Pasien Keluar Lebih Awal'];
+    
+    List<String> outcomes;
+    String selectedOutcome;
+    
+    if (status == 'meninggal') {
+      outcomes = ['Pasien Meninggal'];
+      selectedOutcome = 'Pasien Meninggal';
+    } else if (status == 'dropout') {
+      outcomes = ['Pasien Keluar Lebih Awal', 'Pindah Fasilitas Kesehatan'];
+      selectedOutcome = 'Pasien Keluar Lebih Awal';
+    } else { // berhasil
+      outcomes = ['Tercapai', 'Belum Tercapai', 'Lainnya'];
+      selectedOutcome = 'Tercapai';
+    }
+
+    String titleText = 'Evaluasi Akhir Program';
+    if (status == 'meninggal') titleText = 'Laporan Pasien Meninggal';
+    if (status == 'dropout') titleText = 'Laporan Pasien Dropout';
 
     await showDialog(
       context: context,
@@ -746,9 +762,9 @@ class _AhliGiziDetailPasienScreenState
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           title: Row(
             children: [
-              const Icon(Icons.assignment_turned_in_outlined, color: AppColors.secondary, size: 22),
+              Icon(status == 'berhasil' ? Icons.assignment_turned_in_outlined : Icons.info_outline, color: AppColors.secondary, size: 22),
               const SizedBox(width: 8),
-              Text('Evaluasi Akhir Program', style: GoogleFonts.manrope(fontWeight: FontWeight.w700, fontSize: 16)),
+              Text(titleText, style: GoogleFonts.manrope(fontWeight: FontWeight.w700, fontSize: 16)),
             ],
           ),
           content: SingleChildScrollView(
@@ -797,7 +813,7 @@ class _AhliGiziDetailPasienScreenState
                   maxLines: 4,
                   style: GoogleFonts.manrope(fontSize: 13),
                   decoration: InputDecoration(
-                    hintText: 'Contoh: Pasien berhasil mencapai target BB ideal. Kepatuhan diet 90%. Disarankan tetap menjaga pola makan...',
+                    hintText: status == 'meninggal' ? 'Contoh: Pasien meninggal dunia karena komplikasi gagal ginjal...' : 'Contoh: Pasien berhasil mencapai target BB ideal. Kepatuhan diet 90%. Disarankan tetap menjaga pola makan...',
                     hintStyle: GoogleFonts.manrope(fontSize: 12, color: AppColors.textMuted),
                     filled: true,
                     fillColor: AppColors.surface,
@@ -834,7 +850,7 @@ class _AhliGiziDetailPasienScreenState
                   }
                   Navigator.pop(ctx);
                   _doUpdateStatus(
-                    'berhasil',
+                    status,
                     evaluasiAkhir: evaluasiCtrl.text.trim(),
                     outcomeType: selectedOutcome,
                   );
@@ -851,8 +867,6 @@ class _AhliGiziDetailPasienScreenState
           ],
         ),
       ),
-    );
-    evaluasiCtrl.dispose();
   }
 
   Future<void> _saveAll() async {

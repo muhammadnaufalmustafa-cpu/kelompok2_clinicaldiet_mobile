@@ -646,37 +646,6 @@ class _AhliGiziProfilScreenState extends State<AhliGiziProfilScreen> {
                     child: Column(
                       children: [
                         _buildActionItem(icon: Icons.person_outline, title: 'Edit Identitas & CV', onTap: _showEditProfileDialog),
-                        _divider(),
-                        _buildActionItem(icon: Icons.post_add, title: 'Tambah Program & Leaflet', onTap: _showManageDietDialog),
-                        _divider(),
-                        _buildActionItem(
-                          icon: Icons.sync, 
-                          title: 'Sinkronisasi Data Referensi', 
-                          onTap: () {
-                            showDialog(
-                              context: context,
-                              builder: (ctx) => AlertDialog(
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                                title: Text('Konfirmasi Sinkronisasi', style: GoogleFonts.manrope(fontWeight: FontWeight.w700)),
-                                content: Text(
-                                  'Tindakan ini akan mengunduh dan memperbarui 18 program diet standar ke database online Anda. Lanjutkan?',
-                                  style: GoogleFonts.manrope(fontSize: 14),
-                                ),
-                                actions: [
-                                  TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Batal', style: GoogleFonts.manrope(color: AppColors.textSecondary))),
-                                  ElevatedButton(
-                                    onPressed: () {
-                                      Navigator.pop(ctx);
-                                      _syncData();
-                                    },
-                                    style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
-                                    child: Text('Ya, Sinkronkan', style: GoogleFonts.manrope(color: Colors.white)),
-                                  ),
-                                ],
-                              ),
-                            );
-                          }
-                        ),
                       ],
                     ),
                   ),
@@ -720,7 +689,7 @@ class _AhliGiziProfilScreenState extends State<AhliGiziProfilScreen> {
                                 const Icon(Icons.star, color: AppColors.accent, size: 14),
                                 const SizedBox(width: 4),
                                 Text(
-                                  '${_rating.toStringAsFixed(1)} Â· $_ratingCount ulasan',
+                                  '${_rating.toStringAsFixed(1)} • $_ratingCount ulasan',
                                   style: GoogleFonts.manrope(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
                                 ),
                               ],

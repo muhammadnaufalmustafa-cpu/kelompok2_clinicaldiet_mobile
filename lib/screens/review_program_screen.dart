@@ -45,9 +45,17 @@ class _ReviewProgramScreenState extends State<ReviewProgramScreen> {
     );
 
     if (success) {
-      // Kirim Notifikasi ke Ahli Gizi
+      // Update rating di profil Ahli Gizi
       if (nip.isNotEmpty) {
-        // Ambil UID Ahli Gizi berdasarkan NIP
+        await AuthService.submitRatingAhliGizi(
+          nip,
+          _rating,
+          ulasan: _ulasanCtrl.text.trim(),
+          pasienName: widget.user['name'] ?? 'Pasien',
+          pasienRm: widget.user['rm'] ?? '',
+        );
+
+        // Ambil UID Ahli Gizi berdasarkan NIP untuk notifikasi
         final allAG = await AuthService.getAllAhliGizi();
         try {
           final ag = allAG.firstWhere((a) => a['nip'] == nip);
