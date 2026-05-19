@@ -12,94 +12,41 @@ class LupaKataSandiScreen extends StatefulWidget {
 
 class _LupaKataSandiScreenState extends State<LupaKataSandiScreen> {
   final _emailController = TextEditingController();
-  final _newPassController = TextEditingController();
-  final _confirmPassController = TextEditingController();
-
-  bool _isKodeTerkirim = false;
   bool _isLoading = false;
-  bool _obscureNewPass = true;
-  bool _obscureConfirmPass = true;
+  bool _isSuccess = false;
 
   @override
   void dispose() {
     _emailController.dispose();
-    _newPassController.dispose();
-    _confirmPassController.dispose();
     super.dispose();
-  }
-
-  void _kirimKodeReset() {
-    final email = _emailController.text.trim();
-    if (email.isEmpty) {
-      _showError('Email tidak boleh kosong.');
-      return;
-    }
-    
-    // Simulasi pengiriman kode OTP lokal (tanpa server)
-    setState(() {
-      _isLoading = true;
-    });
-
-    Future.delayed(const Duration(seconds: 1), () {
-      if (!mounted) return;
-      setState(() {
-        _isLoading = false;
-        _isKodeTerkirim = true;
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Tautan / Kode reset kata sandi telah dikirim ke email Anda (Simulasi).', style: GoogleFonts.manrope()),
-          backgroundColor: AppColors.primary,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-    });
   }
 
   Future<void> _resetPassword() async {
     final email = _emailController.text.trim();
-    final newPass = _newPassController.text;
-    final confirmPass = _confirmPassController.text;
-
-    if (newPass.isEmpty || confirmPass.isEmpty) {
-      _showError('Kata sandi tidak boleh kosong.');
-      return;
-    }
-    if (newPass != confirmPass) {
-      _showError('Konfirmasi kata sandi tidak cocok.');
-      return;
-    }
-    if (newPass.length < 6) {
-      _showError('Kata sandi minimal 6 karakter.');
+    if (email.isEmpty) {
+      _showSnackBar('Email tidak boleh kosong.', isError: true);
       return;
     }
 
     setState(() => _isLoading = true);
-    
-    final result = await AuthService.resetPassword(email: email, newPassword: newPass);
-    
+
+    final result = await AuthService.resetPassword(email: email);
+
     if (!mounted) return;
     setState(() => _isLoading = false);
 
     if (result['success'] == true) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Kata sandi berhasil diubah. Silakan login kembali.', style: GoogleFonts.manrope()),
-          backgroundColor: AppColors.primary,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-      Navigator.pop(context); // Kembali ke halaman login
+      setState(() => _isSuccess = true);
     } else {
-      _showError(result['message'] ?? 'Gagal mereset kata sandi.');
+      _showSnackBar(result['message'] ?? 'Gagal mengirim email reset.', isError: true);
     }
   }
 
-  void _showError(String message) {
+  void _showSnackBar(String message, {required bool isError}) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message, style: GoogleFonts.manrope()),
-        backgroundColor: Colors.redAccent,
+        backgroundColor: isError ? Colors.redAccent : AppColors.primary,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
@@ -109,9 +56,9 @@ class _LupaKataSandiScreenState extends State<LupaKataSandiScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF0F4F8),
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: const Color(0xFFF0F4F8),
+        backgroundColor: AppColors.background,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new, size: 18, color: AppColors.textPrimary),
@@ -126,153 +73,79 @@ class _LupaKataSandiScreenState extends State<LupaKataSandiScreen> {
         ),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Icon / Illustration
+            Center(
+              child: Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: AppColors.primaryLight,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.lock_reset_rounded, size: 64, color: AppColors.primaryDark),
+              ),
+            ),
+            const SizedBox(height: 32),
+            
             Text(
-              'Reset Kata Sandi Anda',
+              'Reset Kata Sandi',
               style: GoogleFonts.manrope(
-                fontSize: 24,
-                fontWeight: FontWeight.w700,
+                fontSize: 28,
+                fontWeight: FontWeight.w800,
                 color: AppColors.textPrimary,
               ),
             ),
             const SizedBox(height: 8),
-            Text(
-              _isKodeTerkirim
-                  ? 'Silakan masukkan kata sandi baru Anda di bawah ini.'
-                  : 'Masukkan email yang terdaftar, kami akan mengirimkan instruksi untuk mereset kata sandi Anda.',
-              style: GoogleFonts.manrope(
-                fontSize: 14,
-                color: AppColors.textSecondary,
-                height: 1.4,
-              ),
-            ),
-            const SizedBox(height: 32),
 
-            // Form Email
-            Text('EMAIL',
+            if (!_isSuccess) ...[
+              Text(
+                'Masukkan alamat email yang terdaftar. Kami akan mengirimkan tautan aman untuk mengatur ulang kata sandi Anda.',
                 style: GoogleFonts.manrope(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 0.8,
-                    color: AppColors.textSecondary)),
-            const SizedBox(height: 6),
-            Container(
-              decoration: BoxDecoration(
-                color: _isKodeTerkirim ? const Color(0xFFE5E7EB) : Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.divider),
-              ),
-              child: TextField(
-                controller: _emailController,
-                enabled: !_isKodeTerkirim,
-                keyboardType: TextInputType.emailAddress,
-                style: GoogleFonts.manrope(fontSize: 15, color: AppColors.textPrimary),
-                decoration: InputDecoration(
-                  hintText: 'alamat@email.com',
-                  hintStyle: GoogleFonts.manrope(color: AppColors.textMuted, fontSize: 14),
-                  prefixIcon: const Icon(Icons.email_outlined, color: AppColors.textMuted, size: 20),
-                  border: InputBorder.none,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  fontSize: 15,
+                  color: AppColors.textSecondary,
+                  height: 1.5,
                 ),
               ),
-            ),
-            const SizedBox(height: 24),
+              const SizedBox(height: 32),
 
-            if (!_isKodeTerkirim)
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _isLoading ? null : _kirimKodeReset,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    elevation: 0,
-                  ),
-                  child: _isLoading
-                      ? const SizedBox(
-                          width: 20, height: 20,
-                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                      : Text('KIRIM KODE RESET',
-                          style: GoogleFonts.manrope(fontWeight: FontWeight.w600, fontSize: 14)),
-                ),
-              ),
-
-            if (_isKodeTerkirim) ...[
-              // Form Kata Sandi Baru
-              Text('KATA SANDI BARU',
+              // Form Email
+              Text('ALAMAT EMAIL',
                   style: GoogleFonts.manrope(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
                       letterSpacing: 0.8,
-                      color: AppColors.textSecondary)),
-              const SizedBox(height: 6),
+                      color: AppColors.textPrimary)),
+              const SizedBox(height: 8),
               Container(
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: AppColors.surface,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.divider),
+                  border: Border.all(color: AppColors.divider.withValues(alpha: 0.5)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.textMuted.withValues(alpha: 0.05),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
                 ),
                 child: TextField(
-                  controller: _newPassController,
-                  obscureText: _obscureNewPass,
-                  style: GoogleFonts.manrope(fontSize: 15, color: AppColors.textPrimary),
+                  controller: _emailController,
+                  keyboardType: TextInputType.emailAddress,
+                  style: GoogleFonts.manrope(fontSize: 16, color: AppColors.textPrimary),
                   decoration: InputDecoration(
-                    hintText: '••••••••',
-                    hintStyle: GoogleFonts.manrope(color: AppColors.textMuted, fontSize: 14),
-                    prefixIcon: const Icon(Icons.lock_outline, color: AppColors.textMuted, size: 20),
-                    suffixIcon: GestureDetector(
-                      onTap: () => setState(() => _obscureNewPass = !_obscureNewPass),
-                      child: Icon(
-                        _obscureNewPass ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-                        color: AppColors.textMuted, size: 20,
-                      ),
-                    ),
+                    hintText: 'nama@email.com',
+                    hintStyle: GoogleFonts.manrope(color: AppColors.textMuted, fontSize: 15),
+                    prefixIcon: const Icon(Icons.email_outlined, color: AppColors.textSecondary, size: 22),
                     border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                   ),
                 ),
               ),
-              const SizedBox(height: 16),
-
-              Text('KONFIRMASI KATA SANDI BARU',
-                  style: GoogleFonts.manrope(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 0.8,
-                      color: AppColors.textSecondary)),
-              const SizedBox(height: 6),
-              Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.divider),
-                ),
-                child: TextField(
-                  controller: _confirmPassController,
-                  obscureText: _obscureConfirmPass,
-                  style: GoogleFonts.manrope(fontSize: 15, color: AppColors.textPrimary),
-                  decoration: InputDecoration(
-                    hintText: '••••••••',
-                    hintStyle: GoogleFonts.manrope(color: AppColors.textMuted, fontSize: 14),
-                    prefixIcon: const Icon(Icons.lock_outline, color: AppColors.textMuted, size: 20),
-                    suffixIcon: GestureDetector(
-                      onTap: () => setState(() => _obscureConfirmPass = !_obscureConfirmPass),
-                      child: Icon(
-                        _obscureConfirmPass ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-                        color: AppColors.textMuted, size: 20,
-                      ),
-                    ),
-                    border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 32),
 
               SizedBox(
                 width: double.infinity,
@@ -281,19 +154,74 @@ class _LupaKataSandiScreenState extends State<LupaKataSandiScreen> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    padding: const EdgeInsets.symmetric(vertical: 18),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     elevation: 0,
                   ),
                   child: _isLoading
                       ? const SizedBox(
-                          width: 20, height: 20,
-                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                      : Text('SIMPAN KATA SANDI BARU',
-                          style: GoogleFonts.manrope(fontWeight: FontWeight.w600, fontSize: 14)),
+                          width: 24, height: 24,
+                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
+                      : Text('KIRIM TAUTAN RESET',
+                          style: GoogleFonts.manrope(fontWeight: FontWeight.w700, fontSize: 15, letterSpacing: 0.5)),
                 ),
               ),
-            ]
+            ] else ...[
+              // Success State
+              Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: AppColors.primaryLight.withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+                ),
+                child: Column(
+                  children: [
+                    const Icon(Icons.mark_email_read_outlined, size: 48, color: AppColors.primary),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Tautan Berhasil Dikirim!',
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.manrope(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Text.rich(
+                      TextSpan(
+                        text: 'Silakan periksa kotak masuk (Inbox) atau Spam untuk email ',
+                        style: GoogleFonts.manrope(fontSize: 14, color: AppColors.textSecondary, height: 1.5),
+                        children: [
+                          TextSpan(
+                            text: _emailController.text,
+                            style: GoogleFonts.manrope(fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+                          ),
+                          const TextSpan(text: ' dan ikuti instruksi yang diberikan untuk memulihkan akun Anda.'),
+                        ],
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 32),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: AppColors.primary),
+                    foregroundColor: AppColors.primary,
+                    padding: const EdgeInsets.symmetric(vertical: 18),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: Text('KEMBALI KE HALAMAN MASUK',
+                      style: GoogleFonts.manrope(fontWeight: FontWeight.w700, fontSize: 15)),
+                ),
+              ),
+            ],
           ],
         ),
       ),

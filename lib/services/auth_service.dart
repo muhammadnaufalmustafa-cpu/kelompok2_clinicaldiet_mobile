@@ -560,12 +560,10 @@ static Future<Map<String, dynamic>> registerAhliGizi({
     }
   }
 
-static Future<Map<String, dynamic>> resetPassword({
+  static Future<Map<String, dynamic>> resetPassword({
     required String email,
-    required String newPassword,
   }) async {
     try {
-      // Kita abaikan parameter newPassword karena Firebase mengirim email reset
       await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
       return {
         'success': true,
