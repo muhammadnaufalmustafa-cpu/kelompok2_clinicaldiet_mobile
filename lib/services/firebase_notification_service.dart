@@ -11,10 +11,11 @@ class FirebaseNotificationService {
     required String message,
     required String type,
     String? relatedId,
+    String? notificationId, // <-- Tambahan ID khusus
   }) async {
     try {
       if (userId.isEmpty) return;
-      await _db.collection('notifications').add({
+      final data = {
         'userId': userId,
         'role': role,
         'title': title,
@@ -23,7 +24,18 @@ class FirebaseNotificationService {
         'isRead': false,
         'relatedId': relatedId ?? '',
         'createdAt': FieldValue.serverTimestamp(),
-      });
+      };
+
+      if (notificationId != null && notificationId.isNotEmpty) {
+        // Menggunakan set tanpa mengubah status read jika notif sudah ada
+        final docRef = _db.collection('notifications').doc(notificationId);
+        final docSnap = await docRef.get();
+        if (!docSnap.exists) {
+          await docRef.set(data);
+        }
+      } else {
+        await _db.collection('notifications').add(data);
+      }
     } catch (e) {
       /* debug log removed */
     }
@@ -56,11 +68,25 @@ class FirebaseNotificationService {
           .where('role', isEqualTo: role)
           .where('isRead', isEqualTo: false)
           .get();
-      final batch = _db.batch();
-      for (var doc in unreadDocs.docs) {
-        batch.update(doc.reference, {'isRead': true});
+
+      final chunks = <List<QueryDocumentSnapshot>>[];
+      var i = 0;
+      while (i < unreadDocs.docs.length) {
+        chunks.add(unreadDocs.docs.sublist(
+            i,
+            i + 500 > unreadDocs.docs.length
+                ? unreadDocs.docs.length
+                : i + 500));
+        i += 500;
       }
-      await batch.commit();
+
+      for (var chunk in chunks) {
+        final batch = _db.batch();
+        for (var doc in chunk) {
+          batch.update(doc.reference, {'isRead': true});
+        }
+        await batch.commit();
+      }
     } catch (e) {
       /* debug log removed */
     }
@@ -246,7 +272,8 @@ class FirebaseNotificationService {
       bool alreadyNotifiedToday = notifQuery.docs.any((doc) {
         final t = (doc['type'] as String?) ?? '';
         final createdAt = (doc['createdAt'] as Timestamp?)?.toDate();
-        return t == 'alert_log' && createdAt != null && createdAt.isAfter(startOfDay);
+        // Jika createdAt null, itu berarti notifikasi baru saja dibuat (pending local write)
+        return t == 'alert_log' && (createdAt == null || createdAt.isAfter(startOfDay));
       });
 
       // Notif untuk pasien (jam >= 18.00)
@@ -260,6 +287,7 @@ class FirebaseNotificationService {
               title: '🍽️ Pengingat Catatan Makan',
               message: 'Anda belum mengisi catatan makan hari ini. Yuk isi sekarang agar ahli gizi bisa memantau perkembangan Anda!',
               type: 'alert_log',
+              notificationId: 'alert_log_${patientId}_$todayStr',
             );
           }
         }
@@ -282,17 +310,17 @@ class FirebaseNotificationService {
               final t = (doc['type'] as String?) ?? '';
               final createdAt = (doc['createdAt'] as Timestamp?)?.toDate();
               return t == 'alert_log_2days' &&
-                  createdAt != null &&
-                  createdAt.isAfter(startOfDay);
+                  (createdAt == null || createdAt.isAfter(startOfDay));
             });
 
             if (!missedNotif) {
               await createNotification(
                 userId: patientId,
                 role: 'pasien',
-                title: 'Catatan Makan Terlewat',
-                message: 'Anda belum mengisi catatan makan selama 2 hari. Segera isi agar ahli gizi dapat memantau kondisi Anda dengan baik.',
+                title: '⚠️ Peringatan Penting',
+                message: 'Anda belum mengisi catatan makan selama 2 hari terakhir. Mohon segera diisi!',
                 type: 'alert_log_2days',
+                notificationId: 'alert_log_2days_${patientId}_$todayStr',
               );
             }
           }
@@ -342,17 +370,19 @@ class FirebaseNotificationService {
 
         final alreadySentToday = existingNotif.docs.any((doc) {
           final createdAt = (doc['createdAt'] as Timestamp?)?.toDate();
-          return createdAt != null && createdAt.isAfter(startOfDay);
+          return createdAt == null || createdAt.isAfter(startOfDay);
         });
 
         if (!alreadySentToday) {
+          final todayStr = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
           await createNotification(
             userId: ahliGiziId,
             role: 'ahli_gizi',
-            title: 'Pasien Tidak Mengisi Log',
-            message: 'Pasien $patientName (RM: $patientRm) tidak mengisi catatan makan selama ${missedDays.length} hari terakhir.',
+            title: '⚠️ Pasien Kosong Catatan',
+            message: 'Pasien $patientName ($patientRm) belum mengisi catatan makan selama ${missedDays.length} hari terakhir.',
             type: 'alert_patient_log',
             relatedId: patientRm,
+            notificationId: 'alert_patient_log_${ahliGiziId}_${patientRm}_$todayStr',
           );
         }
       }
