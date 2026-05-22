@@ -352,7 +352,6 @@ class FirebaseNotificationService {
       final userCreatedAt = createdAtTs?.toDate() ?? DateTime.now();
 
       final now = DateTime.now();
-      final startOfToday = DateTime(now.year, now.month, now.day);
       final registrationStartOfDay = DateTime(userCreatedAt.year, userCreatedAt.month, userCreatedAt.day);
 
       List<String> missedDays = [];
