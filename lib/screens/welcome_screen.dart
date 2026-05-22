@@ -206,9 +206,13 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                                 String label;
                                 if (!hasAhliGizi) {
                                   label = 'PILIH AHLI GIZI';
-                                } else if (!consentSigned) label = 'TANDA TANGAN CONSENT';
-                                else if (!hasDiet) label = 'PILIH JENIS DIET';
-                                else label = 'MASUK KE DASHBOARD';
+                                } else if (!consentSigned) {
+                                  label = 'TANDA TANGAN CONSENT';
+                                } else if (!hasDiet) {
+                                  label = 'PILIH JENIS DIET';
+                                } else {
+                                  label = 'MASUK KE DASHBOARD';
+                                }
                                 return Text(label,
                                     style: GoogleFonts.manrope(
                                       fontSize: 14,

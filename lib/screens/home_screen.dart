@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:fl_chart/fl_chart.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../theme/app_theme.dart';
 import 'catatan_screen.dart';
@@ -50,7 +49,6 @@ class _HomeScreenState extends State<HomeScreen> {
   List<Map<String, dynamic>> _nutrisiPerDiet = []; // per-diet nutrisi
   List<Map<String, dynamic>> _bbHistory = [];
   Map<String, dynamic>? _lastMealLog; // catatan makan terakhir
-  String _ahliGiziName = ''; // nama ahli gizi aktif
   Map<String, dynamic>? _selectedAhliGizi;
   bool _isLoading = true;
   final int _dietPageIndex = 0;
@@ -171,7 +169,6 @@ class _HomeScreenState extends State<HomeScreen> {
     List<Map<String, dynamic>> nutrisiPerDiet = [];
     List<Map<String, dynamic>> bbHistory = [];
     Map<String, dynamic>? lastMealLog;
-    String ahliGiziName = '';
     Map<String, dynamic>? selectedAhliGizi;
     List<Map<String, dynamic>> patientPrograms = [];
     String? selectedProgramId;
@@ -255,7 +252,6 @@ class _HomeScreenState extends State<HomeScreen> {
         _nutrisiPerDiet = nutrisiPerDiet;
         _bbHistory = bbHistory;
         _lastMealLog = lastMealLog;
-        _ahliGiziName = ahliGiziName;
         _selectedAhliGizi = selectedAhliGizi;
         _patientPrograms = patientPrograms;
         _selectedPatientProgramId = selectedProgramId;
@@ -320,8 +316,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   double get _kaloriTarget => (_targetNutrients['Energi (kkal)']?['target'] as num?)?.toDouble() ?? 0;
-  double get _kaloriAktual => (_targetNutrients['Energi (kkal)']?['aktual'] as num?)?.toDouble() ?? 0;
-  double get _kaloriPercent => _kaloriTarget > 0 ? (_kaloriAktual / _kaloriTarget).clamp(0.0, 1.0) : 0.0;
 
   // -- BB/TB dari histori terakhir --
   double get _bbTerakhir {
@@ -1709,102 +1703,6 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildDailyTargetChart() {
-    final targetNutrients = _targetNutrients;
-    final pT = (targetNutrients['Protein (g)']?['target'] as num?)?.toDouble() ?? 0;
-    final pA = (targetNutrients['Protein (g)']?['aktual'] as num?)?.toDouble() ?? 0;
-    final pPct = pT > 0 ? (pA / pT).clamp(0.0, 1.0) : 0.0;
-    
-    final lT = (targetNutrients['Lemak (g)']?['target'] as num?)?.toDouble() ?? 0;
-    final lA = (targetNutrients['Lemak (g)']?['aktual'] as num?)?.toDouble() ?? 0;
-    final lPct = lT > 0 ? (lA / lT).clamp(0.0, 1.0) : 0.0;
-    
-    final cT = (targetNutrients['Karbohidrat (g)']?['target'] as num?)?.toDouble() ?? 0;
-    final cA = (targetNutrients['Karbohidrat (g)']?['aktual'] as num?)?.toDouble() ?? 0;
-    final cPct = cT > 0 ? (cA / cT).clamp(0.0, 1.0) : 0.0;
-
-    return Container(
-      color: AppColors.surface,
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Grafik Target Harian',
-            style: GoogleFonts.manrope(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textPrimary,
-            ),
-          ),
-          const SizedBox(height: 16),
-          Container(
-            height: 200,
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: AppColors.background,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppColors.divider),
-            ),
-            child: BarChart(
-              BarChartData(
-                alignment: BarChartAlignment.spaceAround,
-                maxY: 1.2, // 120% max
-                barTouchData: BarTouchData(enabled: false),
-                titlesData: FlTitlesData(
-                  show: true,
-                  bottomTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      getTitlesWidget: (value, meta) {
-                        const style = TextStyle(
-                          color: AppColors.textSecondary,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 10,
-                        );
-                        String text;
-                        switch (value.toInt()) {
-                          case 0: text = 'Kalori'; break;
-                          case 1: text = 'Protein'; break;
-                          case 2: text = 'Lemak'; break;
-                          case 3: text = 'Karbo'; break;
-                          default: text = ''; break;
-                        }
-                        return Padding(
-                          padding: const EdgeInsets.only(top: 4),
-                          child: Text(text, style: style),
-                        );
-                      },
-                    ),
-                  ),
-                  leftTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      reservedSize: 30,
-                      getTitlesWidget: (value, meta) {
-                        return Text('${(value * 100).toInt()}%', style: const TextStyle(fontSize: 10, color: AppColors.textSecondary));
-                      },
-                    ),
-                  ),
-                  topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                  rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                ),
-                borderData: FlBorderData(show: false),
-                gridData: const FlGridData(show: true, drawVerticalLine: false),
-                barGroups: [
-                  BarChartGroupData(x: 0, barRods: [BarChartRodData(toY: _kaloriPercent, color: AppColors.primary, width: 16, borderRadius: BorderRadius.circular(4))]),
-                  BarChartGroupData(x: 1, barRods: [BarChartRodData(toY: pPct, color: AppColors.protein, width: 16, borderRadius: BorderRadius.circular(4))]),
-                  BarChartGroupData(x: 2, barRods: [BarChartRodData(toY: lPct, color: AppColors.fat, width: 16, borderRadius: BorderRadius.circular(4))]),
-                  BarChartGroupData(x: 3, barRods: [BarChartRodData(toY: cPct, color: AppColors.carb, width: 16, borderRadius: BorderRadius.circular(4))]),
-                ],
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }

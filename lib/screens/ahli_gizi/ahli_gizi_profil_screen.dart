@@ -42,7 +42,7 @@ class _AhliGiziProfilScreenState extends State<AhliGiziProfilScreen> {
             _isUploadingPhoto = false;
           });
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(error == null ? 'Foto profil berhasil diperbarui.' : error, style: GoogleFonts.manrope()),
+            content: Text(error ?? 'Foto profil berhasil diperbarui.', style: GoogleFonts.manrope()),
             backgroundColor: error == null ? AppColors.primary : Colors.red,
             duration: const Duration(seconds: 4),
           ));
@@ -68,7 +68,7 @@ class _AhliGiziProfilScreenState extends State<AhliGiziProfilScreen> {
     if (mounted) {
       setState(() => _isUploadingPhoto = false);
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(error == null ? 'Foto profil berhasil dihapus.' : error, style: GoogleFonts.manrope()),
+        content: Text(error ?? 'Foto profil berhasil dihapus.', style: GoogleFonts.manrope()),
         backgroundColor: error == null ? Colors.green : Colors.red,
       ));
     }
@@ -327,144 +327,6 @@ class _AhliGiziProfilScreenState extends State<AhliGiziProfilScreen> {
     );
   }
 
-  void _showManageDietDialog() {
-    final programNameCtrl = TextEditingController();
-    final programDescCtrl = TextEditingController();
-    final programPurposeCtrl = TextEditingController();
-    final programNotesCtrl = TextEditingController();
-    final leafletTitleCtrl = TextEditingController();
-    final leafletContentCtrl = TextEditingController();
-    final leafletUrlCtrl = TextEditingController();
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) {
-        return Container(
-          height: MediaQuery.of(ctx).size.height * 0.85,
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-          ),
-          padding: EdgeInsets.fromLTRB(24, 24, 24, MediaQuery.of(ctx).viewInsets.bottom + 24),
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text('Tambah Program & Leaflet', style: GoogleFonts.manrope(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
-                    IconButton(onPressed: () => Navigator.pop(ctx), icon: const Icon(Icons.close, size: 20)),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Text('Satu form untuk program diet dan edukasi leaflet.', style: GoogleFonts.manrope(fontSize: 12, color: AppColors.textSecondary)),
-                const SizedBox(height: 20),
-                
-                _buildSectionHeader('1. DATA PROGRAM TERAPI DIET'),
-                _buildTextField(programNameCtrl, 'Nama Program (Wajib)'),
-                _buildTextField(programDescCtrl, 'Deskripsi Program'),
-                _buildTextField(programPurposeCtrl, 'Tujuan Diet'),
-                _buildTextField(programNotesCtrl, 'Catatan (Opsional)'),
-                
-                const SizedBox(height: 16),
-                _buildSectionHeader('2. DATA EDUKASI LEAFLET'),
-                _buildTextField(leafletTitleCtrl, 'Judul Leaflet (Wajib)'),
-                _buildTextField(leafletContentCtrl, 'Isi Materi Leaflet (Wajib)'),
-                _buildTextField(leafletUrlCtrl, 'Link Google Drive Gambar/File (Opsional)'),
-                
-                const SizedBox(height: 24),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () async {
-                      if (programNameCtrl.text.isEmpty || leafletTitleCtrl.text.isEmpty || leafletContentCtrl.text.isEmpty) {
-                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                          content: Text('Nama program, judul leaflet, dan isi leaflet wajib diisi.'),
-                          backgroundColor: Colors.orange,
-                        ));
-                        return;
-                      }
-                      
-                      final success = await AuthService.addTherapyProgramAndLeaflet(
-                        programName: programNameCtrl.text,
-                        programDesc: programDescCtrl.text,
-                        programPurpose: programPurposeCtrl.text,
-                        programNotes: programNotesCtrl.text,
-                        leafletTitle: leafletTitleCtrl.text,
-                        leafletContent: leafletContentCtrl.text,
-                        leafletUrl: leafletUrlCtrl.text,
-                      );
-                      
-                      if (!ctx.mounted || !mounted) return;
-                      {
-                        Navigator.pop(ctx);
-                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                          content: Text(success ? 'Program terapi diet dan leaflet berhasil disimpan.' : 'Gagal menyimpan program terapi diet dan leaflet. Silakan coba lagi.'),
-                          backgroundColor: success ? Colors.green : Colors.red,
-                        ));
-                      }
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                    child: Text('Simpan Program & Leaflet', style: GoogleFonts.manrope(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.white)),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildSectionHeader(String title) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Text(title, style: GoogleFonts.manrope(fontSize: 11, fontWeight: FontWeight.w800, color: AppColors.primary, letterSpacing: 1)),
-    );
-  }
-
-  void _syncData() async {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => Center(
-        child: Container(
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const CircularProgressIndicator(color: AppColors.primary),
-              const SizedBox(height: 16),
-              Text('Sinkronisasi data...', style: GoogleFonts.manrope(fontWeight: FontWeight.w600)),
-            ],
-          ),
-        ),
-      ),
-    );
-
-    final error = await AuthService.forceUpdateAppData();
-    
-    if (mounted) {
-      Navigator.pop(context); // Close loading dialog
-      final success = error == null;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(success ? 'Sinkronisasi berhasil! 18 program diet telah diperbarui.' : 'Gagal: $error'),
-        backgroundColor: success ? Colors.green : Colors.red,
-        behavior: SnackBarBehavior.floating,
-        duration: Duration(seconds: success ? 3 : 10),
-      ));
-    }
-  }
-
   void _showLogoutConfirmation() {
     showDialog(
       context: context,
@@ -528,8 +390,12 @@ class _AhliGiziProfilScreenState extends State<AhliGiziProfilScreen> {
     
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: CustomScrollView(
-        slivers: [
+      body: RefreshIndicator(
+        onRefresh: _loadUser,
+        color: AppColors.primary,
+        child: CustomScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          slivers: [
           SliverAppBar(
             backgroundColor: Colors.white,
             elevation: 0,
@@ -718,6 +584,7 @@ class _AhliGiziProfilScreenState extends State<AhliGiziProfilScreen> {
           ),
         ],
       ),
+      ),
     );
   }
 
@@ -747,89 +614,202 @@ class _AhliGiziProfilScreenState extends State<AhliGiziProfilScreen> {
     }
 
     return Column(
-      children: reviews.take(10).map((r) {
-        final name = r['pasienName']?.toString() ?? 'Pasien';
-        final rm = r['pasienRm']?.toString() ?? '';
-        final rating = (r['rating'] as num?)?.toDouble() ?? 0.0;
-        final ulasan = r['ulasan']?.toString() ?? '';
-        final tanggalStr = r['tanggal']?.toString() ?? '';
-        String tanggalFormatted = '-';
-        try {
-          final dt = DateTime.parse(tanggalStr);
-          tanggalFormatted = '${dt.day}/${dt.month}/${dt.year}';
-        } catch (_) {}
+      children: [
+        ...reviews.take(3).map((r) {
+          final name = r['pasienName']?.toString() ?? 'Pasien';
+          final rm = r['pasienRm']?.toString() ?? '';
+          final rating = (r['rating'] as num?)?.toDouble() ?? 0.0;
+          final ulasan = r['ulasan']?.toString() ?? '';
+          final tanggalStr = r['tanggal']?.toString() ?? '';
+          String tanggalFormatted = '-';
+          try {
+            final dt = DateTime.parse(tanggalStr);
+            tanggalFormatted = '${dt.day}/${dt.month}/${dt.year}';
+          } catch (_) {}
 
-        return Container(
-          margin: const EdgeInsets.only(bottom: 10),
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: AppColors.divider),
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: AppColors.accent.withValues(alpha: 0.2),
-                  shape: BoxShape.circle,
-                ),
-                child: Center(
-                  child: Text(
-                    name.isNotEmpty ? name[0].toUpperCase() : 'P',
-                    style: GoogleFonts.manrope(
-                        fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.accent),
+          return Container(
+            margin: const EdgeInsets.only(bottom: 10),
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: AppColors.divider),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: AppColors.accent.withValues(alpha: 0.2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Center(
+                    child: Text(
+                      name.isNotEmpty ? name[0].toUpperCase() : 'P',
+                      style: GoogleFonts.manrope(
+                          fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.accent),
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            name + (rm.isNotEmpty ? ' (RM: $rm)' : ''),
-                            style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              name + (rm.isNotEmpty ? ' (RM: $rm)' : ''),
+                              style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
-                        ),
-                        Text(tanggalFormatted, style: GoogleFonts.manrope(fontSize: 11, color: AppColors.textMuted)),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: List.generate(5, (i) => Icon(
-                        i < rating.round() ? Icons.star : Icons.star_border,
-                        color: AppColors.accent,
-                        size: 16,
-                      )),
-                    ),
-                    if (ulasan.isNotEmpty) ...[
-                      const SizedBox(height: 6),
-                      Text(
-                        '"$ulasan"',
-                        style: GoogleFonts.manrope(fontSize: 13, color: AppColors.textSecondary, fontStyle: FontStyle.italic),
+                          Text(tanggalFormatted, style: GoogleFonts.manrope(fontSize: 11, color: AppColors.textMuted)),
+                        ],
                       ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: List.generate(5, (i) => Icon(
+                          i < rating.round() ? Icons.star : Icons.star_border,
+                          color: AppColors.accent,
+                          size: 16,
+                        )),
+                      ),
+                      if (ulasan.isNotEmpty) ...[
+                        const SizedBox(height: 6),
+                        Text(
+                          '"$ulasan"',
+                          style: GoogleFonts.manrope(fontSize: 13, color: AppColors.textSecondary, fontStyle: FontStyle.italic),
+                        ),
+                      ],
                     ],
+                  ),
+                ),
+              ],
+            ),
+          );
+        }),
+        if (reviews.length > 3)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: SizedBox(
+              width: double.infinity,
+              child: OutlinedButton(
+                onPressed: () => _showAllReviewsBottomSheet(reviews),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  side: BorderSide(color: AppColors.primary.withValues(alpha: 0.5)),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                child: Text('Lihat Semua ${reviews.length} Ulasan', style: GoogleFonts.manrope(fontWeight: FontWeight.w600, color: AppColors.primary)),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  void _showAllReviewsBottomSheet(List<Map<String, dynamic>> reviews) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return Container(
+          height: MediaQuery.of(ctx).size.height * 0.85,
+          decoration: const BoxDecoration(
+            color: AppColors.background,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: Column(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                  border: Border(bottom: BorderSide(color: AppColors.divider)),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('Semua Ulasan', style: GoogleFonts.manrope(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
+                    IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(ctx)),
                   ],
+                ),
+              ),
+              Expanded(
+                child: ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: reviews.length,
+                  itemBuilder: (ctx, index) {
+                    final r = reviews[index];
+                    final name = r['pasienName']?.toString() ?? 'Pasien';
+                    final rm = r['pasienRm']?.toString() ?? '';
+                    final rating = (r['rating'] as num?)?.toDouble() ?? 0.0;
+                    final ulasan = r['ulasan']?.toString() ?? '';
+                    final tanggalStr = r['tanggal']?.toString() ?? '';
+                    String tanggalFormatted = '-';
+                    try {
+                      final dt = DateTime.parse(tanggalStr);
+                      tanggalFormatted = '${dt.day}/${dt.month}/${dt.year}';
+                    } catch (_) {}
+
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 10),
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: AppColors.divider),
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(color: AppColors.accent.withValues(alpha: 0.2), shape: BoxShape.circle),
+                            child: Center(child: Text(name.isNotEmpty ? name[0].toUpperCase() : 'P', style: GoogleFonts.manrope(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.accent))),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Expanded(child: Text(name + (rm.isNotEmpty ? ' (RM: $rm)' : ''), style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textPrimary), maxLines: 1, overflow: TextOverflow.ellipsis)),
+                                    Text(tanggalFormatted, style: GoogleFonts.manrope(fontSize: 11, color: AppColors.textMuted)),
+                                  ],
+                                ),
+                                const SizedBox(height: 4),
+                                Row(children: List.generate(5, (i) => Icon(i < rating.round() ? Icons.star : Icons.star_border, color: AppColors.accent, size: 16))),
+                                if (ulasan.isNotEmpty) ...[
+                                  const SizedBox(height: 6),
+                                  Text('"$ulasan"', style: GoogleFonts.manrope(fontSize: 13, color: AppColors.textSecondary, fontStyle: FontStyle.italic)),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
                 ),
               ),
             ],
           ),
         );
-      }).toList(),
+      },
     );
   }
-
-  Widget _divider() => Divider(height: 1, thickness: 1, color: AppColors.divider, indent: 56);
 
   Widget _buildActionItem({required IconData icon, required String title, required VoidCallback onTap}) {
     return ListTile(

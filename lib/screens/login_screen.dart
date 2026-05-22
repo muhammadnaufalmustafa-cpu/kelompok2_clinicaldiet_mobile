@@ -55,11 +55,13 @@ class _LoginScreenState extends State<LoginScreen> {
       final role = result['role'] as String? ?? 'pasien';
       if (role == 'admin') {
         await NotificationService().cancelAllNotifications();
+        if (!mounted) return;
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (_) => const AdminMainScreen()),
         );
       } else if (role == 'ahli_gizi') {
         await NotificationService().cancelAllNotifications();
+        if (!mounted) return;
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (_) => const AhliGiziMainScreen()),
         );
@@ -121,7 +123,7 @@ class _LoginScreenState extends State<LoginScreen> {
               Image.asset(
                 'assets/images/logo.png',
                 height: 56,
-                errorBuilder: (_, _, _) => Row(
+                errorBuilder: (c, o, e) => Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     const Icon(

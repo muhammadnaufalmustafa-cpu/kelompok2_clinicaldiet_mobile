@@ -4,12 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 
 class AuthService {
   static const String _usersKey = 'registered_users';
   static const String _loggedInUserKey = 'logged_in_user';
-  static const String _ahliGiziKey = 'registered_ahli_gizi';
 
   // ------------------------------------------------------------------------------------ REGISTRASI PASIEN ------------------------------------------------------------------------------------
 
@@ -109,8 +107,9 @@ class AuthService {
       String msg = 'Terjadi kesalahan saat registrasi.';
       if (e.code == 'weak-password') {
         msg = 'Kata sandi minimal 6 karakter.';
-      } else if (e.code == 'email-already-in-use')
+      } else if (e.code == 'email-already-in-use') {
         msg = 'Email sudah terdaftar.';
+      }
       return {'success': false, 'message': msg};
     } catch (e) {
       return {'success': false, 'message': 'Error: $e'};
@@ -278,8 +277,9 @@ static Future<Map<String, dynamic>> registerAhliGizi({
       String msg = 'Terjadi kesalahan saat registrasi.';
       if (e.code == 'weak-password') {
         msg = 'Kata sandi minimal 6 karakter.';
-      } else if (e.code == 'email-already-in-use')
+      } else if (e.code == 'email-already-in-use') {
         msg = 'Email sudah terdaftar.';
+      }
       return {'success': false, 'message': msg};
     } catch (e) {
       return {'success': false, 'message': 'Error: $e'};
@@ -476,10 +476,11 @@ static Future<Map<String, dynamic>> registerAhliGizi({
           .where('role', isEqualTo: 'ahli_gizi');
       if (filter == 'pending') {
         query = query.where('status_akun', isEqualTo: 'pending');
-      } else if (filter == 'approved')
+      } else if (filter == 'approved') {
         query = query.where('status_akun', isEqualTo: 'approved');
-      else if (filter == 'rejected')
+      } else if (filter == 'rejected') {
         query = query.where('status_akun', isEqualTo: 'rejected');
+      }
       final snap = await query.get();
       return snap.docs.map((d) => d.data() as Map<String, dynamic>).toList();
     } catch (e) {

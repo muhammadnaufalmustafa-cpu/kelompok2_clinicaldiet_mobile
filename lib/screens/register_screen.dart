@@ -656,59 +656,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
-  Widget _buildNumberField({
-    required TextEditingController controller,
-    required String label,
-    required String hint,
-    required String suffixText,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label,
-            style: GoogleFonts.manrope(
-                fontSize: 13, color: AppColors.textPrimary)),
-        const SizedBox(height: 8),
-        Container(
-          decoration: BoxDecoration(
-            color: const Color(0xFFF3F4F6),
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(
-                color: AppColors.divider.withValues(alpha: 0.5)),
-          ),
-          child: TextField(
-            controller: controller,
-            keyboardType: TextInputType.number,
-            textAlign: TextAlign.center,
-            style: GoogleFonts.manrope(
-                fontSize: 15, color: AppColors.textPrimary),
-            decoration: InputDecoration(
-              hintText: hint,
-              hintStyle: GoogleFonts.manrope(
-                  color: AppColors.textMuted, fontSize: 14),
-              suffixIcon: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.only(right: 16),
-                    child: Text(suffixText,
-                        style: GoogleFonts.manrope(
-                            color: AppColors.textPrimary,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 14)),
-                  ),
-                ],
-              ),
-              border: InputBorder.none,
-              contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 8, vertical: 14),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
   Widget _buildDropdownField({
     required String label,
     required String hint,

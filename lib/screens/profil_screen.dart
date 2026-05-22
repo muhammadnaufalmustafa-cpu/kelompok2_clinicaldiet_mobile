@@ -8,7 +8,6 @@ import '../theme/app_theme.dart';
 import '../services/auth_service.dart';
 import '../services/firebase_notification_service.dart';
 import 'login_screen.dart';
-import 'pilih_jenis_diet_screen.dart';
 import 'pilih_ahli_gizi_screen.dart';
 import 'review_program_screen.dart';
 import '../widgets/notification_bell.dart';
@@ -82,7 +81,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
             _isUploadingPhoto = false;
           });
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(error == null ? 'Foto profil berhasil diperbarui.' : error, style: GoogleFonts.manrope()),
+            content: Text(error ?? 'Foto profil berhasil diperbarui.', style: GoogleFonts.manrope()),
             backgroundColor: error == null ? AppColors.primary : Colors.red,
             duration: const Duration(seconds: 4),
           ));
@@ -108,7 +107,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
     if (mounted) {
       setState(() => _isUploadingPhoto = false);
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(error == null ? 'Foto profil berhasil dihapus.' : error, style: GoogleFonts.manrope()),
+        content: Text(error ?? 'Foto profil berhasil dihapus.', style: GoogleFonts.manrope()),
         backgroundColor: error == null ? Colors.green : Colors.red,
       ));
     }

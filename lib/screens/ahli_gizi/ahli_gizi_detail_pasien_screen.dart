@@ -32,7 +32,6 @@ class _AhliGiziDetailPasienScreenState
   bool _isSaving = false;
   List<Map<String, dynamic>> _riwayatMakan = [];
   String? _selectedDietType; // Jenis diet yang sedang diedit
-  bool _isRegeneratingConsent = false;
   int _missedDays = 0; // jumlah hari tidak isi log
 
   // ---Â---Â--- Patient Therapy Programs ---Â---Â---
@@ -213,7 +212,6 @@ class _AhliGiziDetailPasienScreenState
     final rm = widget.pasien['rm'] as String? ?? '';
     final name = widget.pasien['name'] as String? ?? '-';
     if (rm.isEmpty) return;
-    setState(() => _isRegeneratingConsent = true);
     try {
       final snapshot = await FirebaseFirestore.instance
           .collection('users')
@@ -341,7 +339,6 @@ class _AhliGiziDetailPasienScreenState
       ));
       }
     } finally {
-      if (mounted) setState(() => _isRegeneratingConsent = false);
     }
   }
 
@@ -1048,11 +1045,9 @@ class _AhliGiziDetailPasienScreenState
             style: GoogleFonts.manrope(
                 fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
       ),
-      body: SingleChildScrollView(
+      body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+        children: [
             // ---Â---Â--- Info Pasien ---Â---Â---
             _buildPasienCard(),
             const SizedBox(height: 12),
@@ -1217,7 +1212,6 @@ class _AhliGiziDetailPasienScreenState
             const SizedBox(height: 8),
             _buildStatusButtons(),
           ],
-        ),
       ),
       bottomNavigationBar: _buildBottomBar(),
     );
@@ -1821,6 +1815,37 @@ class _AhliGiziDetailPasienScreenState
     );
   }
 
+  Future<void> _copyLastTarget() async {
+    try {
+      final previousPrograms = _patientPrograms.where((p) => p['patientProgramId'] != _selectedPatientProgram?['patientProgramId'] && !p['patientProgramId'].toString().startsWith('initial')).toList();
+      
+      if (previousPrograms.isEmpty) {
+         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Belum ada riwayat program sebelumnya.', style: GoogleFonts.manrope())));
+         return;
+      }
+      
+      final lastProgId = previousPrograms.first['patientProgramId'];
+      final nutritionTarget = await AuthService.getNutritionTarget(lastProgId);
+      
+      if (nutritionTarget == null || (nutritionTarget['nutrientItems'] as Map?)?.isEmpty == true) {
+         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Program sebelumnya tidak memiliki target nutrisi.', style: GoogleFonts.manrope())));
+         return;
+      }
+      
+      final nutrientItems = (nutritionTarget['nutrientItems'] as Map).cast<String, dynamic>();
+      setState(() {
+        nutrientItems.forEach((key, val) {
+          if (!_targetCtrls.containsKey(key)) _targetCtrls[key] = TextEditingController();
+          _targetCtrls[key]!.text = _fmtNum(val['target']);
+          _checkedNutrients[key] = true;
+        });
+      });
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Berhasil menyalin target nutrisi terakhir.', style: GoogleFonts.manrope()), backgroundColor: AppColors.primary));
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal menyalin: $e', style: GoogleFonts.manrope()), backgroundColor: Colors.red));
+    }
+  }
+
   Widget _buildNutrisiSection() {
     final List<String> allNutrients = _nutrientCategories.values.expand((e) => e).toList();
     final List<String> availableNutrients = allNutrients.where((n) => !(_checkedNutrients[n] ?? false)).toList();
@@ -1828,8 +1853,17 @@ class _AhliGiziDetailPasienScreenState
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildSectionLabel('Target Gizi Harian'),
-        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(child: _buildSectionLabel('Target Gizi Harian')),
+            TextButton.icon(
+              onPressed: _copyLastTarget,
+              icon: const Icon(Icons.copy, size: 16, color: AppColors.primary),
+              label: Text('Salin Terakhir', style: GoogleFonts.manrope(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primary)),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
         
         // Dropdown to add nutrient
         Container(
@@ -2760,11 +2794,37 @@ class _AhliGiziDetailPasienScreenState
               style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)), elevation: 0),
               onPressed: selectedStartDate == null ? null : () async {
                 Navigator.pop(ctx);
-                final patientProgramId = program['patientProgramId'] as String? ?? '';
+                String patientProgramId = program['patientProgramId'] as String? ?? '';
+                
+                // [BARU] Auto-create virtual program if it doesn't exist yet
                 if (patientProgramId.startsWith('initial_onboarding')) {
-                   // Cannot edit virtual program period
-                   ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Silakan simpan data terlebih dahulu sebelum mengatur periode.')));
-                   return;
+                  final currentUser = await AuthService.getLoggedInUser();
+                  final createdBy = currentUser?['uid'] ?? 'unknown_ag';
+                  final rm = widget.pasien['rm'] ?? '';
+                  final patientId = widget.pasien['uid'] ?? '';
+                  final effectiveDiet = widget.pasien['diet_type'] ?? 'Normal';
+                  
+                  final newProg = await AuthService.addPatientTherapyProgram(
+                    patientId: patientId,
+                    patientRm: rm,
+                    therapyProgramName: effectiveDiet,
+                    therapyProgramId: '',
+                    createdBy: createdBy,
+                  );
+                  
+                  if (newProg['patientProgramId'] != null) {
+                    patientProgramId = newProg['patientProgramId'];
+                    if (mounted) {
+                      setState(() {
+                        _selectedPatientProgram = newProg;
+                        _patientPrograms = _patientPrograms.where((p) => !p['patientProgramId'].toString().startsWith('initial')).toList();
+                        _patientPrograms.insert(0, newProg);
+                      });
+                    }
+                  } else {
+                     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal membuat program. Coba lagi.', style: GoogleFonts.manrope())));
+                     return;
+                  }
                 }
                 
                 final success = await AuthService.updatePatientProgramPeriod(
