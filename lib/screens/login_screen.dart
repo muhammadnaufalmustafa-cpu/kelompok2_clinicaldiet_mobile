@@ -9,6 +9,7 @@ import 'ahli_gizi/register_ahli_gizi_screen.dart';
 import 'lupa_kata_sandi_screen.dart';
 import 'admin/admin_main_screen.dart';
 import 'admin/pending_approval_screen.dart';
+import '../services/notification_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -53,10 +54,12 @@ class _LoginScreenState extends State<LoginScreen> {
     if (result['success'] == true) {
       final role = result['role'] as String? ?? 'pasien';
       if (role == 'admin') {
+        await NotificationService().cancelAllNotifications();
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (_) => const AdminMainScreen()),
         );
       } else if (role == 'ahli_gizi') {
+        await NotificationService().cancelAllNotifications();
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (_) => const AhliGiziMainScreen()),
         );

@@ -82,12 +82,21 @@ class _SplashScreenState extends State<SplashScreen> {
       if (!hasDiet) return const PilihJenisDietScreen(isFromProfil: false);
 
       if (status == 'aktif' || status == null) {
-        await NotificationService().scheduleMealNotifications();
+        // Cek apakah user sudah diberikan target gizi oleh ahli gizi
+        final targetNutrients = user?['target_nutrients'];
+        final hasTarget = targetNutrients is Map && targetNutrients.isNotEmpty;
+
+        if (hasTarget) {
+          await NotificationService().scheduleMealNotifications();
+        } else {
+          await NotificationService().cancelAllNotifications();
+        }
       } else {
         await NotificationService().cancelAllNotifications();
       }
       return const MainScreen();
     } else if (role == 'ahli_gizi') {
+      await NotificationService().cancelAllNotifications();
       return const AhliGiziMainScreen();
     }
 

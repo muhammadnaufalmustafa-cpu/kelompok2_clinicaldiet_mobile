@@ -2005,11 +2005,24 @@ static Future<Map<String, dynamic>> registerAhliGizi({
           .collection('leaflets')
           .where('programId', isEqualTo: programId)
           .get();
-      final batch = FirebaseFirestore.instance.batch();
-      for (final doc in leaflets.docs) {
-        batch.delete(doc.reference);
+      final chunks = <List<QueryDocumentSnapshot>>[];
+      var i = 0;
+      while (i < leaflets.docs.length) {
+        chunks.add(leaflets.docs.sublist(
+            i,
+            i + 500 > leaflets.docs.length
+                ? leaflets.docs.length
+                : i + 500));
+        i += 500;
       }
-      await batch.commit();
+      
+      for (var chunk in chunks) {
+        final batch = FirebaseFirestore.instance.batch();
+        for (final doc in chunk) {
+          batch.delete(doc.reference);
+        }
+        await batch.commit();
+      }
       return true;
     } catch (_) {
       return false;

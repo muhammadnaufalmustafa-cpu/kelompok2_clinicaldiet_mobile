@@ -244,8 +244,13 @@ class FirebaseNotificationService {
       final userDoc = await _db.collection('users').doc(patientId).get();
       if (!userDoc.exists) return;
       
-      final createdAtTs = userDoc.data()?['createdAt'] as Timestamp?;
-      final userCreatedAt = createdAtTs?.toDate() ?? DateTime(2000);
+      final userData = userDoc.data();
+      final targetNutrients = userData?['target_nutrients'] as Map<String, dynamic>?;
+      // Jika belum ada target gizi dari ahli gizi, jangan kirim alert kosong log
+      if (targetNutrients == null || targetNutrients.isEmpty) return;
+
+      final createdAtTs = userData?['createdAt'] as Timestamp?;
+      final userCreatedAt = createdAtTs?.toDate() ?? DateTime.now(); // Gunakan waktu sekarang jika tidak ada, agar tidak langsung trigger
 
       final now = DateTime.now();
       final startOfDay = DateTime(now.year, now.month, now.day);
@@ -331,9 +336,6 @@ class FirebaseNotificationService {
     }
   }
 
-  // ════════════════════════════════════════════════════════════════════════
-  // ── ALERT 8: Ahli Gizi cek apakah pasien tidak isi log (buka detail) ──
-  // ════════════════════════════════════════════════════════════════════════
   static Future<Map<String, dynamic>> checkPatientMissedLogs({
     required String patientRm,
     required String patientId,
@@ -343,11 +345,27 @@ class FirebaseNotificationService {
     int daysToCheck = 3,
   }) async {
     try {
+      final userDoc = await _db.collection('users').doc(patientId).get();
+      if (!userDoc.exists) return {'missedDays': 0, 'hasMissed': false};
+
+      final createdAtTs = userDoc.data()?['createdAt'] as Timestamp?;
+      final userCreatedAt = createdAtTs?.toDate() ?? DateTime.now();
+
       final now = DateTime.now();
+      final startOfToday = DateTime(now.year, now.month, now.day);
+      final registrationStartOfDay = DateTime(userCreatedAt.year, userCreatedAt.month, userCreatedAt.day);
+
       List<String> missedDays = [];
 
       for (int i = 1; i <= daysToCheck; i++) {
         final d = now.subtract(Duration(days: i));
+        final dateToCheckStartOfDay = DateTime(d.year, d.month, d.day);
+
+        // Jangan hitung sebagai missed jika hari tersebut adalah sebelum user mendaftar
+        if (dateToCheckStartOfDay.isBefore(registrationStartOfDay)) {
+          continue;
+        }
+
         final dateStr = '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
         final logs = await _db
             .collection('meal_logs')
