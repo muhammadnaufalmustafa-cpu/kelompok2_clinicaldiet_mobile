@@ -112,6 +112,7 @@ class _AhliGiziDetailPasienScreenState
     super.initState();
     _status = widget.pasien['status'] ?? 'aktif';
     _targetCtrl.text = widget.pasien['target_diet'] ?? '';
+    _diagnosisCtrl.text = widget.pasien['diagnosis'] ?? '';
     _loadInitialData();
     _checkMissedLogs();
   }
@@ -2218,26 +2219,29 @@ class _AhliGiziDetailPasienScreenState
             return Align(
               alignment: Alignment.topLeft,
               child: Material(
-                elevation: 4.0,
+                elevation: 6.0,
+                color: Colors.white,
                 borderRadius: BorderRadius.circular(10),
                 child: Container(
                   width: MediaQuery.of(context).size.width - 64,
-                  constraints: const BoxConstraints(maxHeight: 200),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
+                  constraints: const BoxConstraints(maxHeight: 250),
                   child: ListView.builder(
                     padding: EdgeInsets.zero,
                     shrinkWrap: true,
                     itemCount: options.length,
                     itemBuilder: (BuildContext context, int index) {
                       final String option = options.elementAt(index);
-                      return ListTile(
-                        title: Text(option, style: GoogleFonts.manrope(fontSize: 13)),
+                      return InkWell(
                         onTap: () {
                           onSelected(option);
                         },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                          decoration: const BoxDecoration(
+                            border: Border(bottom: BorderSide(color: AppColors.background)),
+                          ),
+                          child: Text(option, style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+                        ),
                       );
                     },
                   ),
