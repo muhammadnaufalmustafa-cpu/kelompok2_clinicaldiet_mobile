@@ -119,10 +119,10 @@ class TampilLeafletOnboardingScreen extends StatelessWidget {
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: AppColors.primary),
+                        border: Border.all(color: AppColors.secondary),
                         boxShadow: [
                           BoxShadow(
-                            color: AppColors.primary.withValues(alpha: 0.08),
+                            color: AppColors.secondary.withValues(alpha: 0.08),
                             blurRadius: 8,
                             offset: const Offset(0, 3),
                           ),
@@ -133,10 +133,10 @@ class TampilLeafletOnboardingScreen extends StatelessWidget {
                           Container(
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
-                              color: AppColors.primaryLight,
+                              color: AppColors.secondary.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(10),
                             ),
-                            child: const Icon(Icons.picture_as_pdf_outlined, color: AppColors.primary, size: 20),
+                            child: const Icon(Icons.picture_as_pdf_outlined, color: AppColors.secondary, size: 20),
                           ),
                           const SizedBox(width: 12),
                           Expanded(
@@ -145,11 +145,11 @@ class TampilLeafletOnboardingScreen extends StatelessWidget {
                               style: GoogleFonts.manrope(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w600,
-                                color: AppColors.primaryDark,
+                                color: AppColors.secondary,
                               ),
                             ),
                           ),
-                          const Icon(Icons.open_in_new, color: AppColors.primary, size: 18),
+                          const Icon(Icons.open_in_new, color: AppColors.secondary, size: 18),
                         ],
                       ),
                     ),
@@ -176,7 +176,7 @@ class TampilLeafletOnboardingScreen extends StatelessWidget {
                     }
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
+                    backgroundColor: AppColors.secondary,
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                     elevation: 0,

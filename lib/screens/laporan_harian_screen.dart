@@ -25,6 +25,7 @@ class _LaporanHarianScreenState extends State<LaporanHarianScreen> {
   DateTime _selectedDate = DateTime.now();
   Map<String, dynamic>? _nutritionData;
   bool _isLoading = true;
+  Map<String, dynamic>? _catatanEvaluasiTerakhir; // Point 4: catatan evaluasi terakhir
 
   @override
   void initState() {
@@ -45,9 +46,13 @@ class _LaporanHarianScreenState extends State<LaporanHarianScreen> {
       data = await AuthService.getNutrisiPasienPerDiet(widget.rmPasien, widget.dietType);
     }
 
+    // Point 4: Load catatan evaluasi terakhir
+    final evalTerakhir = await AuthService.getCatatanEvaluasiTerakhir(widget.rmPasien);
+
     if (mounted) {
       setState(() {
         _nutritionData = data;
+        _catatanEvaluasiTerakhir = evalTerakhir;
         _isLoading = false;
       });
     }
@@ -212,6 +217,11 @@ class _LaporanHarianScreenState extends State<LaporanHarianScreen> {
             _buildChartSection(targets),
             const SizedBox(height: 20),
             _buildSummaryTable(targets),
+            // Point 4: Tampilkan catatan evaluasi terakhir dari ahli gizi
+            if (_catatanEvaluasiTerakhir != null) ...[
+              const SizedBox(height: 20),
+              _buildCatatanEvaluasiCard(),
+            ],
             const SizedBox(height: 30),
           ],
         ),
@@ -230,7 +240,7 @@ class _LaporanHarianScreenState extends State<LaporanHarianScreen> {
       child: Row(
         children: [
           const CircleAvatar(
-            backgroundColor: AppColors.primary,
+            backgroundColor: AppColors.secondary,
             child: Icon(Icons.person_outline, color: Colors.white),
           ),
           const SizedBox(width: 12),
@@ -566,6 +576,76 @@ class _LaporanHarianScreenState extends State<LaporanHarianScreen> {
           ),
         ),
         if (!isLast) const Divider(height: 1, indent: 16, endIndent: 16),
+      ],
+    );
+  }
+
+  // Point 4: Card catatan evaluasi terakhir dari ahli gizi
+  Widget _buildCatatanEvaluasiCard() {
+    final eval = _catatanEvaluasiTerakhir!;
+    final catatan = eval['catatan'] as String? ?? '';
+    final agName = eval['agName'] as String? ?? 'Ahli Gizi';
+    final dateStr = eval['createdAtStr'] as String? ?? '';
+    String fmtDate = '';
+    if (dateStr.isNotEmpty) {
+      try {
+        final dt = DateTime.parse(dateStr).toLocal();
+        fmtDate = '${dt.day.toString().padLeft(2,'0')}/${dt.month.toString().padLeft(2,'0')}/${dt.year}';
+      } catch (_) { fmtDate = dateStr; }
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Catatan Evaluasi dari Ahli Gizi',
+            style: GoogleFonts.manrope(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
+        const SizedBox(height: 12),
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppColors.secondary.withValues(alpha: 0.3)),
+            boxShadow: [
+              BoxShadow(color: AppColors.secondary.withValues(alpha: 0.08), blurRadius: 8, offset: const Offset(0, 2)),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppColors.secondary.withValues(alpha: 0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.rate_review_outlined, color: AppColors.secondary, size: 16),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(agName,
+                            style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.secondary)),
+                        if (fmtDate.isNotEmpty)
+                          Text(fmtDate,
+                              style: GoogleFonts.manrope(fontSize: 11, color: AppColors.textMuted)),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              const Divider(height: 1),
+              const SizedBox(height: 12),
+              Text(catatan,
+                  style: GoogleFonts.manrope(fontSize: 13, color: AppColors.textPrimary, height: 1.5)),
+            ],
+          ),
+        ),
       ],
     );
   }

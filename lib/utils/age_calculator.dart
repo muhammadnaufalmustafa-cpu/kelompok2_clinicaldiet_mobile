@@ -21,7 +21,7 @@ class AgeCalculator {
 
       if (months < 0 || (months == 0 && days < 0)) {
         years--;
-        months += (months < 0 ? 12 : 11);
+        months += 12;
       }
       
       if (days < 0) {

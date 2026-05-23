@@ -221,7 +221,7 @@ class _PilihJenisDietScreenState extends State<PilihJenisDietScreen> {
               child: ElevatedButton(
                 onPressed: _isLoading ? null : _saveDiets,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
+                  backgroundColor: AppColors.secondary,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                   elevation: 0,

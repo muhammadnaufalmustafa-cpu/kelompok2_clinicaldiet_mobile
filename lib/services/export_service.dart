@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:excel/excel.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:open_filex/open_filex.dart';
 import 'package:share_plus/share_plus.dart';
 import '../utils/age_calculator.dart';
 import '../services/notification_service.dart';
@@ -53,6 +54,7 @@ class ExportService {
         'Nama Ahli Gizi',
         'Rating Pasien',
         'Evaluasi Akhir Ahli Gizi',
+        'Catatan Evaluasi Terakhir',
       ];
 
       for (int i = 0; i < headers.length; i++) {
@@ -108,6 +110,10 @@ class ExportService {
             ? '-'
             : (outcomeProgram.isNotEmpty ? '[$outcomeProgram] $evaluasiAkhir' : evaluasiAkhir);
 
+        // Point 7: Catatan evaluasi terakhir (yang paling update)
+        final catEval = p['catatan_evaluasi_terakhir'] as Map<String, dynamic>?;
+        final catatanEvaluasiStr = catEval != null ? (catEval['catatan']?.toString() ?? '-') : '-';
+
         final rowData = [
           (i + 1).toString(),                        // No
           rm,                                         // No RM
@@ -124,6 +130,7 @@ class ExportService {
           ahliGizi['name']?.toString() ?? '-',       // Nama Ahli Gizi
           ratingStr,                                  // Rating Pasien
           keteranganFinal,                            // Evaluasi Akhir
+          catatanEvaluasiStr,                         // Catatan Evaluasi Terakhir
         ];
 
         for (int c = 0; c < rowData.length; c++) {
@@ -136,41 +143,42 @@ class ExportService {
       final fileBytes = excel.encode();
       if (fileBytes == null) return false;
 
-      final fileName = 'Laporan_Pasien_${ahliGizi['name']?.toString().replaceAll(" ", "_")}_$monthYearStr.xlsx';
+      final timestamp = '${DateTime.now().hour}${DateTime.now().minute}${DateTime.now().second}';
+      final fileName = 'Laporan_Pasien_${ahliGizi['name']?.toString().replaceAll(" ", "_")}_${monthYearStr}_$timestamp.xlsx';
 
       if (kIsWeb) {
         await Share.shareXFiles(
           [XFile.fromData(Uint8List.fromList(fileBytes), name: fileName, mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')],
           text: 'Laporan Pasien Bulanan',
         );
-      } else {
-        final directory = await getTemporaryDirectory();
-        final filePath = '${directory.path}/$fileName';
-        final file = File(filePath);
-        await file.writeAsBytes(fileBytes);
-
+        File? finalFile;
         if (Platform.isAndroid) {
           try {
             final downloadDir = Directory('/storage/emulated/0/Download');
             if (await downloadDir.exists()) {
-              final downloadFile = File('${downloadDir.path}/$fileName');
-              await downloadFile.writeAsBytes(fileBytes);
+              finalFile = File('${downloadDir.path}/$fileName');
+              await finalFile.writeAsBytes(fileBytes);
             }
           } catch (_) {}
+        }
+
+        if (finalFile == null) {
+          final directory = await getTemporaryDirectory();
+          finalFile = File('${directory.path}/$fileName');
+          await finalFile.writeAsBytes(fileBytes);
         }
 
         try {
           await NotificationService().showInstantNotification(
             id: DateTime.now().millisecondsSinceEpoch ~/ 1000,
             title: 'Unduhan Berhasil 📊',
-            body: 'Laporan $fileName berhasil disimpan di folder Download.',
+            body: 'Laporan $fileName berhasil disimpan. Ketuk untuk membuka.',
+            payload: finalFile.path,
           );
         } catch (_) {}
-
-        await Share.shareXFiles(
-          [XFile(file.path)],
-          subject: 'Laporan Pasien',
-        );
+        
+        // Kita langsung buka filenya jika memungkinkan, atau biarkan user membuka dari notifikasi
+        OpenFilex.open(finalFile.path);
       }
 
       return true;

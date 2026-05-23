@@ -92,7 +92,8 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
       );
     } else {
-      _showError(result['message'] ?? 'Login gagal.');
+      final errMsg = result['message'] ?? 'Login gagal.';
+      _showError('$errMsg\nSilakan coba lagi.');
     }
   }
 
@@ -181,7 +182,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Masukkan kredensial Anda untuk melanjutkan',
+                      'Masukkan data login Anda untuk melanjutkan',
                       style: GoogleFonts.manrope(
                         fontSize: 12,
                         color: AppColors.textMuted,

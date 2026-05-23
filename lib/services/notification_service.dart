@@ -1,6 +1,7 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
+import 'package:open_filex/open_filex.dart';
 
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
@@ -29,7 +30,10 @@ class NotificationService {
     await flutterLocalNotificationsPlugin.initialize(
       initializationSettings,
       onDidReceiveNotificationResponse: (details) {
-        // Handle action when clicked
+        // Jika payload berisi path file, buka file secara langsung
+        if (details.payload != null && details.payload!.isNotEmpty) {
+          OpenFilex.open(details.payload!);
+        }
       },
     );
 
@@ -114,6 +118,7 @@ class NotificationService {
     required int id,
     required String title,
     required String body,
+    String? payload,
   }) async {
     const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
       'download_channel',
@@ -124,6 +129,6 @@ class NotificationService {
       icon: '@mipmap/ic_launcher',
     );
     const NotificationDetails details = NotificationDetails(android: androidDetails);
-    await flutterLocalNotificationsPlugin.show(id, title, body, details);
+    await flutterLocalNotificationsPlugin.show(id, title, body, details, payload: payload);
   }
 }

@@ -459,7 +459,7 @@ class _CatatanScreenState extends State<CatatanScreen> {
             ),
             ElevatedButton(
               onPressed: () { Navigator.pop(ctx); _saveMealLog(); },
-              style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.secondary, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
               child: Text('Tetap Kirim', style: GoogleFonts.manrope(color: Colors.white, fontWeight: FontWeight.w600)),
             ),
           ],
@@ -526,7 +526,7 @@ class _CatatanScreenState extends State<CatatanScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Catatan makan berhasil disimpan!', style: GoogleFonts.manrope(fontWeight: FontWeight.w600)),
-            backgroundColor: AppColors.primary,
+            backgroundColor: AppColors.secondary,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
@@ -946,7 +946,7 @@ class _CatatanScreenState extends State<CatatanScreen> {
               : const Icon(Icons.send_outlined, color: Colors.white),
           label: Text('KIRIM LAPORAN', style: GoogleFonts.manrope(fontSize: 15, fontWeight: FontWeight.w600, letterSpacing: 1.2, color: Colors.white)),
           style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.primary,
+            backgroundColor: AppColors.secondary,
             padding: const EdgeInsets.symmetric(vertical: 16),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
             elevation: 0,

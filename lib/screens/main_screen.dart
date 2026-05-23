@@ -90,12 +90,12 @@ class _MainScreenState extends State<MainScreen> {
             duration: const Duration(milliseconds: 200),
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
             decoration: BoxDecoration(
-              color: isActive ? AppColors.primaryLight : Colors.transparent,
+              color: isActive ? AppColors.secondary.withValues(alpha: 0.1) : Colors.transparent,
               borderRadius: BorderRadius.circular(20),
             ),
             child: Icon(
               isActive ? activeIcon : inactiveIcon,
-              color: isActive ? AppColors.primary : AppColors.textMuted,
+              color: isActive ? AppColors.secondary : AppColors.textMuted,
               size: 22,
             ),
           ),
@@ -105,7 +105,7 @@ class _MainScreenState extends State<MainScreen> {
             style: GoogleFonts.manrope(
               fontSize: 11,
               fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
-              color: isActive ? AppColors.primary : AppColors.textMuted,
+              color: isActive ? AppColors.secondary : AppColors.textMuted,
             ),
           ),
         ],

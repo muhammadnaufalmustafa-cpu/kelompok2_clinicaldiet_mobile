@@ -171,24 +171,24 @@ class _InformConsentScreenState extends State<InformConsentScreen> {
     .patient-info td { padding: 5px 8px; font-size: 14px; }
     .patient-info td:first-child { color: #64748b; width: 150px; }
     .patient-info td:last-child { font-weight: 600; color: #1e293b; }
-    .section-label { font-size: 12px; font-weight: 700; color: #3B7A57; letter-spacing: 1.2px; text-transform: uppercase; margin-bottom: 10px; }
+    .section-label { font-size: 12px; font-weight: 700; color: #3E6F95; letter-spacing: 1.2px; text-transform: uppercase; margin-bottom: 10px; }
     .consent-box { border: 1px solid #e2e8f0; border-radius: 10px; padding: 20px 24px; margin-bottom: 24px; background: #fafafa; }
     p { font-size: 14px; color: #475569; line-height: 1.7; margin-bottom: 10px; }
     .point-row { display: flex; gap: 10px; margin-bottom: 8px; }
-    .point-num { font-size: 14px; font-weight: 700; color: #3B7A57; min-width: 24px; }
+    .point-num { font-size: 14px; font-weight: 700; color: #3E6F95; min-width: 24px; }
     .point-text { font-size: 14px; color: #475569; line-height: 1.6; }
-    .agreement-box { background: #f0fdf4; border: 2px solid #3B7A57; border-radius: 10px; padding: 14px 18px; margin-bottom: 24px; display: flex; align-items: center; gap: 12px; }
-    .check-icon { width: 24px; height: 24px; background: #3B7A57; border-radius: 6px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .agreement-box { background: rgba(62, 111, 149, 0.1); border: 2px solid #3E6F95; border-radius: 10px; padding: 14px 18px; margin-bottom: 24px; display: flex; align-items: center; gap: 12px; }
+    .check-icon { width: 24px; height: 24px; background: #3E6F95; border-radius: 6px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
     .check-icon svg { width: 14px; height: 14px; }
-    .agreement-text { font-size: 14px; font-weight: 600; color: #166534; line-height: 1.5; }
+    .agreement-text { font-size: 14px; font-weight: 600; color: #3E6F95; line-height: 1.5; }
     .signature-section { margin-bottom: 32px; }
     .signature-label { font-size: 12px; font-weight: 700; color: #64748b; letter-spacing: 1.2px; text-transform: uppercase; margin-bottom: 10px; }
-    .signature-box { border: 1.5px solid #3B7A57; border-radius: 12px; padding: 12px; background: #fff; display: inline-block; }
+    .signature-box { border: 1.5px solid #3E6F95; border-radius: 12px; padding: 12px; background: #fff; display: inline-block; }
     .signature-box img { max-width: 100%; height: auto; max-height: 180px; display: block; border-radius: 6px; background: #fff; }
     .footer { border-top: 2px solid #e2e8f0; padding-top: 20px; margin-top: 32px; display: flex; justify-content: space-between; align-items: flex-end; }
     .signed-info { font-size: 12px; color: #64748b; }
     .signed-info strong { color: #1e293b; font-weight: 700; }
-    .verified-badge { background: #dcfce7; border: 1px solid #86efac; border-radius: 20px; padding: 6px 14px; font-size: 12px; font-weight: 700; color: #16a34a; }
+    .verified-badge { background: rgba(62, 111, 149, 0.1); border: 1px solid #3E6F95; border-radius: 20px; padding: 6px 14px; font-size: 12px; font-weight: 700; color: #3E6F95; }
     @media print {
       body { background: #fff; padding: 0; }
       .page { box-shadow: none; border-radius: 0; padding: 32px; }
@@ -304,7 +304,7 @@ class _InformConsentScreenState extends State<InformConsentScreen> {
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
                       gradient: const LinearGradient(
-                        colors: [AppColors.primary, AppColors.primaryDark],
+                        colors: [Color(0xFF294E6B), Color(0xFF4C87B5)],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
@@ -418,11 +418,11 @@ class _InformConsentScreenState extends State<InformConsentScreen> {
                     child: Container(
                       padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
-                        color: _hasRead ? AppColors.primaryLight : Colors.white,
+                        color: _hasRead ? AppColors.secondary.withValues(alpha: 0.1) : Colors.white,
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
                           color: _hasRead
-                              ? AppColors.primary
+                              ? AppColors.secondary
                               : AppColors.divider,
                           width: _hasRead ? 1.5 : 1,
                         ),
@@ -435,12 +435,12 @@ class _InformConsentScreenState extends State<InformConsentScreen> {
                             height: 22,
                             decoration: BoxDecoration(
                               color: _hasRead
-                                  ? AppColors.primary
+                                  ? AppColors.secondary
                                   : Colors.transparent,
                               borderRadius: BorderRadius.circular(6),
                               border: Border.all(
                                 color: _hasRead
-                                    ? AppColors.primary
+                                    ? AppColors.secondary
                                     : AppColors.textMuted,
                                 width: 2,
                               ),
@@ -461,7 +461,7 @@ class _InformConsentScreenState extends State<InformConsentScreen> {
                                 fontSize: 13,
                                 fontWeight: FontWeight.w500,
                                 color: _hasRead
-                                    ? AppColors.primaryDark
+                                    ? AppColors.secondary
                                     : AppColors.textPrimary,
                               ),
                             ),
@@ -489,7 +489,7 @@ class _InformConsentScreenState extends State<InformConsentScreen> {
                       borderRadius: BorderRadius.circular(14),
                       border: Border.all(
                         color: _hasSigned
-                            ? AppColors.primary
+                            ? AppColors.secondary
                             : AppColors.divider,
                         width: _hasSigned ? 1.5 : 1,
                       ),
@@ -609,7 +609,7 @@ class _InformConsentScreenState extends State<InformConsentScreen> {
                   ),
                 ),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
+                  backgroundColor: AppColors.secondary,
                   disabledBackgroundColor: Colors.grey.shade400,
                   disabledForegroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 16),
@@ -653,7 +653,7 @@ class _InformConsentScreenState extends State<InformConsentScreen> {
               style: GoogleFonts.manrope(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
-                color: AppColors.primary,
+                color: AppColors.secondary,
               ),
             ),
           ),

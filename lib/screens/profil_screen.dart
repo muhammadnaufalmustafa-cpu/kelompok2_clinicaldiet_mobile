@@ -350,6 +350,14 @@ class _ProfilScreenState extends State<ProfilScreen> {
                           final targets = n['target_nutrients']
                                   as Map<String, dynamic>? ??
                               {};
+                          
+                          bool isCompleted = false;
+                          final matchingProgs = _patientPrograms
+                              .where((p) => p['therapyProgramName'] == dietName)
+                              .toList();
+                          if (matchingProgs.isNotEmpty && matchingProgs.first['status'] == 'completed') {
+                            isCompleted = true;
+                          }
                           return Container(
                             margin: const EdgeInsets.only(bottom: 16),
                             decoration: BoxDecoration(
@@ -369,11 +377,32 @@ class _ProfilScreenState extends State<ProfilScreen> {
                                     borderRadius: const BorderRadius.vertical(
                                         top: Radius.circular(16)),
                                   ),
-                                  child: Text(dietName,
-                                      style: GoogleFonts.manrope(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w700,
-                                          color: AppColors.primaryDark)),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(dietName,
+                                          style: GoogleFonts.manrope(
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w700,
+                                              color: AppColors.primaryDark)),
+                                      if (isCompleted)
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                          decoration: BoxDecoration(
+                                            color: Colors.red.shade100,
+                                            borderRadius: BorderRadius.circular(12),
+                                          ),
+                                          child: Text(
+                                            'Selesai',
+                                            style: GoogleFonts.manrope(
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.w700,
+                                              color: Colors.red.shade700,
+                                            ),
+                                          ),
+                                        ),
+                                    ],
+                                  ),
                                 ),
                                 if (targets.isEmpty)
                                   Padding(
@@ -623,7 +652,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
                                 );
                               }
                               if (!context.mounted) return;
-                              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Data berhasil diperbarui!', style: GoogleFonts.manrope()), backgroundColor: AppColors.primary));
+                              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Data berhasil diperbarui!', style: GoogleFonts.manrope()), backgroundColor: AppColors.secondary));
                             } else {
                               if (!context.mounted) return;
                               ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal memperbarui data.', style: GoogleFonts.manrope()), backgroundColor: Colors.red));
@@ -633,7 +662,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
                           }
                         },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
+                    backgroundColor: AppColors.secondary,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12)),
@@ -752,12 +781,12 @@ class _ProfilScreenState extends State<ProfilScreen> {
                 ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                   content: Text('Terima kasih atas ulasan dan penilaian Anda!',
                       style: GoogleFonts.manrope()),
-                  backgroundColor: AppColors.primary,
+                  backgroundColor: AppColors.secondary,
                   behavior: SnackBarBehavior.floating,
                 ));
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
+                backgroundColor: AppColors.secondary,
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10)),
               ),
@@ -781,6 +810,8 @@ class _ProfilScreenState extends State<ProfilScreen> {
     final alamatCtrl = TextEditingController(text: _user?['alamat'] ?? '');
     final pendidikanCtrl = TextEditingController(text: _user?['pendidikan'] ?? '');
     final pekerjaanCtrl = TextEditingController(text: _user?['pekerjaan'] ?? '');
+    // Tanggal lahir — simpan sebagai String 'dd/MM/yyyy'
+    String selectedBirthdate = _user?['birthdate'] as String? ?? '';
     bool isLoading = false;
 
     showModalBottomSheet(
@@ -828,6 +859,75 @@ class _ProfilScreenState extends State<ProfilScreen> {
                         _buildDialogTextField(pendidikanCtrl, 'Pendidikan Terakhir'),
                         _buildDialogTextField(pekerjaanCtrl, 'Pekerjaan'),
                         _buildDialogTextField(alamatCtrl, 'Alamat', maxLines: 3),
+                        // --- Tanggal Lahir ---
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 16),
+                          child: InkWell(
+                            onTap: () async {
+                              // Parse existing birthdate
+                              DateTime initialDate = DateTime(1990, 1, 1);
+                              if (selectedBirthdate.isNotEmpty) {
+                                try {
+                                  if (selectedBirthdate.contains('/')) {
+                                    final parts = selectedBirthdate.split('/');
+                                    if (parts.length == 3) {
+                                      initialDate = DateTime(int.parse(parts[2]), int.parse(parts[1]), int.parse(parts[0]));
+                                    }
+                                  } else {
+                                    initialDate = DateTime.parse(selectedBirthdate);
+                                  }
+                                } catch (_) {}
+                              }
+                              final picked = await showDatePicker(
+                                context: context,
+                                initialDate: initialDate,
+                                firstDate: DateTime(1920),
+                                lastDate: DateTime.now(),
+                                helpText: 'Pilih Tanggal Lahir',
+                              );
+                              if (picked != null) {
+                                setStateDialog(() {
+                                  final d = picked.day.toString().padLeft(2, '0');
+                                  final m = picked.month.toString().padLeft(2, '0');
+                                  final y = picked.year.toString();
+                                  selectedBirthdate = '$d/$m/$y';
+                                });
+                              }
+                            },
+                            borderRadius: BorderRadius.circular(10),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                              decoration: BoxDecoration(
+                                border: Border.all(color: AppColors.divider),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.calendar_today_outlined, size: 18, color: AppColors.primary),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text('Tanggal Lahir',
+                                            style: GoogleFonts.manrope(fontSize: 12, color: AppColors.textSecondary)),
+                                        Text(
+                                          selectedBirthdate.isNotEmpty ? selectedBirthdate : 'Belum diisi',
+                                          style: GoogleFonts.manrope(
+                                            fontSize: 14,
+                                            color: selectedBirthdate.isNotEmpty ? AppColors.textPrimary : AppColors.textMuted,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const Icon(Icons.arrow_drop_down, color: AppColors.textSecondary),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -852,7 +952,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
                                       child: Text('Tidak', style: GoogleFonts.manrope(color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
                                     ),
                                     ElevatedButton(
-                                      style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
+                                      style: ElevatedButton.styleFrom(backgroundColor: AppColors.secondary, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
                                       onPressed: () => Navigator.of(context).pop(true),
                                       child: Text('Ya, Simpan', style: GoogleFonts.manrope(color: Colors.white, fontWeight: FontWeight.w600)),
                                     ),
@@ -878,6 +978,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
                                   alamat: alamatCtrl.text.trim(),
                                   pendidikan: pendidikanCtrl.text.trim(),
                                   pekerjaan: pekerjaanCtrl.text.trim(),
+                                  birthdate: selectedBirthdate,
                                 );
 
                                 if (success) {
@@ -885,7 +986,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
                                   Navigator.pop(context);
                                   await _loadUser();
                                   if (!context.mounted) return;
-                                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Profil berhasil diperbarui.', style: GoogleFonts.manrope()), backgroundColor: AppColors.primary));
+                                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Profil berhasil diperbarui.', style: GoogleFonts.manrope()), backgroundColor: AppColors.secondary));
                                 } else {
                                   if (!context.mounted) return;
                                   ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal memperbarui profil (Username mungkin sudah dipakai).', style: GoogleFonts.manrope()), backgroundColor: Colors.red));
@@ -896,7 +997,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
                             }
                           },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
+                      backgroundColor: AppColors.secondary,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12)),
@@ -990,7 +1091,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
                                 Navigator.pop(context);
                                 await _loadUser();
                                 if (!context.mounted) return;
-                                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Email/Password berhasil diperbarui.', style: GoogleFonts.manrope()), backgroundColor: AppColors.primary));
+                                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Email/Password berhasil diperbarui.', style: GoogleFonts.manrope()), backgroundColor: AppColors.secondary));
                               } else {
                                 if (!context.mounted) return;
                                 ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal memperbarui pengaturan keamanan.', style: GoogleFonts.manrope()), backgroundColor: Colors.red));
@@ -1001,7 +1102,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
                           }
                         },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
+                    backgroundColor: AppColors.secondary,
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12)),
@@ -1278,7 +1379,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    'ID Pasien: #CD-${_user?['rm'] ?? '...'}',
+                    'NO. RM : ${_user?['rm'] ?? '...'}',
                     style: GoogleFonts.manrope(
                       fontSize: 13,
                       color: AppColors.textSecondary,
@@ -1356,10 +1457,10 @@ class _ProfilScreenState extends State<ProfilScreen> {
                     width: double.infinity,
                     child: OutlinedButton.icon(
                       onPressed: _showUpdateBBTBDialog,
-                      icon: const Icon(Icons.monitor_weight_outlined, size: 18, color: AppColors.primary),
-                      label: Text('Catat BB & TB Hari Ini', style: GoogleFonts.manrope(fontWeight: FontWeight.w600, color: AppColors.primary)),
+                      icon: const Icon(Icons.monitor_weight_outlined, size: 18, color: AppColors.secondary),
+                      label: Text('Catat BB & TB Hari Ini', style: GoogleFonts.manrope(fontWeight: FontWeight.w600, color: AppColors.secondary)),
                       style: OutlinedButton.styleFrom(
-                        side: const BorderSide(color: AppColors.primary),
+                        side: const BorderSide(color: AppColors.secondary),
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                       ),

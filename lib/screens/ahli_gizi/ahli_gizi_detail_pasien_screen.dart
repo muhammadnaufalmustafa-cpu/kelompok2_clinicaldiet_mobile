@@ -7,9 +7,9 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:share_plus/share_plus.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
+import 'package:open_filex/open_filex.dart';
 import '../../theme/app_theme.dart';
 import '../../services/auth_service.dart';
 import '../../utils/age_calculator.dart';
@@ -46,6 +46,7 @@ class _AhliGiziDetailPasienScreenState
   // ---Â---Â--- Clinical Inputs ---Â---Â---
   final _diagnosisCtrl = TextEditingController();
   final _catatanNutrisiCtrl = TextEditingController();
+  final _evaluasiHarianCtrl = TextEditingController();
   final _customDietCtrl = TextEditingController();
 
   final List<String> _terapiDietList = [
@@ -203,6 +204,7 @@ class _AhliGiziDetailPasienScreenState
     _targetCtrl.dispose();
     _diagnosisCtrl.dispose();
     _catatanNutrisiCtrl.dispose();
+    _evaluasiHarianCtrl.dispose();
     for (var c in _targetCtrls.values) { c.dispose(); }
     for (var c in _aktualCtrls.values) { c.dispose(); }
     super.dispose();
@@ -296,10 +298,7 @@ class _AhliGiziDetailPasienScreenState
           );
         } catch (_) {}
 
-        await Share.shareXFiles(
-          [XFile(file.path)],
-          text: 'Informed Consent - $name',
-        );
+        // Removed Share.shareXFiles
       }
 
       if (mounted) {
@@ -307,6 +306,15 @@ class _AhliGiziDetailPasienScreenState
           content: Text('Dokumen consent (PDF) berhasil diunduh!', style: GoogleFonts.manrope(fontWeight: FontWeight.w600)),
           backgroundColor: AppColors.primary, behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          action: SnackBarAction(
+            label: 'Buka',
+            textColor: Colors.white,
+            onPressed: () {
+              if (Platform.isAndroid || Platform.isIOS) {
+                OpenFilex.open(file.path);
+              }
+            },
+          ),
         ));
 
         showDialog(
@@ -321,13 +329,26 @@ class _AhliGiziDetailPasienScreenState
               ],
             ),
             content: Text(
-              'Dokumen Informed Consent (PDF) berhasil disimpan ke folder Download di HP Anda dan siap dibagikan.',
+              'Dokumen Informed Consent (PDF) berhasil disimpan ke folder Download di HP Anda.',
               style: GoogleFonts.manrope(fontSize: 14),
             ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(ctx),
-                child: Text('Tutup', style: GoogleFonts.manrope(color: AppColors.primary, fontWeight: FontWeight.w600)),
+                child: Text('Tutup', style: GoogleFonts.manrope(color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  if (Platform.isAndroid || Platform.isIOS) {
+                    OpenFilex.open(file.path);
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+                child: Text('Buka File', style: GoogleFonts.manrope(fontWeight: FontWeight.w600, color: Colors.white)),
               ),
             ],
           ),
@@ -869,6 +890,15 @@ class _AhliGiziDetailPasienScreenState
   }
 
   Future<void> _saveAll() async {
+    if (_evaluasiHarianCtrl.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('Catatan Evaluasi Pasien (Harian) wajib diisi sebelum menyimpan data!', style: GoogleFonts.manrope()),
+        backgroundColor: Colors.red,
+        behavior: SnackBarBehavior.floating,
+      ));
+      return;
+    }
+
     setState(() => _isSaving = true);
     try {
       final rm = widget.pasien['rm'] as String? ?? '';
@@ -973,6 +1003,16 @@ class _AhliGiziDetailPasienScreenState
         }
       }
 
+      // 2c. Simpan catatan evaluasi harian
+      if (_evaluasiHarianCtrl.text.isNotEmpty) {
+        final currentAg = (await AuthService.getLoggedInUser())?['name'] ?? 'Ahli Gizi';
+        await AuthService.saveCatatanEvaluasi(
+          rmPasien: rm,
+          catatan: _evaluasiHarianCtrl.text,
+          agName: currentAg,
+        );
+      }
+
       // 3. Simpan target diet (text summary legacy)
       await AuthService.saveTargetDietPasien(
         rm: rm,
@@ -1026,7 +1066,7 @@ class _AhliGiziDetailPasienScreenState
       case 'dropout':
         return AppColors.red;
       default:
-        return AppColors.primary;
+        return AppColors.secondary;
     }
   }
 
@@ -1188,6 +1228,43 @@ class _AhliGiziDetailPasienScreenState
               ),
             ),
             const SizedBox(height: 12),
+            const SizedBox(height: 16),
+            _buildSectionLabel('Catatan Evaluasi Pasien (Harian)'),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.divider),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Berikan catatan evaluasi terbaru mengenai perkembangan pasien ini. Catatan ini akan tersinkronisasi dengan dashboard pasien dan akan muncul pada Laporan Bulanan.',
+                    style: GoogleFonts.manrope(fontSize: 12, color: AppColors.textSecondary),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _evaluasiHarianCtrl,
+                    maxLines: 4,
+                    style: GoogleFonts.manrope(fontSize: 13, color: AppColors.textPrimary),
+                    decoration: InputDecoration(
+                      hintText: 'Ketik catatan evaluasi perkembangan pasien...',
+                      hintStyle: GoogleFonts.manrope(fontSize: 13, color: AppColors.textMuted),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: AppColors.divider)),
+                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: AppColors.divider)),
+                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: AppColors.primary)),
+                      filled: true,
+                      fillColor: AppColors.background,
+                      contentPadding: const EdgeInsets.all(12),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
@@ -1264,7 +1341,7 @@ class _AhliGiziDetailPasienScreenState
                 const SizedBox(height: 4),
                 Row(
                   children: [
-                    _buildChip(_dietLabel, AppColors.primary),
+                    _buildChip(_dietLabel, AppColors.secondary),
                     const SizedBox(width: 6),
                     _buildChip(_status.toUpperCase(), _statusColor),
                   ],
@@ -1457,10 +1534,10 @@ class _AhliGiziDetailPasienScreenState
               Expanded(
                 child: OutlinedButton.icon(
                   onPressed: () => _showConsentDialog(base64Sig, filePath, signedDateStr),
-                  icon: const Icon(Icons.visibility_outlined, size: 16, color: AppColors.primary),
-                  label: Text('Lihat', style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.primary)),
+                  icon: const Icon(Icons.visibility_outlined, size: 16, color: AppColors.secondary),
+                  label: Text('Lihat', style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.secondary)),
                   style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: AppColors.primary),
+                    side: const BorderSide(color: AppColors.secondary),
                     padding: const EdgeInsets.symmetric(vertical: 10),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   ),
@@ -1473,7 +1550,7 @@ class _AhliGiziDetailPasienScreenState
                   icon: const Icon(Icons.download_outlined, size: 16, color: Colors.white),
                   label: Text('Download', style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.white)),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
+                    backgroundColor: AppColors.secondary,
                     padding: const EdgeInsets.symmetric(vertical: 10),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                     elevation: 0,
@@ -1754,7 +1831,7 @@ class _AhliGiziDetailPasienScreenState
                         icon: const Icon(Icons.download_outlined, size: 16, color: Colors.white),
                         label: Text('Download Dokumen', style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.white)),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
+                          backgroundColor: AppColors.secondary,
                           padding: const EdgeInsets.symmetric(vertical: 12),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                           elevation: 0,
@@ -1828,6 +1905,7 @@ class _AhliGiziDetailPasienScreenState
       final lastProgId = previousPrograms.first['patientProgramId'];
       final nutritionTarget = await AuthService.getNutritionTarget(lastProgId);
       
+      if (!mounted) return;
       if (nutritionTarget == null || (nutritionTarget['nutrientItems'] as Map?)?.isEmpty == true) {
          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Program sebelumnya tidak memiliki target nutrisi.', style: GoogleFonts.manrope())));
          return;
@@ -1843,6 +1921,7 @@ class _AhliGiziDetailPasienScreenState
       });
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Berhasil menyalin target nutrisi terakhir.', style: GoogleFonts.manrope()), backgroundColor: AppColors.primary));
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal menyalin: $e', style: GoogleFonts.manrope()), backgroundColor: Colors.red));
     }
   }
@@ -1856,7 +1935,33 @@ class _AhliGiziDetailPasienScreenState
       children: [
         Row(
           children: [
-            Expanded(child: _buildSectionLabel('Target Gizi Harian')),
+            Expanded(
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Flexible(child: _buildSectionLabel('Target Gizi Harian')),
+                  if (_selectedPatientProgram?['status'] == 'completed') ...[
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.red.shade100,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        'Selesai',
+                        style: GoogleFonts.manrope(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.red.shade700,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
             TextButton.icon(
               onPressed: _copyLastTarget,
               icon: const Icon(Icons.copy, size: 16, color: AppColors.primary),
@@ -2303,7 +2408,7 @@ class _AhliGiziDetailPasienScreenState
           children: [
             Expanded(
                 child:
-                    _buildStatusButton('Aktif', 'aktif', AppColors.primary)),
+                    _buildStatusButton('Aktif', 'aktif', AppColors.secondary)),
             const SizedBox(width: 8),
             Expanded(
                 child: _buildStatusButton(
@@ -2354,7 +2459,7 @@ class _AhliGiziDetailPasienScreenState
                 color: Colors.white),
           ),
           style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.primary,
+            backgroundColor: AppColors.secondary,
             padding: const EdgeInsets.symmetric(vertical: 16),
             shape:
                 RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
@@ -2472,8 +2577,8 @@ class _AhliGiziDetailPasienScreenState
             Expanded(child: _buildSectionLabel('Program Terapi Diet Pasien')),
             TextButton.icon(
               onPressed: _showAddProgramDialog,
-              icon: const Icon(Icons.add_circle_outline, size: 18, color: AppColors.primary),
-              label: Text('Tambah', style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.primary)),
+              icon: const Icon(Icons.add_circle_outline, size: 18, color: AppColors.secondary),
+              label: Text('Tambah', style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.secondary)),
             ),
           ],
         ),
@@ -2516,7 +2621,7 @@ class _AhliGiziDetailPasienScreenState
                     Color statusColor;
                     String statusLabel;
                     switch (status) {
-                      case 'active': statusColor = AppColors.primary; statusLabel = 'Aktif'; break;
+                      case 'active': statusColor = AppColors.secondary; statusLabel = 'Aktif'; break;
                       case 'completed': statusColor = AppColors.secondary; statusLabel = 'Selesai'; break;
                       default: statusColor = AppColors.textSecondary; statusLabel = 'Nonaktif';
                     }
@@ -2527,10 +2632,10 @@ class _AhliGiziDetailPasienScreenState
                         margin: const EdgeInsets.only(right: 10),
                         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                         decoration: BoxDecoration(
-                          color: isSelected ? AppColors.primary : Colors.white,
+                          color: isSelected ? AppColors.secondary : Colors.white,
                           borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: isSelected ? AppColors.primary : AppColors.divider, width: isSelected ? 2 : 1),
-                          boxShadow: isSelected ? [BoxShadow(color: AppColors.primary.withValues(alpha: 0.2), blurRadius: 8, offset: const Offset(0, 3))] : [],
+                          border: Border.all(color: isSelected ? AppColors.secondary : AppColors.divider, width: isSelected ? 2 : 1),
+                          boxShadow: isSelected ? [BoxShadow(color: AppColors.secondary.withValues(alpha: 0.2), blurRadius: 8, offset: const Offset(0, 3))] : [],
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -2590,7 +2695,7 @@ class _AhliGiziDetailPasienScreenState
     return Row(
       children: [
         for (final s in [
-          {'status': 'active', 'label': 'Aktif', 'color': AppColors.primary},
+          {'status': 'active', 'label': 'Aktif', 'color': AppColors.secondary},
           {'status': 'completed', 'label': 'Selesai', 'color': AppColors.secondary},
           {'status': 'inactive', 'label': 'Nonaktif', 'color': AppColors.textSecondary},
         ]) ...[
@@ -2623,7 +2728,7 @@ class _AhliGiziDetailPasienScreenState
             ),
           ),
           if (s != [
-            {'status': 'active', 'label': 'Aktif', 'color': AppColors.primary},
+            {'status': 'active', 'label': 'Aktif', 'color': AppColors.secondary},
             {'status': 'completed', 'label': 'Selesai', 'color': AppColors.secondary},
             {'status': 'inactive', 'label': 'Nonaktif', 'color': AppColors.textSecondary},
           ].last) const SizedBox(width: 8),
@@ -2639,6 +2744,17 @@ class _AhliGiziDetailPasienScreenState
     final startDateStr = prog['startDate'] as String? ?? '';
     final endDateStr = prog['endDate'] as String? ?? '';
     final notes = prog['notes'] as String? ?? '';
+    final isSelesai = prog['status'] == 'completed';
+
+    int? remainingDays;
+    if (endDateStr.isNotEmpty) {
+      try {
+        final endDt = DateTime.parse(endDateStr).toLocal();
+        final now = DateTime.now();
+        final diff = endDt.difference(DateTime(now.year, now.month, now.day)).inDays;
+        remainingDays = diff;
+      } catch (_) {}
+    }
 
     String fmtDate(String d) {
       if (d.isEmpty) return '-';
@@ -2650,47 +2766,167 @@ class _AhliGiziDetailPasienScreenState
       }
     }
 
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppColors.background,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.divider),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('Periode Program', style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
-              TextButton.icon(
-                onPressed: () => _showEditPeriodDialog(prog),
-                icon: const Icon(Icons.edit_calendar, size: 16, color: AppColors.primary),
-                label: Text('Atur Periode', style: GoogleFonts.manrope(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primary)),
-                style: TextButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
-                  minimumSize: Size.zero,
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (!isSelesai && remainingDays != null && remainingDays < 0)
+          Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.orange.withValues(alpha: 0.1),
+              border: Border.all(color: Colors.orange),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Periode program ini telah berakhir.',
+                        style: GoogleFonts.manrope(fontWeight: FontWeight.w700, fontSize: 13, color: Colors.orange[800]),
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-            ],
+                const SizedBox(height: 8),
+                Text(
+                  'Apakah Anda ingin melanjutkan program diet pasien ini atau menyelesaikannya secara permanen?',
+                  style: GoogleFonts.manrope(fontSize: 12, color: AppColors.textSecondary),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => _showEditPeriodDialog(prog),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppColors.primary,
+                          side: const BorderSide(color: AppColors.primary),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                        ),
+                        child: Text('Lanjutkan Program', style: GoogleFonts.manrope(fontSize: 12, fontWeight: FontWeight.w600)),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () async {
+                          final confirm = await showDialog<bool>(
+                            context: context,
+                            builder: (ctx) => AlertDialog(
+                              title: const Text('Selesaikan Program?'),
+                              content: const Text('Tindakan ini akan menandai program ini selesai dan menjadi arsip permanen. Anda yakin?'),
+                              actions: [
+                                TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
+                                ElevatedButton(
+                                  style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                                  onPressed: () => Navigator.pop(ctx, true), 
+                                  child: const Text('Selesaikan', style: TextStyle(color: Colors.white)),
+                                ),
+                              ],
+                            ),
+                          );
+                          if (confirm == true) {
+                            await AuthService.updatePatientProgramStatus(
+                              prog['patientProgramId'],
+                              'completed',
+                            );
+                            _loadInitialData();
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Program telah diselesaikan.')));
+                            }
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                        ),
+                        child: Text('Selesaikan', style: GoogleFonts.manrope(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white)),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
-          const SizedBox(height: 8),
-          Row(
+
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: AppColors.background,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppColors.divider),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(child: _buildInfoRow('Mulai', fmtDate(startDateStr))),
-              Expanded(child: _buildInfoRow('Selesai', fmtDate(endDateStr))),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Text('Periode Program', style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
+                      const SizedBox(width: 8),
+                      if (isSelesai)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(color: Colors.grey.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(6)),
+                          child: Text('Telah Selesai', style: GoogleFonts.manrope(fontSize: 10, fontWeight: FontWeight.w700, color: Colors.grey[700])),
+                        )
+                      else if (remainingDays != null)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: remainingDays < 0 ? Colors.red.withValues(alpha: 0.1) : remainingDays <= 3 ? Colors.orange.withValues(alpha: 0.15) : AppColors.primary.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            remainingDays < 0 ? 'Telah Berakhir' : remainingDays == 0 ? 'Hari Terakhir' : 'Sisa $remainingDays hari',
+                            style: GoogleFonts.manrope(
+                              fontSize: 10, fontWeight: FontWeight.w700,
+                              color: remainingDays < 0 ? Colors.red[700] : remainingDays <= 3 ? Colors.orange[800] : AppColors.primary,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  if (!isSelesai)
+                    TextButton.icon(
+                      onPressed: () => _showEditPeriodDialog(prog),
+                      icon: const Icon(Icons.edit_calendar, size: 16, color: AppColors.primary),
+                      label: Text('Atur Periode', style: GoogleFonts.manrope(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primary)),
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(child: _buildInfoRow('Mulai', fmtDate(startDateStr))),
+                  Expanded(child: _buildInfoRow('Selesai', fmtDate(endDateStr))),
+                ],
+              ),
+              if (notes.isNotEmpty) ...[
+                const SizedBox(height: 6),
+                Text('Catatan Periode:', style: GoogleFonts.manrope(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                const SizedBox(height: 2),
+                Text(notes, style: GoogleFonts.manrope(fontSize: 13, color: AppColors.textPrimary)),
+              ],
             ],
           ),
-          if (notes.isNotEmpty) ...[
-            const SizedBox(height: 6),
-            Text('Catatan Periode:', style: GoogleFonts.manrope(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-            const SizedBox(height: 2),
-            Text(notes, style: GoogleFonts.manrope(fontSize: 13, color: AppColors.textPrimary)),
-          ],
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -2826,7 +3062,9 @@ class _AhliGiziDetailPasienScreenState
                       });
                     }
                   } else {
-                     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal membuat program. Coba lagi.', style: GoogleFonts.manrope())));
+                     if (mounted) {
+                       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal membuat program. Coba lagi.', style: GoogleFonts.manrope())));
+                     }
                      return;
                   }
                 }
@@ -2926,7 +3164,7 @@ class _AhliGiziDetailPasienScreenState
           actions: [
             TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Batal', style: GoogleFonts.manrope(color: AppColors.textSecondary))),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)), elevation: 0),
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.secondary, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)), elevation: 0),
               onPressed: selectedTherapyId == null ? null : () async {
                 Navigator.pop(ctx);
                 setState(() => _isLoadingPrograms = true);
@@ -2991,5 +3229,3 @@ class _AhliGiziDetailPasienScreenState
     notesCtrl.dispose();
   }
 }
-
-

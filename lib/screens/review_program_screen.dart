@@ -175,7 +175,7 @@ class _ReviewProgramScreenState extends State<ReviewProgramScreen> {
               child: ElevatedButton(
                 onPressed: _isSaving ? null : _submitReview,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
+                  backgroundColor: AppColors.secondary,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                   elevation: 0,

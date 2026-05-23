@@ -60,6 +60,7 @@ class _HomeScreenState extends State<HomeScreen> {
   List<Map<String, dynamic>> _patientPrograms = [];
   String? _selectedPatientProgramId;
   Map<String, dynamic>? _selectedNutritionTarget; // nutritionTargets doc
+  Map<String, dynamic>? _catatanEvaluasiTerakhir; // Point 4: catatan evaluasi terakhir dari AG
 
   // -- Realtime stream --
   StreamSubscription<QuerySnapshot>? _programsStreamSub;
@@ -243,6 +244,12 @@ class _HomeScreenState extends State<HomeScreen> {
       // Check daily alert
       if (uid.isNotEmpty) {
         FirebaseNotificationService.checkAndCreateDailyAlert(rm, uid);
+      }
+
+      // Point 4: Load catatan evaluasi terakhir dari ahli gizi
+      final evalTerakhir = await AuthService.getCatatanEvaluasiTerakhir(rm);
+      if (mounted) {
+        setState(() => _catatanEvaluasiTerakhir = evalTerakhir);
       }
     }
     if (mounted) {
@@ -436,6 +443,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     _buildNoDataState(),
                   // -- Catatan Makan Terakhir --
                   if (_lastMealLog != null) _buildLastMealCard(),
+                  // Point 4: Card catatan evaluasi terakhir dari ahli gizi
+                  if (_catatanEvaluasiTerakhir != null) _buildCatatanEvaluasiHomeCard(),
                   _buildReminderCard(context),
                   const SizedBox(height: 16),
 
@@ -474,7 +483,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ).then((_) => _loadData()); // Refresh setelah kembali
                 },
-                backgroundColor: AppColors.primary,
+                backgroundColor: AppColors.secondary,
                 icon: const Icon(Icons.edit_note_rounded, color: Colors.white),
                 label: Text('Catat Makan', style: GoogleFonts.manrope(color: Colors.white, fontWeight: FontWeight.w600)),
               ),
@@ -529,7 +538,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 style: GoogleFonts.manrope(
                     color: AppColors.primary, fontWeight: FontWeight.w600)),
             style: OutlinedButton.styleFrom(
-              side: const BorderSide(color: AppColors.primary),
+              side: const BorderSide(color: AppColors.secondary),
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12)),
               padding:
@@ -715,9 +724,11 @@ class _HomeScreenState extends State<HomeScreen> {
         final endDt = DateTime.parse(endDateStr).toLocal();
         final now = DateTime.now();
         final diff = endDt.difference(DateTime(now.year, now.month, now.day)).inDays;
-        remainingDays = diff >= 0 ? diff : 0;
+        remainingDays = diff;
       } catch (_) {}
     }
+
+    final isSelesai = prog['status'] == 'completed';
 
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
@@ -740,19 +751,47 @@ class _HomeScreenState extends State<HomeScreen> {
                   Text('Periode Diet', style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
                 ],
               ),
-              if (remainingDays != null)
+              if (isSelesai)
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: remainingDays <= 3 ? Colors.orange.withValues(alpha: 0.15) : AppColors.primary.withValues(alpha: 0.1),
+                    color: Colors.grey.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
-                    remainingDays == 0 ? 'Hari Terakhir' : 'Sisa $remainingDays hari',
+                    'Telah Selesai',
                     style: GoogleFonts.manrope(
                       fontSize: 11,
                       fontWeight: FontWeight.w700,
-                      color: remainingDays <= 3 ? Colors.orange[800] : AppColors.primary,
+                      color: Colors.grey[700],
+                    ),
+                  ),
+                )
+              else if (remainingDays != null)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: remainingDays < 0 
+                        ? Colors.red.withValues(alpha: 0.1)
+                        : remainingDays <= 3 
+                            ? Colors.orange.withValues(alpha: 0.15) 
+                            : AppColors.primary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    remainingDays < 0 
+                        ? 'Telah Berakhir'
+                        : remainingDays == 0 
+                            ? 'Hari Terakhir' 
+                            : 'Sisa $remainingDays hari',
+                    style: GoogleFonts.manrope(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: remainingDays < 0
+                          ? Colors.red[700]
+                          : remainingDays <= 3 
+                              ? Colors.orange[800] 
+                              : AppColors.primary,
                     ),
                   ),
                 ),
@@ -1189,6 +1228,12 @@ class _HomeScreenState extends State<HomeScreen> {
     final mainPct = mainTarget > 0 ? (mainAktual / mainTarget).clamp(0.0, 1.0) : 0.0;
     final mainPctInt = (mainPct * 100).toInt();
 
+    Color getProgressColor(double percentage) {
+      if (percentage < 0.4) return Colors.redAccent;
+      if (percentage < 0.8) return Colors.amberAccent;
+      return AppColors.primary;
+    }
+
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
       padding: const EdgeInsets.all(20),
@@ -1342,11 +1387,11 @@ class _HomeScreenState extends State<HomeScreen> {
                 height: 10,
                 width: (MediaQuery.of(context).size.width - 72) * mainPct,
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: getProgressColor(mainPct),
                   borderRadius: BorderRadius.circular(5),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.white.withValues(alpha: 0.4),
+                      color: getProgressColor(mainPct).withValues(alpha: 0.4),
                       blurRadius: 4,
                     ),
                   ],
@@ -1403,7 +1448,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         value: pct,
                         minHeight: 4,
                         backgroundColor: Colors.white.withValues(alpha: 0.2),
-                        color: Colors.white,
+                        color: getProgressColor(pct),
                       ),
                     ),
                   ],
@@ -1642,7 +1687,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 Navigator.pop(ctx);
                 _savePinnedNutrients(tempSelected);
               },
-              style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white, elevation: 0),
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.secondary, foregroundColor: Colors.white, elevation: 0),
               child: Text('Simpan', style: GoogleFonts.manrope(fontWeight: FontWeight.w600)),
             ),
           ],
@@ -1746,6 +1791,77 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   // Kode lama dihapus
+
+  // Point 4: Card catatan evaluasi terakhir dari ahli gizi di dashboard pasien
+  Widget _buildCatatanEvaluasiHomeCard() {
+    final eval = _catatanEvaluasiTerakhir!;
+    final catatan = eval['catatan'] as String? ?? '';
+    final agName = eval['agName'] as String? ?? 'Ahli Gizi';
+    final dateStr = eval['createdAtStr'] as String? ?? '';
+    String fmtDate = '';
+    if (dateStr.isNotEmpty) {
+      try {
+        final dt = DateTime.parse(dateStr).toLocal();
+        fmtDate = '${dt.day.toString().padLeft(2,'0')}/${dt.month.toString().padLeft(2,'0')}/${dt.year}';
+      } catch (_) { fmtDate = dateStr; }
+    }
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [AppColors.secondary.withValues(alpha: 0.08), AppColors.secondary.withValues(alpha: 0.04)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.secondary.withValues(alpha: 0.25)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppColors.secondary.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.rate_review_outlined, color: AppColors.secondary, size: 18),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Catatan dari Ahli Gizi',
+                          style: GoogleFonts.manrope(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.secondary)),
+                      Text(agName,
+                          style: GoogleFonts.manrope(fontSize: 11, color: AppColors.textMuted)),
+                    ],
+                  ),
+                ),
+                if (fmtDate.isNotEmpty)
+                  Text(fmtDate, style: GoogleFonts.manrope(fontSize: 10, color: AppColors.textMuted)),
+              ],
+            ),
+            const SizedBox(height: 10),
+            const Divider(height: 1),
+            const SizedBox(height: 10),
+            Text(
+              catatan,
+              style: GoogleFonts.manrope(fontSize: 13, color: AppColors.textPrimary, height: 1.5),
+              maxLines: 4,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 // -----------------------------------------------------------------------------

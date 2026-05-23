@@ -42,12 +42,14 @@ class _WelcomeScreenState extends State<WelcomeScreen>
 
   void _autoRedirect() {
     final user = widget.user;
-    final hasAhliGizi = (user['ahli_gizi_nip'] as String? ?? '').isNotEmpty ||
+    final hasAhliGizi =
+        (user['ahli_gizi_nip'] as String? ?? '').isNotEmpty ||
         (user['selected_ahli_gizi_nip'] as String? ?? '').isNotEmpty;
     final consentSigned = AuthService.isConsentSigned(user);
     final dietTypes = user['diet_types'];
     final dietType = user['diet_type'] as String? ?? '';
-    final hasDiet = (dietTypes is List && dietTypes.isNotEmpty) || dietType.isNotEmpty;
+    final hasDiet =
+        (dietTypes is List && dietTypes.isNotEmpty) || dietType.isNotEmpty;
 
     if (hasAhliGizi && consentSigned && hasDiet) {
       // Semua step selesai — langsung ke dashboard
@@ -73,9 +75,8 @@ class _WelcomeScreenState extends State<WelcomeScreen>
 
   String get _rm => widget.user['rm'] as String? ?? '-';
 
-  String get _avatarInitial => _firstName.isNotEmpty
-      ? _firstName.substring(0, 1).toUpperCase()
-      : 'P';
+  String get _avatarInitial =>
+      _firstName.isNotEmpty ? _firstName.substring(0, 1).toUpperCase() : 'P';
 
   @override
   Widget build(BuildContext context) {
@@ -152,77 +153,110 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                           onPressed: () {
                             final user = widget.user;
                             final hasAhliGizi =
-                                (user['ahli_gizi_nip'] as String? ?? '').isNotEmpty ||
-                                (user['selected_ahli_gizi_nip'] as String? ?? '').isNotEmpty;
-                            final consentSigned = AuthService.isConsentSigned(user);
+                                (user['ahli_gizi_nip'] as String? ?? '')
+                                    .isNotEmpty ||
+                                (user['selected_ahli_gizi_nip'] as String? ??
+                                        '')
+                                    .isNotEmpty;
+                            final consentSigned = AuthService.isConsentSigned(
+                              user,
+                            );
                             final dietTypes = user['diet_types'];
                             final dietType = user['diet_type'] as String? ?? '';
-                            final hasDiet = (dietTypes is List && dietTypes.isNotEmpty) ||
+                            final hasDiet =
+                                (dietTypes is List && dietTypes.isNotEmpty) ||
                                 dietType.isNotEmpty;
 
                             if (!hasAhliGizi) {
                               Navigator.pushReplacement(
                                 context,
-                                MaterialPageRoute(builder: (_) => const PilihAhliGiziScreen()),
+                                MaterialPageRoute(
+                                  builder: (_) => const PilihAhliGiziScreen(),
+                                ),
                               );
                             } else if (!consentSigned) {
                               Navigator.pushReplacement(
                                 context,
-                                MaterialPageRoute(builder: (_) => const InformConsentScreen()),
+                                MaterialPageRoute(
+                                  builder: (_) => const InformConsentScreen(),
+                                ),
                               );
                             } else if (!hasDiet) {
                               Navigator.pushReplacement(
                                 context,
-                                MaterialPageRoute(builder: (_) => const PilihJenisDietScreen(isFromProfil: false)),
+                                MaterialPageRoute(
+                                  builder: (_) => const PilihJenisDietScreen(
+                                    isFromProfil: false,
+                                  ),
+                                ),
                               );
                             } else {
                               Navigator.pushAndRemoveUntil(
                                 context,
-                                MaterialPageRoute(builder: (_) => const MainScreen()),
+                                MaterialPageRoute(
+                                  builder: (_) => const MainScreen(),
+                                ),
                                 (route) => false,
                               );
                             }
                           },
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.primary,
+                            backgroundColor: AppColors.secondary,
                             padding: const EdgeInsets.symmetric(vertical: 18),
                             shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16)),
+                              borderRadius: BorderRadius.circular(16),
+                            ),
                             elevation: 0,
                           ),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Builder(builder: (ctx) {
-                                final user = widget.user;
-                                final hasAhliGizi =
-                                    (user['ahli_gizi_nip'] as String? ?? '').isNotEmpty ||
-                                    (user['selected_ahli_gizi_nip'] as String? ?? '').isNotEmpty;
-                                final consentSigned = AuthService.isConsentSigned(user);
-                                final dietTypes = user['diet_types'];
-                                final dietType = user['diet_type'] as String? ?? '';
-                                final hasDiet = (dietTypes is List && dietTypes.isNotEmpty) ||
-                                    dietType.isNotEmpty;
-                                String label;
-                                if (!hasAhliGizi) {
-                                  label = 'PILIH AHLI GIZI';
-                                } else if (!consentSigned) {
-                                  label = 'TANDA TANGAN CONSENT';
-                                } else if (!hasDiet) {
-                                  label = 'PILIH JENIS DIET';
-                                } else {
-                                  label = 'MASUK KE DASHBOARD';
-                                }
-                                return Text(label,
+                              Builder(
+                                builder: (ctx) {
+                                  final user = widget.user;
+                                  final hasAhliGizi =
+                                      (user['ahli_gizi_nip'] as String? ?? '')
+                                          .isNotEmpty ||
+                                      (user['selected_ahli_gizi_nip']
+                                                  as String? ??
+                                              '')
+                                          .isNotEmpty;
+                                  final consentSigned =
+                                      AuthService.isConsentSigned(user);
+                                  final dietTypes = user['diet_types'];
+                                  final dietType =
+                                      user['diet_type'] as String? ?? '';
+                                  final hasDiet =
+                                      (dietTypes is List &&
+                                          dietTypes.isNotEmpty) ||
+                                      dietType.isNotEmpty;
+                                  String label;
+                                  if (!hasAhliGizi) {
+                                    label = 'PILIH AHLI GIZI';
+                                  } else if (!consentSigned) {
+                                    label = 'TANDA TANGAN CONSENT';
+                                  } else if (!hasDiet) {
+                                    label = 'PILIH JENIS DIET';
+                                  } else {
+                                    label = 'MASUK KE DASHBOARD';
+                                  }
+                                  return Text(
+                                    label,
                                     style: GoogleFonts.manrope(
                                       fontSize: 14,
                                       fontWeight: FontWeight.w700,
                                       color: Colors.white,
                                       letterSpacing: 0.8,
-                                    ));
-                              }),
+                                    ),
+                                  );
+                                },
+                              ),
                               const SizedBox(width: 8),
-                              const Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 20),
+                              const Icon(
+                                Icons.arrow_forward_rounded,
+                                color: Colors.white,
+                                size: 20,
+                              ),
                             ],
                           ),
                         ),
@@ -255,7 +289,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
       width: double.infinity,
       decoration: const BoxDecoration(
         gradient: LinearGradient(
-          colors: [Color(0xFF059669), Color(0xFF34D399)],
+          colors: [Color(0xFF294E6B), Color(0xFF4C87B5)], // Darker steel blue to lighter steel blue
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -282,7 +316,9 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                 color: Colors.white.withValues(alpha: 0.25),
                 shape: BoxShape.circle,
                 border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.5), width: 2),
+                  color: Colors.white.withValues(alpha: 0.5),
+                  width: 2,
+                ),
               ),
               child: Center(
                 child: Text(
@@ -324,7 +360,9 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                   const SizedBox(height: 6),
                   Container(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 3),
+                      horizontal: 10,
+                      vertical: 3,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.white.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(20),
@@ -358,7 +396,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
             color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 12,
             offset: const Offset(0, 4),
-          )
+          ),
         ],
       ),
       child: Column(
@@ -366,8 +404,11 @@ class _WelcomeScreenState extends State<WelcomeScreen>
         children: [
           Row(
             children: [
-              const Icon(Icons.assignment_ind_outlined,
-                  color: AppColors.primary, size: 18),
+              const Icon(
+                Icons.assignment_ind_outlined,
+                color: AppColors.primary,
+                size: 18,
+              ),
               const SizedBox(width: 8),
               Text(
                 'Informasi Pasien',
@@ -382,8 +423,12 @@ class _WelcomeScreenState extends State<WelcomeScreen>
           const SizedBox(height: 12),
           const Divider(height: 1),
           const SizedBox(height: 12),
-          _infoRow(Icons.restaurant_menu_outlined, 'Program Diet', _dietType,
-              AppColors.primary),
+          _infoRow(
+            Icons.restaurant_menu_outlined,
+            'Program Diet',
+            _dietType,
+            AppColors.primary,
+          ),
           const SizedBox(height: 8),
           _infoRow(
             Icons.person_outline,
@@ -403,8 +448,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
     );
   }
 
-  Widget _infoRow(
-      IconData icon, String label, String value, Color iconColor) {
+  Widget _infoRow(IconData icon, String label, String value, Color iconColor) {
     return Row(
       children: [
         Container(
@@ -443,8 +487,13 @@ class _WelcomeScreenState extends State<WelcomeScreen>
     );
   }
 
-  Widget _buildFeatureRow(IconData icon, String title, String subtitle,
-      Color bg, Color iconColor) {
+  Widget _buildFeatureRow(
+    IconData icon,
+    String title,
+    String subtitle,
+    Color bg,
+    Color iconColor,
+  ) {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -487,8 +536,11 @@ class _WelcomeScreenState extends State<WelcomeScreen>
               ],
             ),
           ),
-          Icon(Icons.check_circle_outline,
-              color: iconColor.withValues(alpha: 0.6), size: 18),
+          Icon(
+            Icons.check_circle_outline,
+            color: iconColor.withValues(alpha: 0.6),
+            size: 18,
+          ),
         ],
       ),
     );

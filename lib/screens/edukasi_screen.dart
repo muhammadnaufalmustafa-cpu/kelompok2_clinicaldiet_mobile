@@ -48,62 +48,7 @@ class _EdukasiScreenState extends State<EdukasiScreen>
 
   // ─── Data Artikel ─────────────────────────────────────────────────────────
 
-  final List<Map<String, dynamic>> _articles = [
-    {
-      'title': 'Manfaat Sarapan Pagi untuk Diet',
-      'duration': '5 menit membaca',
-      'category': 'Nutrisi',
-      'color': const Color(0xFFD1FAE5),
-      'icon': Icons.breakfast_dining,
-      'content':
-          'Sarapan pagi memiliki peran penting dalam menjaga metabolisme tubuh. Dengan sarapan, tubuh mendapatkan energi awal untuk beraktivitas dan membantu mengontrol nafsu makan sepanjang hari. Penelitian menunjukkan bahwa orang yang rutin sarapan cenderung memiliki berat badan yang lebih stabil.\n\nTips sarapan sehat:\n• Pilih makanan dengan serat tinggi seperti oatmeal atau roti gandum\n• Tambahkan protein dari telur, yogurt, atau kacang-kacangan\n• Hindari sarapan tinggi gula seperti sereal manis atau roti putih\n• Minum air putih minimal 1 gelas sebelum sarapan',
-    },
-    {
-      'title': 'Olahraga Ringan Pendukung Diet',
-      'duration': '8 menit membaca',
-      'category': 'Olahraga',
-      'color': const Color(0xFFDBEAFE),
-      'icon': Icons.fitness_center,
-      'content':
-          'Olahraga ringan yang dilakukan secara rutin terbukti efektif mendukung program diet dan menjaga kesehatan tubuh secara keseluruhan. Tidak perlu gym mahal — aktivitas sederhana di rumah sudah sangat bermanfaat.\n\nOlahraga ringan yang bisa dilakukan:\n• Jalan kaki 30 menit sehari\n• Senam peregangan pagi atau sore\n• Naik turun tangga selama 10-15 menit\n• Yoga ringan atau pilates\n• Bersepeda santai\n\nLakukan minimal 3-5 kali per minggu untuk hasil terbaik.',
-    },
-    {
-      'title': 'Mengenal Diet Seimbang',
-      'duration': '10 menit membaca',
-      'category': 'Nutrisi',
-      'color': const Color(0xFFFEF3C7),
-      'icon': Icons.restaurant,
-      'content':
-          'Diet seimbang bukan berarti tidak boleh makan enak, melainkan mengatur komposisi makanan agar tubuh mendapat semua nutrisi yang dibutuhkan dalam proporsi yang tepat.\n\nKomponen diet seimbang:\n• Karbohidrat: 45-65% dari total kalori (nasi, kentang, gandum)\n• Protein: 10-35% dari total kalori (daging, ikan, telur, kacang)\n• Lemak sehat: 20-35% dari total kalori (alpukat, minyak zaitun, ikan)\n• Serat: minimal 25-30 gram per hari\n• Air: 8 gelas atau 2 liter per hari\n\nKonsultasikan dengan ahli gizi Anda untuk penyesuaian sesuai kondisi kesehatan.',
-    },
-    {
-      'title': 'Manajemen Stres dan Pola Makan',
-      'duration': '6 menit membaca',
-      'category': 'Psikologi',
-      'color': const Color(0xFFFCE7F3),
-      'icon': Icons.self_improvement,
-      'content':
-          'Stres dapat mempengaruhi pola makan secara signifikan. Banyak orang cenderung makan berlebihan (emotional eating) atau justru kehilangan nafsu makan saat stres. Keduanya berdampak negatif pada program diet.\n\nCara mengelola stres agar tidak ganggu diet:\n• Meditasi 10-15 menit setiap pagi\n• Journaling atau menulis catatan harian\n• Berbicara dengan orang yang dipercaya\n• Hindari makan sebagai pelarian emosi\n• Tidur cukup 7-8 jam per hari\n• Lakukan hobi yang menyenangkan',
-    },
-    {
-      'title': 'Pentingnya Tidur untuk Metabolisme',
-      'duration': '7 menit membaca',
-      'category': 'Psikologi',
-      'color': const Color(0xFFEDE9FE),
-      'icon': Icons.bedtime_outlined,
-      'content':
-          'Kualitas tidur yang baik adalah salah satu kunci sukses program diet yang sering diabaikan. Kurang tidur dapat meningkatkan hormon ghrelin (hormon lapar) dan menurunkan hormon leptin (hormon kenyang).\n\nDampak kurang tidur pada diet:\n• Nafsu makan meningkat, terutama untuk makanan tinggi karbohidrat\n• Metabolisme melambat\n• Energi berkurang sehingga malas berolahraga\n• Sulit fokus dan mudah stres\n\nTips tidur berkualitas:\n• Tidur dan bangun di jam yang sama setiap hari\n• Hindari layar HP/TV 1 jam sebelum tidur\n• Buat kamar tidur sejuk dan gelap',
-    },
-    {
-      'title': 'Air Putih dan Manfaatnya untuk Diet',
-      'duration': '5 menit membaca',
-      'category': 'Nutrisi',
-      'color': const Color(0xFFDBEAFE),
-      'icon': Icons.water_drop_outlined,
-      'content':
-          'Air putih adalah "suplemen" paling murah dan efektif untuk mendukung program diet. Minum cukup air membantu tubuh dalam berbagai proses metabolisme.\n\nManfaat air putih untuk diet:\n• Meningkatkan rasa kenyang (minum sebelum makan)\n• Membantu proses pencernaan dan penyerapan nutrisi\n• Melancarkan pengeluaran racun dari tubuh\n• Meningkatkan metabolisme basal 24-30%\n• Mencegah sembelit\n\nTarget: minimal 8 gelas (2 liter) per hari. Tambahkan lemon atau daun mint untuk variasi rasa tanpa kalori.',
-    },
-  ];
+  List<Map<String, dynamic>> _articles = [];
 
   // ─── Init & Dispose ───────────────────────────────────────────────────────
 
@@ -115,15 +60,17 @@ class _EdukasiScreenState extends State<EdukasiScreen>
         () => setState(() => _leafletSearch = _searchLeafletCtrl.text.toLowerCase()));
     _searchArtikelCtrl.addListener(
         () => setState(() => _artikelSearch = _searchArtikelCtrl.text.toLowerCase()));
-    _loadLeaflets();
+    _loadData();
   }
 
-  Future<void> _loadLeaflets() async {
+  Future<void> _loadData() async {
     await AuthService.initializeAppDataIfNeeded();
     final leaflets = await AuthService.getLeaflets();
+    final articles = await AuthService.getArticles();
     if (mounted) {
       setState(() {
         _leaflets = leaflets;
+        _articles = articles;
         _isLoading = false;
       });
     }
@@ -198,7 +145,7 @@ class _EdukasiScreenState extends State<EdukasiScreen>
                     icon: const Icon(Icons.download, size: 18, color: Colors.white),
                     label: Text('Download Lampiran', style: GoogleFonts.manrope(fontWeight: FontWeight.w600, color: Colors.white)),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
+                      backgroundColor: AppColors.secondary,
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
@@ -553,8 +500,17 @@ class _EdukasiScreenState extends State<EdukasiScreen>
   }
 
   Widget _buildFeaturedCard() {
+    if (_articles.isEmpty) return const SizedBox();
+    final article = _articles.first;
+    final title = article['title'] as String? ?? 'Artikel Unggulan';
+    final content = article['content'] as String? ?? '';
+    final preview = content.length > 80 ? '${content.substring(0, 80).replaceAll('\n', ' ')}...' : content;
+    final category = article['category'] as String? ?? 'Nutrisi';
+    final iconCode = article['iconCode'] as int? ?? Icons.water_drop.codePoint;
+    final colorVal = article['colorVal'] as int? ?? 0xFFDBEAFE;
+
     return GestureDetector(
-      onTap: () => _openArticleDetail(_articles[5]), // Air Putih & Diet
+      onTap: () => _openArticleDetail(article),
       child: Container(
         decoration: BoxDecoration(
           color: AppColors.surface,
@@ -575,7 +531,7 @@ class _EdukasiScreenState extends State<EdukasiScreen>
               height: 150,
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [Color(0xFF34D399), Color(0xFF059669)],
+                  colors: [Color(0xFF4C87B5), Color(0xFF294E6B)],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
@@ -584,11 +540,11 @@ class _EdukasiScreenState extends State<EdukasiScreen>
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.water_drop,
+                    Icon(IconData(iconCode, fontFamily: 'MaterialIcons'),
                         color: Colors.white, size: 48),
                     const SizedBox(height: 8),
                     Text(
-                      'Hidrasi & Kesehatan',
+                      category,
                       style: GoogleFonts.manrope(
                           color: Colors.white, fontWeight: FontWeight.w700),
                     ),
@@ -597,6 +553,7 @@ class _EdukasiScreenState extends State<EdukasiScreen>
                       style: GoogleFonts.manrope(
                           color: Colors.white70,
                           fontSize: 10,
+                          fontWeight: FontWeight.w800,
                           letterSpacing: 1.5),
                     ),
                   ],
@@ -609,7 +566,7 @@ class _EdukasiScreenState extends State<EdukasiScreen>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Air Putih dan Manfaatnya untuk Diet',
+                    title,
                     style: GoogleFonts.manrope(
                       fontSize: 16,
                       fontWeight: FontWeight.w700,
@@ -618,7 +575,7 @@ class _EdukasiScreenState extends State<EdukasiScreen>
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Minum cukup air adalah kunci sukses diet yang sering diabaikan. Simak manfaat lengkapnya...',
+                    preview,
                     style: GoogleFonts.manrope(
                         fontSize: 13, color: AppColors.textSecondary, height: 1.4),
                     maxLines: 2,
@@ -627,19 +584,13 @@ class _EdukasiScreenState extends State<EdukasiScreen>
                   const SizedBox(height: 10),
                   Row(
                     children: [
-                      const Icon(Icons.access_time,
-                          size: 14, color: AppColors.textMuted),
-                      const SizedBox(width: 4),
-                      Text('5 menit membaca',
-                          style: GoogleFonts.manrope(
-                              fontSize: 12, color: AppColors.textMuted)),
                       const Spacer(),
                       Text(
                         'Baca Selengkapnya →',
                         style: GoogleFonts.manrope(
                           fontSize: 13,
                           fontWeight: FontWeight.w700,
-                          color: AppColors.primary,
+                          color: AppColors.secondary,
                         ),
                       ),
                     ],
@@ -675,10 +626,10 @@ class _EdukasiScreenState extends State<EdukasiScreen>
               width: 64,
               height: 64,
               decoration: BoxDecoration(
-                color: article['color'] as Color,
+                color: article['colorVal'] != null ? Color(article['colorVal'] as int) : AppColors.secondary.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(14),
               ),
-              child: Icon(article['icon'] as IconData,
+              child: Icon(IconData(article['iconCode'] as int? ?? Icons.article.codePoint, fontFamily: 'MaterialIcons'),
                   color: AppColors.primary, size: 28),
             ),
             const SizedBox(width: 12),
@@ -687,7 +638,7 @@ class _EdukasiScreenState extends State<EdukasiScreen>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    article['title'] as String,
+                    article['title'] as String? ?? '-',
                     style: GoogleFonts.manrope(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
@@ -695,33 +646,20 @@ class _EdukasiScreenState extends State<EdukasiScreen>
                     ),
                   ),
                   const SizedBox(height: 3),
-                  Row(
-                    children: [
-                      const Icon(Icons.access_time,
-                          size: 12, color: AppColors.textMuted),
-                      const SizedBox(width: 3),
-                      Text(
-                        article['duration'] as String,
-                        style: GoogleFonts.manrope(
-                            fontSize: 11, color: AppColors.textMuted),
-                      ),
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 6, vertical: 1),
-                        decoration: BoxDecoration(
-                          color: AppColors.primaryLight,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Text(
-                          article['category'] as String,
-                          style: GoogleFonts.manrope(
-                              fontSize: 9,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.primaryDark),
-                        ),
-                      ),
-                    ],
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 6, vertical: 1),
+                    decoration: BoxDecoration(
+                      color: AppColors.primaryLight,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      article['category'] as String? ?? '-',
+                      style: GoogleFonts.manrope(
+                          fontSize: 9,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.primaryDark),
+                    ),
                   ),
                 ],
               ),
@@ -827,8 +765,8 @@ class _ArticleDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = article['color'] as Color;
-    final icon = article['icon'] as IconData;
+    final color = article['colorVal'] != null ? Color(article['colorVal'] as int) : AppColors.secondary.withValues(alpha: 0.1);
+    final icon = IconData(article['iconCode'] as int? ?? Icons.article.codePoint, fontFamily: 'MaterialIcons');
     final tip = article['tip'] as String?;
 
     return Scaffold(
@@ -839,7 +777,7 @@ class _ArticleDetailScreen extends StatelessWidget {
           SliverAppBar(
             expandedHeight: 200,
             pinned: true,
-            backgroundColor: AppColors.primary,
+            backgroundColor: AppColors.secondary,
             leading: GestureDetector(
               onTap: () => Navigator.pop(context),
               child: Container(
@@ -924,15 +862,6 @@ class _ArticleDetailScreen extends StatelessWidget {
                   // Meta row
                   Row(
                     children: [
-                      const Icon(Icons.access_time,
-                          size: 14, color: AppColors.textMuted),
-                      const SizedBox(width: 4),
-                      Text(
-                        article['duration'] as String,
-                        style: GoogleFonts.manrope(
-                            fontSize: 12, color: AppColors.textMuted),
-                      ),
-                      const SizedBox(width: 16),
                       const Icon(Icons.local_hospital_outlined,
                           size: 14, color: AppColors.primary),
                       const SizedBox(width: 4),
@@ -1066,7 +995,7 @@ class _ArticleDetailScreen extends StatelessWidget {
                             fontWeight: FontWeight.w600),
                       ),
                       style: OutlinedButton.styleFrom(
-                        side: const BorderSide(color: AppColors.primary),
+                        side: const BorderSide(color: AppColors.secondary),
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12)),
                         padding: const EdgeInsets.symmetric(vertical: 14),

@@ -456,7 +456,7 @@ static Future<Map<String, dynamic>> registerAhliGizi({
       /* debug log removed */
       return {
         'success': false,
-        'message': 'Kredensial (Email/Username/RM/NIP atau Kata Sandi) salah.',
+        'message': 'Data login (Email/Username/RM/NIP atau Kata Sandi) yang dimasukkan salah, silakan coba lagi.',
       };
     } catch (e) {
       /* debug log removed */
@@ -592,12 +592,13 @@ static Future<Map<String, dynamic>> registerAhliGizi({
     required String pengalamanKerja,
     required String noStr,
     required String spesialisasi,
+    String? birthdate, // Opsional: edit tanggal lahir
   }) async {
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) return false;
 
-      final updateData = {
+      final updateData = <String, dynamic>{
         'name': name,
         'phone': phone,
         'email': email,
@@ -608,6 +609,9 @@ static Future<Map<String, dynamic>> registerAhliGizi({
         'noStr': noStr,
         'spesialisasi': spesialisasi,
       };
+      if (birthdate != null && birthdate.isNotEmpty) {
+        updateData['birthdate'] = birthdate;
+      }
 
       await FirebaseFirestore.instance
           .collection('users')
@@ -672,6 +676,7 @@ static Future<Map<String, dynamic>> registerAhliGizi({
     required String alamat,
     required String pendidikan,
     required String pekerjaan,
+    String? birthdate, // Opsional: edit tanggal lahir
   }) async {
     try {
       final user = FirebaseAuth.instance.currentUser;
@@ -689,6 +694,9 @@ static Future<Map<String, dynamic>> registerAhliGizi({
         'pekerjaan': pekerjaan,
         'updated_at': FieldValue.serverTimestamp(),
       };
+      if (birthdate != null && birthdate.isNotEmpty) {
+        updateData['birthdate'] = birthdate;
+      }
 
       await FirebaseFirestore.instance
           .collection('users')
@@ -1922,6 +1930,109 @@ static Future<Map<String, dynamic>> registerAhliGizi({
         .map((s) => s.docs.map((d) => {'id': d.id, ...d.data()}).toList());
   }
 
+  static Future<List<Map<String, dynamic>>> getArticles() async {
+    try {
+      final snap = await FirebaseFirestore.instance
+          .collection('articles')
+          .orderBy('created_at', descending: true)
+          .get();
+      return snap.docs.map((d) => {'id': d.id, ...d.data()}).toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  static Future<bool> addArticle({
+    required String title,
+    required String category,
+    required String content,
+  }) async {
+    try {
+      final articleId = title
+          .toLowerCase()
+          .replaceAll(' ', '_')
+          .replaceAll(RegExp(r'[^a-z0-9_]'), '');
+          
+      int colorVal = 0xFFDBEAFE;
+      int iconCode = Icons.article.codePoint;
+      
+      switch (category.toLowerCase()) {
+        case 'nutrisi':
+          colorVal = 0xFFD1FAE5;
+          iconCode = Icons.restaurant.codePoint;
+          break;
+        case 'olahraga':
+          colorVal = 0xFFDBEAFE;
+          iconCode = Icons.fitness_center.codePoint;
+          break;
+        case 'psikologi':
+          colorVal = 0xFFFCE7F3;
+          iconCode = Icons.self_improvement.codePoint;
+          break;
+      }
+
+      await FirebaseFirestore.instance.collection('articles').doc(articleId).set({
+        'title': title,
+        'category': category,
+        'content': content,
+        'colorVal': colorVal,
+        'iconCode': iconCode,
+        'created_at': FieldValue.serverTimestamp(),
+      });
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  static Future<bool> updateArticle(
+    String id, {
+    required String title,
+    required String category,
+    required String content,
+  }) async {
+    try {
+      int colorVal = 0xFFDBEAFE;
+      int iconCode = Icons.article.codePoint;
+      
+      switch (category.toLowerCase()) {
+        case 'nutrisi':
+          colorVal = 0xFFD1FAE5;
+          iconCode = Icons.restaurant.codePoint;
+          break;
+        case 'olahraga':
+          colorVal = 0xFFDBEAFE;
+          iconCode = Icons.fitness_center.codePoint;
+          break;
+        case 'psikologi':
+          colorVal = 0xFFFCE7F3;
+          iconCode = Icons.self_improvement.codePoint;
+          break;
+      }
+
+      await FirebaseFirestore.instance.collection('articles').doc(id).update({
+        'title': title,
+        'category': category,
+        'content': content,
+        'colorVal': colorVal,
+        'iconCode': iconCode,
+        'updated_at': FieldValue.serverTimestamp(),
+      });
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  static Future<bool> deleteArticle(String id) async {
+    try {
+      await FirebaseFirestore.instance.collection('articles').doc(id).delete();
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
   static Future<bool> addTherapyProgramAndLeaflet({
     required String programName,
     required String programDesc,
@@ -2495,7 +2606,26 @@ static Future<Map<String, dynamic>> registerAhliGizi({
     }
   }
 
-  /// Menyimpan diagnosis ke dokumen patientTherapyPrograms (per program)
+  /// Menyimpan diagnosis dan catatan klinis ke dokumen patientTherapyPrograms (per program)
+  static Future<void> updateProgramClinicalData({
+    required String patientProgramId,
+    required String diagnosis,
+    required String catatanKlinis,
+  }) async {
+    try {
+      await FirebaseFirestore.instance
+          .collection('patientTherapyPrograms')
+          .doc(patientProgramId)
+          .update({
+            'diagnosis': diagnosis,
+            'catatan_klinis': catatanKlinis,
+            'updatedAt': FieldValue.serverTimestamp(),
+          });
+    } catch (e) {
+      /* debug log removed */
+    }
+  }
+
   static Future<void> updateProgramDiagnosis({
     required String patientProgramId,
     required String diagnosis,
@@ -2505,11 +2635,11 @@ static Future<Map<String, dynamic>> registerAhliGizi({
           .collection('patientTherapyPrograms')
           .doc(patientProgramId)
           .update({
-            'diagnosis': diagnosis,
-            'updatedAt': FieldValue.serverTimestamp(),
-          });
+        'diagnosis': diagnosis,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
     } catch (e) {
-      /* debug log removed */
+      /* ignore */
     }
   }
 
@@ -2803,6 +2933,119 @@ static Future<Map<String, dynamic>> registerAhliGizi({
       }).toList();
     } catch (e) {
       return [];
+    }
+  }
+
+  // ------------ CATATAN EVALUASI PASIEN (oleh Ahli Gizi) --------------------------------------------------------------------------
+
+  /// Simpan catatan evaluasi baru dari ahli gizi untuk pasien tertentu
+  /// Collection path: users/{pasienUid}/evaluasiCatatan/{auto-id}
+  /// Juga update field 'catatan_evaluasi_terakhir' di dokumen pasien untuk akses cepat
+  static Future<bool> saveCatatanEvaluasi({
+    required String rmPasien,
+    required String catatan,
+    required String agName,
+    String agNip = '',
+  }) async {
+    try {
+      // Cari UID pasien dari RM
+      final snap = await FirebaseFirestore.instance
+          .collection('users')
+          .where('rm', isEqualTo: rmPasien)
+          .limit(1)
+          .get();
+      if (snap.docs.isEmpty) return false;
+
+      final pasienUid = snap.docs.first.id;
+      final now = DateTime.now();
+
+      // Simpan ke subcollection evaluasiCatatan
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(pasienUid)
+          .collection('evaluasiCatatan')
+          .add({
+        'catatan': catatan,
+        'agName': agName,
+        'agNip': agNip,
+        'createdAt': FieldValue.serverTimestamp(),
+        'createdAtStr': now.toIso8601String(),
+      });
+
+      // Update field snapshot di dokumen utama untuk akses cepat
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(pasienUid)
+          .update({
+        'catatan_evaluasi_terakhir': catatan,
+        'catatan_evaluasi_ag': agName,
+        'catatan_evaluasi_at': now.toIso8601String(),
+      });
+
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /// Ambil semua catatan evaluasi pasien (descending by createdAt)
+  static Future<List<Map<String, dynamic>>> getCatatanEvaluasiList(
+    String rmPasien,
+  ) async {
+    try {
+      final snap = await FirebaseFirestore.instance
+          .collection('users')
+          .where('rm', isEqualTo: rmPasien)
+          .limit(1)
+          .get();
+      if (snap.docs.isEmpty) return [];
+
+      final pasienUid = snap.docs.first.id;
+      final evalSnap = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(pasienUid)
+          .collection('evaluasiCatatan')
+          .orderBy('createdAt', descending: true)
+          .limit(20)
+          .get();
+
+      return evalSnap.docs.map((d) {
+        final data = d.data();
+        data['id'] = d.id;
+        final rawTs = data['createdAt'];
+        if (rawTs is Timestamp) {
+          data['createdAt'] = rawTs.toDate().toIso8601String();
+          data['createdAtStr'] = rawTs.toDate().toIso8601String();
+        }
+        return data;
+      }).toList();
+    } catch (e) {
+      return [];
+    }
+  }
+
+  /// Ambil catatan evaluasi terakhir (snapshot cepat dari field dokumen pasien)
+  static Future<Map<String, dynamic>?> getCatatanEvaluasiTerakhir(
+    String rmPasien,
+  ) async {
+    try {
+      final snap = await FirebaseFirestore.instance
+          .collection('users')
+          .where('rm', isEqualTo: rmPasien)
+          .limit(1)
+          .get();
+      if (snap.docs.isEmpty) return null;
+
+      final data = snap.docs.first.data();
+      final catatan = data['catatan_evaluasi_terakhir'] as String? ?? '';
+      if (catatan.isEmpty) return null;
+      return {
+        'catatan': catatan,
+        'agName': data['catatan_evaluasi_ag'] as String? ?? '',
+        'createdAtStr': data['catatan_evaluasi_at'] as String? ?? '',
+      };
+    } catch (e) {
+      return null;
     }
   }
 }

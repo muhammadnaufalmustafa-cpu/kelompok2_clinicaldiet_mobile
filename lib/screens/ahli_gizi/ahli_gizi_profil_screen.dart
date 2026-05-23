@@ -209,12 +209,15 @@ class _AhliGiziProfilScreenState extends State<AhliGiziProfilScreen> {
     final pengalamanKerjaCtrl = TextEditingController(text: _user!['pengalamanKerja'] ?? '');
     final noStrCtrl = TextEditingController(text: _user!['noStr'] ?? '');
     final spesialisasiCtrl = TextEditingController(text: _user!['spesialisasi'] ?? '');
+    String selectedBirthdate = _user!['birthdate'] as String? ?? '';
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setStateDialog) {
         return Container(
           decoration: const BoxDecoration(
             color: Colors.white,
@@ -237,6 +240,74 @@ class _AhliGiziProfilScreenState extends State<AhliGiziProfilScreen> {
                 _buildTextField(pengalamanKerjaCtrl, 'Pengalaman Kerja (Contoh: 3 Tahun)'),
                 _buildTextField(noStrCtrl, 'No. STR (Surat Tanda Registrasi)'),
                 _buildTextField(spesialisasiCtrl, 'Spesialisasi (Contoh: Ahli Gizi Klinis)'),
+                // --- Tanggal Lahir ---
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: InkWell(
+                    onTap: () async {
+                      DateTime initialDate = DateTime(1990, 1, 1);
+                      if (selectedBirthdate.isNotEmpty) {
+                        try {
+                          if (selectedBirthdate.contains('/')) {
+                            final parts = selectedBirthdate.split('/');
+                            if (parts.length == 3) {
+                              initialDate = DateTime(int.parse(parts[2]), int.parse(parts[1]), int.parse(parts[0]));
+                            }
+                          } else {
+                            initialDate = DateTime.parse(selectedBirthdate);
+                          }
+                        } catch (_) {}
+                      }
+                      final picked = await showDatePicker(
+                        context: context,
+                        initialDate: initialDate,
+                        firstDate: DateTime(1940),
+                        lastDate: DateTime.now(),
+                        helpText: 'Pilih Tanggal Lahir',
+                      );
+                      if (picked != null) {
+                        setStateDialog(() {
+                          final d = picked.day.toString().padLeft(2, '0');
+                          final m = picked.month.toString().padLeft(2, '0');
+                          final y = picked.year.toString();
+                          selectedBirthdate = '$d/$m/$y';
+                        });
+                      }
+                    },
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      decoration: BoxDecoration(
+                        color: AppColors.background,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.calendar_today_outlined, size: 18, color: AppColors.secondary),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('Tanggal Lahir',
+                                    style: GoogleFonts.manrope(fontSize: 12, color: AppColors.textSecondary)),
+                                Text(
+                                  selectedBirthdate.isNotEmpty ? selectedBirthdate : 'Belum diisi',
+                                  style: GoogleFonts.manrope(
+                                    fontSize: 14,
+                                    color: selectedBirthdate.isNotEmpty ? AppColors.textPrimary : AppColors.textMuted,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Icon(Icons.arrow_drop_down, color: AppColors.textSecondary),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
                 const SizedBox(height: 24),
                 SizedBox(
                   width: double.infinity,
@@ -254,12 +325,13 @@ class _AhliGiziProfilScreenState extends State<AhliGiziProfilScreen> {
                         pengalamanKerja: pengalamanKerjaCtrl.text,
                         noStr: noStrCtrl.text,
                         spesialisasi: spesialisasiCtrl.text,
+                        birthdate: selectedBirthdate,
                       );
                       if (!ctx.mounted) return; Navigator.pop(ctx);
                       _loadUser();
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
+                      backgroundColor: AppColors.secondary,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
@@ -269,6 +341,8 @@ class _AhliGiziProfilScreenState extends State<AhliGiziProfilScreen> {
               ],
             ),
           ),
+        );
+          },
         );
       },
     );
@@ -313,7 +387,7 @@ class _AhliGiziProfilScreenState extends State<AhliGiziProfilScreen> {
                     _loadUser();
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
+                    backgroundColor: AppColors.secondary,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),

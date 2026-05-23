@@ -90,7 +90,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       builder: (context, child) => Theme(
         data: Theme.of(context).copyWith(
           colorScheme: const ColorScheme.light(
-            primary: AppColors.primary,
+            primary: AppColors.secondary,
             onPrimary: Colors.white,
           ),
         ),
@@ -208,7 +208,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message, style: GoogleFonts.manrope()),
-        backgroundColor: isError ? Colors.redAccent : AppColors.primary,
+        backgroundColor: isError ? Colors.redAccent : AppColors.secondary,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
@@ -230,13 +230,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
         ),
         title: Row(
           children: [
-            const Icon(Icons.assignment_ind, color: AppColors.primaryDark),
+            const Icon(Icons.assignment_ind, color: AppColors.secondary),
             const SizedBox(width: 8),
             Text('Naksihat',
                 style: GoogleFonts.manrope(
                   fontSize: 18,
                   fontWeight: FontWeight.w600,
-                  color: AppColors.primaryDark,
+                  color: AppColors.secondary,
                 )),
           ],
         ),
@@ -302,12 +302,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       decoration: BoxDecoration(
                         color: selected
-                            ? AppColors.primary
+                            ? AppColors.secondary
                             : const Color(0xFFF3F4F6),
                         borderRadius: BorderRadius.circular(10),
                         border: Border.all(
                             color: selected
-                                ? AppColors.primary
+                                ? AppColors.secondary
                                 : AppColors.divider),
                       ),
                       child: Row(
@@ -511,7 +511,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                   decoration: BoxDecoration(
-                    color: AppColors.primaryLight,
+                    color: AppColors.secondary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Text(
@@ -519,7 +519,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     style: GoogleFonts.manrope(
                       fontSize: 18, 
                       fontWeight: FontWeight.w700,
-                      color: AppColors.primaryDark,
+                      color: AppColors.secondary,
                     ),
                   ),
                 ),
@@ -541,7 +541,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               child: ElevatedButton(
                 onPressed: _isLoading ? null : _register,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
+                  backgroundColor: AppColors.secondary,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
@@ -572,7 +572,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     TextSpan(
                       text: 'Masuk di sini',
                       style: GoogleFonts.manrope(
-                          color: AppColors.primary,
+                          color: AppColors.secondary,
                           fontWeight: FontWeight.w600),
                     ),
                   ],
@@ -592,7 +592,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         Container(
           width: 3,
           height: 16,
-          color: AppColors.primary,
+          color: AppColors.secondary,
         ),
         const SizedBox(width: 8),
         Text(label,

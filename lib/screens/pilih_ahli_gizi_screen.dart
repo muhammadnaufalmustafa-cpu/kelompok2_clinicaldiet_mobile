@@ -81,7 +81,7 @@ class _PilihAhliGiziScreenState extends State<PilihAhliGiziScreen> {
                 context, MaterialPageRoute(builder: (_) => const InformConsentScreen()));
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
+              backgroundColor: AppColors.secondary,
             ),
             child: Text('Lewati Sementara',
                 style: GoogleFonts.manrope(color: Colors.white)),
@@ -123,7 +123,7 @@ class _PilihAhliGiziScreenState extends State<PilihAhliGiziScreen> {
                     'Anda memilih ${ag['name']} sebagai ahli gizi Anda',
                     style: GoogleFonts.manrope(fontWeight: FontWeight.w600),
                   ),
-                  backgroundColor: AppColors.primary,
+                  backgroundColor: AppColors.secondary,
                   behavior: SnackBarBehavior.floating,
                 ),
               );
