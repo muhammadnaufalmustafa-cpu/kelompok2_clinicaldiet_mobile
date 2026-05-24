@@ -62,6 +62,10 @@ class _HomeScreenState extends State<HomeScreen> {
   Map<String, dynamic>? _selectedNutritionTarget; // nutritionTargets doc
   Map<String, dynamic>? _catatanEvaluasiTerakhir; // Point 4: catatan evaluasi terakhir dari AG
 
+  // -- Poin 5: Realtime status pasien --
+  String _pasienStatus = 'aktif';
+  StreamSubscription<DocumentSnapshot>? _statusStreamSub;
+
   // -- Realtime stream --
   StreamSubscription<QuerySnapshot>? _programsStreamSub;
 
@@ -70,11 +74,13 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     _loadData();
     _startProgramsStream(); // Bug 3: realtime listener
+    _startStatusStream();   // Poin 5: realtime status pasien
   }
 
   @override
   void dispose() {
     _programsStreamSub?.cancel();
+    _statusStreamSub?.cancel();
     _dietPageCtrl.dispose();
     super.dispose();
   }
@@ -164,6 +170,27 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
+  /// Poin 5: Realtime listener untuk status pasien (dropout, berhasil, meninggal)
+  Future<void> _startStatusStream() async {
+    final user = await AuthService.getLoggedInUser();
+    if (user == null) return;
+    final uid = user['uid'] as String? ?? '';
+    if (uid.isEmpty) return;
+
+    _statusStreamSub = FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .snapshots()
+        .listen((snapshot) {
+      if (!mounted) return;
+      final data = snapshot.data();
+      if (data != null) {
+        final newStatus = data['status'] as String? ?? 'aktif';
+        setState(() => _pasienStatus = newStatus);
+      }
+    });
+  }
+
   Future<void> _loadData() async {
     final user = await AuthService.getLoggedInUser();
     Map<String, dynamic>? nutrisi;
@@ -186,7 +213,11 @@ class _HomeScreenState extends State<HomeScreen> {
         patientPrograms = await AuthService.getPatientTherapyPrograms(uid);
       }
       if (patientPrograms.isEmpty) {
-        patientPrograms = await AuthService.getPatientTherapyProgramsByRm(rm);
+        final rmProgs = await AuthService.getPatientTherapyProgramsByRm(rm);
+        patientPrograms = rmProgs.where((p) {
+          final progUid = p['patientId'] as String? ?? '';
+          return progUid.isEmpty || progUid == uid;
+        }).toList();
       }
       // Auto-select first active program
       final activePrograms = patientPrograms.where((p) => p['status'] == 'active').toList();
@@ -298,13 +329,14 @@ class _HomeScreenState extends State<HomeScreen> {
     return {};
   }
 
-  // Nutrient yang punya target > 0 (aktif dari AG)
+  // Nutrient yang punya target > 0 ATAU aktual > 0 (aktif dari AG)
   Map<String, dynamic> get _activeNutrients {
     final targets = _targetNutrients;
     return Map.fromEntries(
       targets.entries.where((e) {
         final target = (e.value['target'] as num? ?? 0).toDouble();
-        return target > 0;
+        final aktual = (e.value['aktual'] as num? ?? 0).toDouble();
+        return target > 0 || aktual > 0;
       }),
     );
   }
@@ -425,6 +457,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildTopBar(context),
+                  // -- Poin 5: Status Banner (dropout/berhasil/meninggal) --
+                  if (_pasienStatus != 'aktif') _buildStatusBanner(),
                   // -- BB/TB Harian --
                   _buildBBTBCard(),
                   // -- Program Terapi Diet Selector --
@@ -433,13 +467,13 @@ class _HomeScreenState extends State<HomeScreen> {
                   _buildProgramPeriod(),
                   // -- Kartu Ahli Gizi Utama --
                   if (_selectedAhliGizi != null) _buildAhliGiziCard(context),
-                  if (_kaloriTarget > 0)
+                  if (_activeNutrients.isNotEmpty)
                     _buildNutritionSummary()
                   else if (_patientPrograms.any((p) => p['status'] == 'active'))
                     _buildNoDataState()
-                  else if (_currentDietNutrisi != null && _kaloriTarget > 0)
+                  else if (_currentDietNutrisi != null && _activeNutrients.isNotEmpty)
                     _buildNutritionSummary()
-                  else if (_currentDietNutrisi != null && _kaloriTarget == 0)
+                  else if (_currentDietNutrisi != null && _activeNutrients.isEmpty)
                     _buildNoDataState(),
                   // -- Catatan Makan Terakhir --
                   if (_lastMealLog != null) _buildLastMealCard(),
@@ -495,6 +529,68 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   // -------------------------------------------------------------------------
+
+  /// Poin 5: Banner status untuk pasien yang bukan aktif (dropout/berhasil/meninggal)
+  Widget _buildStatusBanner() {
+    Color bannerColor;
+    Color textColor;
+    IconData bannerIcon;
+    String bannerTitle;
+    String bannerDesc;
+
+    switch (_pasienStatus) {
+      case 'dropout':
+        bannerColor = Colors.red.shade50;
+        textColor = Colors.red.shade800;
+        bannerIcon = Icons.block_rounded;
+        bannerTitle = 'Program Dihentikan (Dropout)';
+        bannerDesc = 'Akun Anda telah dinyatakan Dropout oleh Ahli Gizi. Silakan hubungi ahli gizi Anda untuk informasi lebih lanjut.';
+        break;
+      case 'berhasil':
+        bannerColor = Colors.green.shade50;
+        textColor = Colors.green.shade800;
+        bannerIcon = Icons.check_circle_rounded;
+        bannerTitle = 'Program Selesai! 🎉';
+        bannerDesc = 'Selamat! Program terapi diet Anda telah berhasil diselesaikan. Terima kasih atas kerja keras Anda!';
+        break;
+      case 'meninggal':
+        bannerColor = Colors.grey.shade100;
+        textColor = Colors.grey.shade700;
+        bannerIcon = Icons.info_outlined;
+        bannerTitle = 'Status Pasien Tidak Aktif';
+        bannerDesc = 'Akun ini tidak aktif. Silakan hubungi pihak rumah sakit.';
+        break;
+      default:
+        return const SizedBox.shrink();
+    }
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: bannerColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: textColor.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(bannerIcon, color: textColor, size: 22),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(bannerTitle, style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w700, color: textColor)),
+                const SizedBox(height: 4),
+                Text(bannerDesc, style: GoogleFonts.manrope(fontSize: 12, color: textColor.withValues(alpha: 0.8), height: 1.4)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   Widget _buildNoDataState() {
     return Container(

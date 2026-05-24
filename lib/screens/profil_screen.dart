@@ -551,9 +551,13 @@ class _ProfilScreenState extends State<ProfilScreen> {
     );
   }
 
-  void _showUpdateBBTBDialog() {
-    final weightCtrl = TextEditingController(text: _user?['weight']?.toString() ?? '');
-    final heightCtrl = TextEditingController(text: _user?['height']?.toString() ?? '');
+  void _showUpdateBBDialog() {
+    // Ambil BB terkini dari bb_history jika ada, fallback ke field weight
+    final bbHistory = AuthService.getBBTBHistory(_user ?? {});
+    final latestBB = bbHistory.isNotEmpty
+        ? (bbHistory.first['weight'] as num?)?.toDouble() ?? (_user?['weight'] as num?)?.toDouble() ?? 0.0
+        : (_user?['weight'] as num?)?.toDouble() ?? 0.0;
+    final weightCtrl = TextEditingController(text: latestBB > 0 ? latestBB.toStringAsFixed(1) : '');
     bool isLoading = false;
 
     showModalBottomSheet(
@@ -571,48 +575,27 @@ class _ProfilScreenState extends State<ProfilScreen> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Catat BB & TB',
+              Text('Catat Berat Badan',
                   style: GoogleFonts.manrope(
                       fontSize: 20,
                       fontWeight: FontWeight.w600,
                       color: AppColors.textPrimary)),
               const SizedBox(height: 8),
-              Text('Perbarui data fisik Anda untuk memantau IMT harian.',
+              Text('Perbarui berat badan Anda untuk memantau IMT harian.',
                   style: GoogleFonts.manrope(
                       fontSize: 13, color: AppColors.textSecondary)),
               const SizedBox(height: 20),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: weightCtrl,
-                      keyboardType: TextInputType.number,
-                      enabled: !isLoading,
-                      decoration: InputDecoration(
-                        labelText: 'Berat Badan',
-                        hintText: 'Masukkan berat badan',
-                        suffixText: 'kg',
-                        border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12)),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: TextField(
-                      controller: heightCtrl,
-                      keyboardType: TextInputType.number,
-                      enabled: !isLoading,
-                      decoration: InputDecoration(
-                        labelText: 'Tinggi Badan',
-                        hintText: 'Masukkan tinggi badan',
-                        suffixText: 'cm',
-                        border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12)),
-                      ),
-                    ),
-                  ),
-                ],
+              TextField(
+                controller: weightCtrl,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                enabled: !isLoading,
+                decoration: InputDecoration(
+                  labelText: 'Berat Badan (kg)',
+                  hintText: 'Masukkan berat badan Anda',
+                  suffixText: 'kg',
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ),
               ),
               const SizedBox(height: 24),
               SizedBox(
@@ -622,10 +605,9 @@ class _ProfilScreenState extends State<ProfilScreen> {
                       ? null
                       : () async {
                           final weight = double.tryParse(weightCtrl.text);
-                          final height = double.tryParse(heightCtrl.text);
 
-                          if (weight == null || height == null) {
-                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Masukkan nilai yang valid', style: GoogleFonts.manrope()), backgroundColor: Colors.red));
+                          if (weight == null || weight <= 0) {
+                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Masukkan nilai berat badan yang valid', style: GoogleFonts.manrope()), backgroundColor: Colors.red));
                             return;
                           }
 
@@ -633,11 +615,14 @@ class _ProfilScreenState extends State<ProfilScreen> {
 
                           try {
                             final rm = _user?['rm'];
-                            final success = await AuthService.updatePasienBBTB(rm, weight, height);
+                            // Ambil TB dari bb_history terbaru atau dari field height
+                            final currentHeight = bbHistory.isNotEmpty
+                                ? (bbHistory.first['height'] as num?)?.toDouble() ?? (_user?['height'] as num?)?.toDouble() ?? 0.0
+                                : (_user?['height'] as num?)?.toDouble() ?? 0.0;
+                            final success = await AuthService.updatePasienBBTB(rm, weight, currentHeight);
 
                             if (success) {
                               weightCtrl.dispose();
-                              heightCtrl.dispose();
                               if (!context.mounted) return;
                               Navigator.pop(context);
                               await _loadUser();
@@ -648,11 +633,11 @@ class _ProfilScreenState extends State<ProfilScreen> {
                                   pasienName: _user?['name'] ?? 'Pasien',
                                   pasienRm: _user?['rm'] ?? '',
                                   weight: weight,
-                                  height: height,
+                                  height: currentHeight,
                                 );
                               }
                               if (!context.mounted) return;
-                              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Data berhasil diperbarui!', style: GoogleFonts.manrope()), backgroundColor: AppColors.secondary));
+                              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Berat badan berhasil diperbarui!', style: GoogleFonts.manrope()), backgroundColor: AppColors.secondary));
                             } else {
                               if (!context.mounted) return;
                               ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal memperbarui data.', style: GoogleFonts.manrope()), backgroundColor: Colors.red));
@@ -668,7 +653,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
                         borderRadius: BorderRadius.circular(12)),
                   ),
                   child: isLoading
-                      ? SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                      ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
                       : Text('SIMPAN', style: GoogleFonts.manrope(fontWeight: FontWeight.w600, color: Colors.white)),
                 ),
               ),
@@ -1252,8 +1237,14 @@ class _ProfilScreenState extends State<ProfilScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final weight = (_user?['weight'] as num?)?.toDouble() ?? 0;
-    final height = (_user?['height'] as num?)?.toDouble() ?? 0;
+    // Poin 1: Sinkronkan BB/TB dari bb_history terbaru (sama seperti home_screen)
+    final bbHistory = AuthService.getBBTBHistory(_user ?? {});
+    final weight = bbHistory.isNotEmpty
+        ? (bbHistory.first['weight'] as num?)?.toDouble() ?? (_user?['weight'] as num?)?.toDouble() ?? 0
+        : (_user?['weight'] as num?)?.toDouble() ?? 0;
+    final height = bbHistory.isNotEmpty
+        ? (bbHistory.first['height'] as num?)?.toDouble() ?? (_user?['height'] as num?)?.toDouble() ?? 0
+        : (_user?['height'] as num?)?.toDouble() ?? 0;
     
     double bmi = 0;
     String bmiStatus = 'N/A';
@@ -1456,9 +1447,9 @@ class _ProfilScreenState extends State<ProfilScreen> {
                   SizedBox(
                     width: double.infinity,
                     child: OutlinedButton.icon(
-                      onPressed: _showUpdateBBTBDialog,
+                      onPressed: _showUpdateBBDialog,
                       icon: const Icon(Icons.monitor_weight_outlined, size: 18, color: AppColors.secondary),
-                      label: Text('Catat BB & TB Hari Ini', style: GoogleFonts.manrope(fontWeight: FontWeight.w600, color: AppColors.secondary)),
+                      label: Text('Catat BB Hari Ini', style: GoogleFonts.manrope(fontWeight: FontWeight.w600, color: AppColors.secondary)),
                       style: OutlinedButton.styleFrom(
                         side: const BorderSide(color: AppColors.secondary),
                         padding: const EdgeInsets.symmetric(vertical: 12),

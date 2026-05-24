@@ -116,7 +116,11 @@ class _CatatanScreenState extends State<CatatanScreen> {
         programs = await AuthService.getPatientTherapyPrograms(uid);
       }
       if (programs.isEmpty) {
-        programs = await AuthService.getPatientTherapyProgramsByRm(rm);
+        final rmProgs = await AuthService.getPatientTherapyProgramsByRm(rm);
+        programs = rmProgs.where((p) {
+          final progUid = p['patientId'] as String? ?? '';
+          return progUid.isEmpty || progUid == uid;
+        }).toList();
       }
       final activePrograms = programs.where((p) => p['status'] == 'active').toList();
 
@@ -977,7 +981,14 @@ class _CatatanScreenState extends State<CatatanScreen> {
     }
 
     final ageMap = AgeCalculator.calculateAge(_birthdate);
-    final int months = ageMap != null ? (ageMap['years']! * 12) + ageMap['months']! : 0;
+    
+    // Jika usia berhasil dihitung dan di bawah 18 tahun (216 bulan), sembunyikan Ringkasan Klinis & Status Gizi (IMT Dewasa)
+    if (ageMap != null) {
+      final int totalMonths = (ageMap['years']! * 12) + ageMap['months']!;
+      if (totalMonths < 216) {
+        return const SizedBox.shrink();
+      }
+    }
 
     return Container(
       margin: const EdgeInsets.only(top: 12),
@@ -1017,11 +1028,8 @@ class _CatatanScreenState extends State<CatatanScreen> {
               Expanded(child: _statusItem('IMT/U', 'Normal')), 
             ],
           ),
-          if (months > 0 && months < 216)
-            Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: Text('* Indikator /U disesuaikan dengan kurva pertumbuhan anak (0-18 thn).', style: GoogleFonts.manrope(fontSize: 10, color: const Color(0xFF166534), fontStyle: FontStyle.italic)),
-            ),
+          // Keterangan khusus anak-anak disembunyikan karena jika pasien < 18 tahun,
+          // seluruh block Ringkasan Klinis ini sudah tidak di-render (SizedBox.shrink).
         ],
       ),
     );

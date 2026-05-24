@@ -40,14 +40,28 @@ class _AhliGiziDetailPasienScreenState
   bool _isLoadingPrograms = false;
   List<Map<String, dynamic>> _availableTherapyPrograms = [];
 
-  // ---Â---Â--- Existing controllers ---Â---Â---
+  // ---Â ---Â --- Existing controllers ---Â ---Â ---
   final _targetCtrl = TextEditingController();
 
-  // ---Â---Â--- Clinical Inputs ---Â---Â---
+  // ---Â ---Â --- Clinical Inputs ---Â ---Â ---
   final _diagnosisCtrl = TextEditingController();
   final _catatanNutrisiCtrl = TextEditingController();
   final _evaluasiHarianCtrl = TextEditingController();
   final _customDietCtrl = TextEditingController();
+
+  // Poin 3 & 6: Status Gizi Manual dan kunci dinamis
+  String? _statusGiziManual; // Dipilih oleh Ahli Gizi
+
+
+  static const List<String> _statusGiziOptions = [
+    'Gizi Baik',
+    'Gizi Kurang',
+    'Gizi Buruk',
+    'Gizi Lebih',
+    'Obesitas',
+    'Berisiko Gizi Lebih',
+    'Tidak Terkategorikan',
+  ];
 
   final List<String> _terapiDietList = [
     'Diet Normal',
@@ -87,7 +101,7 @@ class _AhliGiziDetailPasienScreenState
     'K58.9 - Irritable Bowel Syndrome (IBS) tanpa Diare',
   ];
 
-  // ---Â---Â--- Dynamic Nutrition Target controllers & state ---Â---Â---
+  // ---Â ---Â --- Dynamic Nutrition Target controllers & state ---Â ---Â ---
   final Map<String, TextEditingController> _targetCtrls = {};
   final Map<String, TextEditingController> _aktualCtrls = {};
   final Map<String, bool> _checkedNutrients = {};
@@ -114,6 +128,7 @@ class _AhliGiziDetailPasienScreenState
     _status = widget.pasien['status'] ?? 'aktif';
     _targetCtrl.text = widget.pasien['target_diet'] ?? '';
     _diagnosisCtrl.text = widget.pasien['diagnosis'] ?? '';
+    _statusGiziManual = widget.pasien['status_gizi_manual'];
     _loadInitialData();
     _checkMissedLogs();
   }
@@ -147,13 +162,28 @@ class _AhliGiziDetailPasienScreenState
 
     // 2. Load patient therapy programs
     final patientId = widget.pasien['uid'] as String? ?? '';
+    if (patientId.isNotEmpty) {
+      try {
+        final freshSnap = await FirebaseFirestore.instance.collection('users').doc(patientId).get();
+        if (freshSnap.exists && freshSnap.data() != null) {
+          widget.pasien.addAll(freshSnap.data()!);
+        }
+      } catch (e) {
+        /* fail silently */
+      }
+    }
+
     final rm = widget.pasien['rm'] as String? ?? '';
     List<Map<String, dynamic>> patientPrograms = [];
     if (patientId.isNotEmpty) {
       patientPrograms = await AuthService.getPatientTherapyPrograms(patientId);
     }
     if (patientPrograms.isEmpty && rm.isNotEmpty) {
-      patientPrograms = await AuthService.getPatientTherapyProgramsByRm(rm);
+      final rmProgs = await AuthService.getPatientTherapyProgramsByRm(rm);
+      patientPrograms = rmProgs.where((p) {
+        final progUid = p['patientId'] as String? ?? '';
+        return progUid.isEmpty || progUid == patientId;
+      }).toList();
     }
 
     // [FIX Bug 1] Jika program kosong, baca diet_types (array) dari onboarding
@@ -210,7 +240,7 @@ class _AhliGiziDetailPasienScreenState
     super.dispose();
   }
 
-  // -Â---Â Regenerate Informed Consent (oleh Ahli Gizi) -Â---Â
+  // -Â ---Â  Regenerate Informed Consent (oleh Ahli Gizi) -Â ---Â 
   Future<void> _regenerateConsent() async {
     final rm = widget.pasien['rm'] as String? ?? '';
     final name = widget.pasien['name'] as String? ?? '-';
@@ -890,9 +920,14 @@ class _AhliGiziDetailPasienScreenState
   }
 
   Future<void> _saveAll() async {
-    if (_evaluasiHarianCtrl.text.trim().isEmpty) {
+    final hasTargetData = _checkedNutrients.isNotEmpty &&
+        _targetCtrls.values.any((c) => c.text.trim().isNotEmpty);
+    final hasAktualData = _checkedNutrients.isNotEmpty &&
+        _aktualCtrls.values.any((c) => c.text.trim().isNotEmpty && c.text.trim() != '0');
+
+    if (hasTargetData && hasAktualData && _evaluasiHarianCtrl.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('Catatan Evaluasi Pasien (Harian) wajib diisi sebelum menyimpan data!', style: GoogleFonts.manrope()),
+        content: Text('Catatan Evaluasi Pasien (Harian) wajib diisi jika Anda menginput aktualisasi gizi!', style: GoogleFonts.manrope()),
         backgroundColor: Colors.red,
         behavior: SnackBarBehavior.floating,
       ));
@@ -981,6 +1016,13 @@ class _AhliGiziDetailPasienScreenState
         catatanKlinis: _catatanNutrisiCtrl.text,
         terapiDiet: effectiveDiet,
       );
+      
+      // Simpan status gizi manual
+      await FirebaseFirestore.instance.collection('users').where('rm', isEqualTo: rm).get().then((value) {
+        if (value.docs.isNotEmpty) {
+          value.docs.first.reference.update({'status_gizi_manual': _statusGiziManual});
+        }
+      });
 
       // 2b. Simpan diagnosis ke program yang aktif (per-program)
       if (_selectedPatientProgram != null) {
@@ -1055,6 +1097,82 @@ class _AhliGiziDetailPasienScreenState
     }
   }
 
+  Widget _buildEvaluasiSection() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.4), width: 1.5),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Status Gizi (selalu bisa dipilih)
+          Row(
+            children: [
+              const Icon(Icons.monitor_heart_outlined, size: 16, color: AppColors.primary),
+              const SizedBox(width: 8),
+              Text('Status Gizi Pasien', style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(color: AppColors.secondary.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(6)),
+                child: Text('Input Manual AG', style: GoogleFonts.manrope(fontSize: 10, fontWeight: FontWeight.w600, color: AppColors.secondary)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          DropdownButtonFormField<String>(
+            value: _statusGiziManual,
+            hint: Text('Pilih status gizi pasien...', style: GoogleFonts.manrope(fontSize: 13, color: AppColors.textMuted)),
+            items: _statusGiziOptions.map((v) => DropdownMenuItem(
+              value: v,
+              child: Text(v, style: GoogleFonts.manrope(fontSize: 13)),
+            )).toList(),
+            onChanged: (v) => setState(() => _statusGiziManual = v),
+            decoration: InputDecoration(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.divider)),
+              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.divider)),
+              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.primary)),
+            ),
+          ),
+          const SizedBox(height: 16),
+          // Catatan Evaluasi
+          Row(
+            children: [
+              Icon(Icons.edit_note_outlined, size: 16, color: AppColors.primary),
+              const SizedBox(width: 8),
+              Text('Catatan Evaluasi Harian', style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(color: Colors.green.shade100, borderRadius: BorderRadius.circular(6)),
+                child: Text('Tersedia', style: GoogleFonts.manrope(fontSize: 10, fontWeight: FontWeight.w600, color: Colors.green.shade700)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          TextField(
+            controller: _evaluasiHarianCtrl,
+            maxLines: 4,
+            style: GoogleFonts.manrope(fontSize: 13, color: AppColors.textPrimary),
+            decoration: InputDecoration(
+              hintText: 'Ketik catatan evaluasi perkembangan pasien...',
+              hintStyle: GoogleFonts.manrope(fontSize: 13, color: AppColors.textMuted),
+              filled: true,
+              fillColor: AppColors.background,
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.divider)),
+              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: AppColors.primary.withValues(alpha: 0.5))),
+              contentPadding: const EdgeInsets.all(12),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   String get _dietLabel => widget.pasien['diet_type'] ?? 'Normal';
 
   Color get _statusColor {
@@ -1089,17 +1207,17 @@ class _AhliGiziDetailPasienScreenState
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
         children: [
-            // ---Â---Â--- Info Pasien ---Â---Â---
+            // ---Â ---Â --- Info Pasien ---Â ---Â ---
             _buildPasienCard(),
             const SizedBox(height: 12),
             _buildInfoGrid(),
             const SizedBox(height: 16),
 
-            // ---Â---Â--- Program Terapi Diet Pasien ---Â---Â---
+            // ---Â ---Â --- Program Terapi Diet Pasien ---Â ---Â ---
             _buildPatientProgramsSection(),
             const SizedBox(height: 24),
 
-            // ---Â---Â--- Clinical Info ---Â---Â---
+            // ---Â ---Â --- Clinical Info ---Â ---Â ---
             _buildSectionLabel('Kondisi Klinis Pasien'),
             const SizedBox(height: 8),
             Container(
@@ -1117,7 +1235,7 @@ class _AhliGiziDetailPasienScreenState
             ),
             const SizedBox(height: 24),
 
-            // ---Â---Â--- Terapi Diet Selection (hanya tampil jika belum ada program dipilih) ---Â---Â---
+            // ---Â ---Â --- Terapi Diet Selection (hanya tampil jika belum ada program dipilih) ---Â ---Â ---
             if (_selectedPatientProgram == null) ...[
               _buildSectionLabel('Pilih Terapi Diet'),
               const SizedBox(height: 8),
@@ -1129,7 +1247,7 @@ class _AhliGiziDetailPasienScreenState
               const SizedBox(height: 24),
             ],
 
-            // ---Â---Â--- Banner: Program yang sedang diedit ---Â---Â---
+            // ---Â ---Â --- Banner: Program yang sedang diedit ---Â ---Â ---
             if (_selectedPatientProgram != null) ...[
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -1171,15 +1289,15 @@ class _AhliGiziDetailPasienScreenState
               ),
             ],
 
-            // ---Â---Â--- NUTRISI SECTION ---Â---Â---
+            // ---Â ---Â --- NUTRISI SECTION ---Â ---Â ---
             _buildNutrisiSection(),
             const SizedBox(height: 24),
 
-            // ---Â---Â--- CAPAIAN GIZI SECTION ---Â---Â---
+            // ---Â ---Â --- CAPAIAN GIZI SECTION ---Â ---Â ---
             _buildCapaianGiziSection(),
             const SizedBox(height: 24),
             
-            // ---Â---Â--- RIWAYAT CATATAN MAKANAN ---Â---Â---
+            // ---Â ---Â --- RIWAYAT CATATAN MAKANAN ---Â ---Â ---
             _buildRiwayatMakanSection(),
             const SizedBox(height: 12),
             SizedBox(
@@ -1229,42 +1347,13 @@ class _AhliGiziDetailPasienScreenState
             ),
             const SizedBox(height: 12),
             const SizedBox(height: 16),
+            
+            // --- Catatan Evaluasi Harian (dengan kunci dinamis & Status Gizi) ---
             _buildSectionLabel('Catatan Evaluasi Pasien (Harian)'),
             const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.divider),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Berikan catatan evaluasi terbaru mengenai perkembangan pasien ini. Catatan ini akan tersinkronisasi dengan dashboard pasien dan akan muncul pada Laporan Bulanan.',
-                    style: GoogleFonts.manrope(fontSize: 12, color: AppColors.textSecondary),
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: _evaluasiHarianCtrl,
-                    maxLines: 4,
-                    style: GoogleFonts.manrope(fontSize: 13, color: AppColors.textPrimary),
-                    decoration: InputDecoration(
-                      hintText: 'Ketik catatan evaluasi perkembangan pasien...',
-                      hintStyle: GoogleFonts.manrope(fontSize: 13, color: AppColors.textMuted),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: AppColors.divider)),
-                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: AppColors.divider)),
-                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: AppColors.primary)),
-                      filled: true,
-                      fillColor: AppColors.background,
-                      contentPadding: const EdgeInsets.all(12),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            _buildEvaluasiSection(),
 
+            const SizedBox(height: 24),
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
@@ -3042,8 +3131,11 @@ class _AhliGiziDetailPasienScreenState
                   final createdBy = currentUser?['uid'] ?? 'unknown_ag';
                   final rm = widget.pasien['rm'] ?? '';
                   final patientId = widget.pasien['uid'] ?? '';
-                  final effectiveDiet = widget.pasien['diet_type'] ?? 'Normal';
-                  
+                  final effectiveDiet = (program['therapyProgramName'] as String?)?.isNotEmpty == true 
+                      ? program['therapyProgramName'] as String 
+                      : ((widget.pasien['diet_type'] as String?)?.isNotEmpty == true 
+                          ? widget.pasien['diet_type'] as String 
+                          : 'Diet Normal');                  
                   final newProg = await AuthService.addPatientTherapyProgram(
                     patientId: patientId,
                     patientRm: rm,
@@ -3060,6 +3152,26 @@ class _AhliGiziDetailPasienScreenState
                         _patientPrograms = _patientPrograms.where((p) => !p['patientProgramId'].toString().startsWith('initial')).toList();
                         _patientPrograms.insert(0, newProg);
                       });
+                      
+                      // Construct current nutrients
+                      Map<String, dynamic> currentNutrients = {};
+                      _checkedNutrients.forEach((key, checked) {
+                        if (checked) {
+                          final tVal = double.tryParse(_targetCtrls[key]?.text ?? '0') ?? 0.0;
+                          final aVal = double.tryParse(_aktualCtrls[key]?.text ?? '0') ?? 0.0;
+                          currentNutrients[key] = {'target': tVal, 'aktual': aVal};
+                        }
+                      });
+
+                      // Auto-save the targets to the newly created program
+                      AuthService.saveNutritionTarget(
+                        patientProgramId: patientProgramId,
+                        patientId: patientId,
+                        patientRm: rm,
+                        therapyProgramId: '',
+                        nutrientItems: currentNutrients,
+                        createdBy: createdBy,
+                      );
                     }
                   } else {
                      if (mounted) {

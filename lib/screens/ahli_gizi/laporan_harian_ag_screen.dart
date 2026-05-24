@@ -27,6 +27,7 @@ class _LaporanHarianAGScreenState extends State<LaporanHarianAGScreen> {
   List<Map<String, dynamic>> _mealLogs = [];
   List<Map<String, dynamic>> _nutrisiPerDiet = [];
   List<Map<String, dynamic>> _patientPrograms = [];
+  List<Map<String, dynamic>> _catatanEvaluasiList = []; // Poin 4
 
   // Filter
   int _selectedMonth = DateTime.now().month;
@@ -46,9 +47,20 @@ class _LaporanHarianAGScreenState extends State<LaporanHarianAGScreen> {
 
   Future<void> _loadData() async {
     final rm = widget.pasien['rm'] as String;
-    final logs = await AuthService.getMealLogsForPasien(rm, days: 90);
+    final patientId = widget.pasien['uid'] as String? ?? '';
+    final logs = await AuthService.getMealLogsForPasien(rm, days: 90, ownerUid: patientId);
     final nutrisi = await AuthService.getAllNutrisiPasien(rm);
-    List<Map<String, dynamic>> programs = await AuthService.getPatientTherapyProgramsByRm(rm);
+    List<Map<String, dynamic>> programs = [];
+    if (patientId.isNotEmpty) {
+      programs = await AuthService.getPatientTherapyPrograms(patientId);
+    }
+    if (programs.isEmpty) {
+      final rmProgs = await AuthService.getPatientTherapyProgramsByRm(rm);
+      programs = rmProgs.where((p) {
+        final progUid = p['patientId'] as String? ?? '';
+        return progUid.isEmpty || progUid == patientId;
+      }).toList();
+    }
     
     // Fallback jika tidak ada program spesifik
     if (programs.isEmpty) {
@@ -80,6 +92,13 @@ class _LaporanHarianAGScreenState extends State<LaporanHarianAGScreen> {
         _isLoading = false;
       });
     }
+
+    // Poin 4: Load catatan evaluasi dari ahli gizi
+    try {
+      final rm = widget.pasien['rm'] as String;
+      final evalDocs = await AuthService.getCatatanEvaluasiList(rm);
+      if (mounted) setState(() => _catatanEvaluasiList = evalDocs);
+    } catch (_) {}
   }
 
   List<Map<String, dynamic>> get _filteredLogs {
@@ -194,6 +213,37 @@ class _LaporanHarianAGScreenState extends State<LaporanHarianAGScreen> {
       }
       programBlocks.write('</table>');
       
+      // Catatan Evaluasi untuk Program ini
+      final evalForProg = _catatanEvaluasiList.where((e) {
+        final progId = prog['patientProgramId'] as String? ?? '';
+        return e['patientProgramId'] == progId || progId.isEmpty;
+      }).toList();
+      // Juga ambil semua evaluasi jika tidak ada filter spesifik
+      final evalToShow = evalForProg.isNotEmpty ? evalForProg : _catatanEvaluasiList;
+      if (evalToShow.isNotEmpty) {
+        programBlocks.write('<h3 style="font-size: 12pt; color: #333; margin-bottom: 5px;">Catatan Evaluasi Ahli Gizi</h3>');
+        programBlocks.write('<table border="1" cellpadding="6" cellspacing="0" width="100%" style="border-collapse: collapse; margin-bottom: 15px; font-size: 11pt;">');
+        programBlocks.write('<tr style="background-color: #3B7A57; color: white;"><th width="25%" style="text-align: left;">Tanggal</th><th width="20%" style="text-align: left;">Ahli Gizi</th><th width="55%" style="text-align: left;">Catatan Evaluasi</th></tr>');
+        for (final eval in evalToShow) {
+          final evalDateRaw = eval['created_at'] as String? ?? eval['date'] as String? ?? '';
+          String evalDateStr = '-';
+          try {
+            if (evalDateRaw.isNotEmpty) {
+              final dt = DateTime.parse(evalDateRaw).toLocal();
+              evalDateStr = '${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')}/${dt.year}';
+            }
+          } catch (_) {}
+          final agName = eval['agName'] as String? ?? eval['ag_name'] as String? ?? '-';
+          final catatan = eval['catatan'] as String? ?? '-';
+          programBlocks.write('<tr>');
+          programBlocks.write('<td style="vertical-align: top;"><b style="color: #0284c7;">$evalDateStr</b></td>');
+          programBlocks.write('<td style="vertical-align: top;">$agName</td>');
+          programBlocks.write('<td style="vertical-align: top;">$catatan</td>');
+          programBlocks.write('</tr>');
+        }
+        programBlocks.write('</table>');
+      }
+
       // Pembatas antar program jika belum program terakhir
       if (i < _patientPrograms.length - 1) {
         programBlocks.write('<hr style="border: 1px solid #ccc; margin-top: 30px;" />');
@@ -253,7 +303,7 @@ class _LaporanHarianAGScreenState extends State<LaporanHarianAGScreen> {
     <tr><td>No. Rekam Medis</td><td>: ${p['rm'] ?? '-'}</td></tr>
     <tr><td>Tanggal Lahir</td><td>: ${p['birthdate'] ?? '-'}</td></tr>
     <tr><td>Jenis Kelamin</td><td>: ${p['gender'] ?? '-'}</td></tr>
-    <tr><td>Status Gizi</td><td>: ${p['status_gizi'] ?? '-'}</td></tr>
+    <tr><td>Status Gizi</td><td>: ${p['status_gizi_manual'] ?? p['status_gizi'] ?? 'Belum diinput'}</td></tr>
   </table>
 
   ${programBlocks.toString()}

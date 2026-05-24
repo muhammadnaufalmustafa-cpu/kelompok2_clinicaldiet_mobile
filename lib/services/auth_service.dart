@@ -450,6 +450,16 @@ static Future<Map<String, dynamic>> registerAhliGizi({
         jsonEncode(_makeEncodable(userData)),
       );
 
+      // Poin 9: Cleanup orphaned meal_logs saat login pasien
+      // (data dari RM yang sama tapi UID berbeda = warisan user yang sudah dihapus)
+      if (userRole == 'pasien') {
+        final rm = userData['rm'] as String? ?? '';
+        if (rm.isNotEmpty) {
+          // Jalankan di background, tidak menunggu
+          cleanupOrphanedMealLogs(rm: rm, currentUid: uid).ignore();
+        }
+      }
+
       /* debug log removed */
       return {'success': true, 'user': userData, 'role': userRole};
     } on FirebaseAuthException {
@@ -1086,6 +1096,7 @@ static Future<Map<String, dynamic>> registerAhliGizi({
   static Future<List<Map<String, dynamic>>> getMealLogsForPasien(
     String rmPasien, {
     int days = 30,
+    String? ownerUid, // Poin 9: filter by owner UID untuk skip orphaned data
   }) async {
     try {
       // Query HANYA by rm_pasien (single-field index, always available)
@@ -1102,7 +1113,13 @@ static Future<Map<String, dynamic>> registerAhliGizi({
         final dateStr = log['date'] as String? ?? '';
         if (dateStr.isEmpty) return true; // sertakan jika tidak ada tanggal
         final logDate = DateTime.tryParse(dateStr);
-        return logDate != null && logDate.isAfter(cutoffDate);
+        if (logDate == null || !logDate.isAfter(cutoffDate)) return false;
+        // Poin 9: Jika ownerUid diberikan, skip log yang user_id-nya berbeda
+        if (ownerUid != null) {
+          final logUid = log['user_id'] as String? ?? log['uid'] as String? ?? '';
+          if (logUid.isNotEmpty && logUid != ownerUid) return false;
+        }
+        return true;
       }).toList();
 
       result.sort(
@@ -1112,6 +1129,38 @@ static Future<Map<String, dynamic>> registerAhliGizi({
       return result;
     } catch (e) {
       return [];
+    }
+  }
+
+  /// Poin 9: Cleanup orphaned meal_logs dari RM yang sama tapi UID berbeda
+  /// Dipanggil saat user pertama kali login agar tidak mewarisi data user lama
+  static Future<void> cleanupOrphanedMealLogs({
+    required String rm,
+    required String currentUid,
+  }) async {
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('meal_logs')
+          .where('rm_pasien', isEqualTo: rm)
+          .limit(100)
+          .get();
+
+      final batch = FirebaseFirestore.instance.batch();
+      int deleteCount = 0;
+      for (final doc in snapshot.docs) {
+        final data = doc.data();
+        final logUid = data['user_id'] as String? ?? data['uid'] as String? ?? '';
+        // Hapus log yang UID-nya berbeda dari user saat ini
+        if (logUid.isNotEmpty && logUid != currentUid) {
+          batch.delete(doc.reference);
+          deleteCount++;
+        }
+      }
+      if (deleteCount > 0) {
+        await batch.commit();
+      }
+    } catch (_) {
+      // Gagal cleanup tidak menghalangi proses login
     }
   }
 
@@ -2582,25 +2631,34 @@ static Future<Map<String, dynamic>> registerAhliGizi({
       final patientProgramId =
           '${patientRm}_${therapyProgramId}_${now.millisecondsSinceEpoch}';
 
+      final newProgramData = {
+        'patientProgramId': patientProgramId,
+        'patientId': patientId,
+        'patientRm': patientRm,
+        'therapyProgramId': therapyProgramId,
+        'therapyProgramName': therapyProgramName,
+        'status': 'active',
+        'startDate': startDate ?? now.toIso8601String(),
+        'endDate': null,
+        'notes': notes,
+        'createdAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+        'createdBy': createdBy,
+      };
+
       await FirebaseFirestore.instance
           .collection('patientTherapyPrograms')
           .doc(patientProgramId)
-          .set({
-            'patientProgramId': patientProgramId,
-            'patientId': patientId,
-            'patientRm': patientRm,
-            'therapyProgramId': therapyProgramId,
-            'therapyProgramName': therapyProgramName,
-            'status': 'active',
-            'startDate': startDate ?? now.toIso8601String(),
-            'endDate': null,
-            'notes': notes,
-            'createdAt': FieldValue.serverTimestamp(),
-            'updatedAt': FieldValue.serverTimestamp(),
-            'createdBy': createdBy,
-          });
+          .set(newProgramData);
 
-      return {'success': true, 'patientProgramId': patientProgramId};
+      // Return the new program data so UI can use it immediately without fetching again
+      return {
+        'success': true, 
+        'patientProgramId': patientProgramId,
+        ...newProgramData,
+        'createdAt': now.toIso8601String(), // replace timestamp for local use
+        'updatedAt': now.toIso8601String(),
+      };
     } catch (e) {
       return {'success': false, 'message': 'Error: $e'};
     }

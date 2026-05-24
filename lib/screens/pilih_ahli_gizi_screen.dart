@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../theme/app_theme.dart';
 import '../services/auth_service.dart';
 import '../services/firebase_notification_service.dart';
@@ -24,24 +25,20 @@ class PilihAhliGiziScreen extends StatefulWidget {
   State<PilihAhliGiziScreen> createState() => _PilihAhliGiziScreenState();
 }
 
+
+
 class _PilihAhliGiziScreenState extends State<PilihAhliGiziScreen> {
-  List<Map<String, dynamic>> _ahliGiziList = [];
-  bool _isLoading = true;
+  // Poin 10: Gunakan Stream agar rating real-time
+  late final Stream<QuerySnapshot> _ahliGiziStream;
 
   @override
   void initState() {
     super.initState();
-    _loadAhliGizi();
-  }
-
-  Future<void> _loadAhliGizi() async {
-    final list = await AuthService.getAllAhliGizi();
-    if (mounted) {
-      setState(() {
-        _ahliGiziList = list;
-        _isLoading = false;
-      });
-    }
+    // Stream query yang diupdate real-time dari Firestore
+    _ahliGiziStream = FirebaseFirestore.instance
+        .collection('users')
+        .where('role', isEqualTo: 'ahli_gizi')
+        .snapshots();
   }
 
   @override
@@ -55,11 +52,29 @@ class _PilihAhliGiziScreenState extends State<PilihAhliGiziScreen> {
             style: GoogleFonts.manrope(
                 fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _ahliGiziList.isEmpty
-              ? _buildEmptyState()
-              : _buildList(),
+      // Poin 10: StreamBuilder untuk rating real-time
+      body: StreamBuilder<QuerySnapshot>(
+        stream: _ahliGiziStream,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+            return _buildEmptyState();
+          }
+          final list = snapshot.data!.docs
+              .map((doc) => doc.data() as Map<String, dynamic>)
+              .where((data) {
+                final status = data['status_akun'] as String?;
+                return status != 'pending' && status != 'rejected';
+              })
+              .toList();
+          if (list.isEmpty) {
+            return _buildEmptyState();
+          }
+          return _buildList(list);
+        },
+      ),
     );
   }
 
@@ -91,12 +106,12 @@ class _PilihAhliGiziScreenState extends State<PilihAhliGiziScreen> {
     );
   }
 
-  Widget _buildList() {
+  Widget _buildList(List<Map<String, dynamic>> ahliGiziList) {
     return ListView.builder(
       padding: const EdgeInsets.all(16),
-      itemCount: _ahliGiziList.length,
+      itemCount: ahliGiziList.length,
       itemBuilder: (ctx, i) {
-        final ag = _ahliGiziList[i];
+        final ag = ahliGiziList[i];
         final rating = (ag['rating'] as num?)?.toDouble() ?? 0.0;
         final ratingCount = (ag['rating_count'] as num?)?.toInt() ?? 0;
 

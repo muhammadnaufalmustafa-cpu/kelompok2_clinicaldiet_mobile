@@ -147,39 +147,43 @@ class ExportService {
       final fileName = 'Laporan_Pasien_${ahliGizi['name']?.toString().replaceAll(" ", "_")}_${monthYearStr}_$timestamp.xlsx';
 
       if (kIsWeb) {
+        // Web: Share via browser download
         await Share.shareXFiles(
           [XFile.fromData(Uint8List.fromList(fileBytes), name: fileName, mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')],
           text: 'Laporan Pasien Bulanan',
         );
-        File? finalFile;
-        if (Platform.isAndroid) {
-          try {
-            final downloadDir = Directory('/storage/emulated/0/Download');
-            if (await downloadDir.exists()) {
-              finalFile = File('${downloadDir.path}/$fileName');
-              await finalFile.writeAsBytes(fileBytes);
-            }
-          } catch (_) {}
-        }
-
-        if (finalFile == null) {
-          final directory = await getTemporaryDirectory();
-          finalFile = File('${directory.path}/$fileName');
-          await finalFile.writeAsBytes(fileBytes);
-        }
-
-        try {
-          await NotificationService().showInstantNotification(
-            id: DateTime.now().millisecondsSinceEpoch ~/ 1000,
-            title: 'Unduhan Berhasil 📊',
-            body: 'Laporan $fileName berhasil disimpan. Ketuk untuk membuka.',
-            payload: finalFile.path,
-          );
-        } catch (_) {}
-        
-        // Kita langsung buka filenya jika memungkinkan, atau biarkan user membuka dari notifikasi
-        OpenFilex.open(finalFile.path);
+        return true;
       }
+
+      // Android / iOS: Simpan ke storage lokal
+      File? finalFile;
+      if (Platform.isAndroid) {
+        try {
+          final downloadDir = Directory('/storage/emulated/0/Download');
+          if (await downloadDir.exists()) {
+            finalFile = File('${downloadDir.path}/$fileName');
+            await finalFile.writeAsBytes(fileBytes);
+          }
+        } catch (_) {}
+      }
+
+      if (finalFile == null) {
+        final directory = await getTemporaryDirectory();
+        finalFile = File('${directory.path}/$fileName');
+        await finalFile.writeAsBytes(fileBytes);
+      }
+
+      try {
+        await NotificationService().showInstantNotification(
+          id: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+          title: 'Unduhan Berhasil 📊',
+          body: 'Laporan $fileName berhasil disimpan. Ketuk untuk membuka.',
+          payload: finalFile.path,
+        );
+      } catch (_) {}
+      
+      // Buka file langsung
+      OpenFilex.open(finalFile.path);
 
       return true;
     } catch (e) {
