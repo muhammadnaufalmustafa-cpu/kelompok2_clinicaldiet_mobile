@@ -304,6 +304,9 @@ class _LaporanHarianAGScreenState extends State<LaporanHarianAGScreen> {
     <tr><td>Tanggal Lahir</td><td>: ${p['birthdate'] ?? '-'}</td></tr>
     <tr><td>Jenis Kelamin</td><td>: ${p['gender'] ?? '-'}</td></tr>
     <tr><td>Status Gizi</td><td>: ${p['status_gizi_manual'] ?? p['status_gizi'] ?? 'Belum diinput'}</td></tr>
+    ${p['bbu_manual'] != null ? '<tr><td>BB/U (Anak)</td><td>: ${p['bbu_manual']}</td></tr>' : ''}
+    ${p['tbu_manual'] != null ? '<tr><td>TB/U (Anak)</td><td>: ${p['tbu_manual']}</td></tr>' : ''}
+    ${p['imtu_manual'] != null ? '<tr><td>IMT/U (Anak)</td><td>: ${p['imtu_manual']}</td></tr>' : ''}
   </table>
 
   ${programBlocks.toString()}
@@ -330,52 +333,32 @@ class _LaporanHarianAGScreenState extends State<LaporanHarianAGScreen> {
           : '${_selectedMonth}_$_selectedYear';
       final timestamp = '${DateTime.now().hour}${DateTime.now().minute}${DateTime.now().second}';
       final fileName =
-          'Laporan_Harian_${widget.pasien['rm']}_${periodStr}_$timestamp.doc';
-      if (kIsWeb) {
-        // Di web: share sebagai plain text fallback
-        await Share.share(docContent,
-            subject: 'Laporan Harian ${widget.pasien['name']} - $periodStr');
-      } else {
-        File? finalFile;
-        if (Platform.isAndroid) {
-          try {
-            final downloadDir = Directory('/storage/emulated/0/Download');
-            if (await downloadDir.exists()) {
-              finalFile = File('${downloadDir.path}/$fileName');
-            }
-          } catch (_) {}
-        }
-        
-        if (finalFile == null) {
-          final dir = await getTemporaryDirectory();
-          finalFile = File('${dir.path}/$fileName');
-        }
+          'Laporan_Harian_${widget.pasien['rm']}_${periodStr}_$timestamp.html';
+      
+      final dir = await getTemporaryDirectory();
+      final finalFile = File('${dir.path}/$fileName');
+      await finalFile.writeAsString(docContent, flush: true);
 
-        await finalFile.writeAsString(docContent, flush: true);
+      try {
+        await NotificationService().showInstantNotification(
+          id: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+          title: 'Unduhan Laporan Harian Berhasil',
+          body: 'Laporan $fileName berhasil dibuat. Ketuk untuk membuka atau membagikan.',
+          payload: finalFile.path,
+        );
+      } catch (_) {}
 
-        try {
-          await NotificationService().showInstantNotification(
-            id: DateTime.now().millisecondsSinceEpoch ~/ 1000,
-            title: 'Unduhan Laporan Harian Berhasil',
-            body: 'Laporan $fileName berhasil disimpan. Ketuk untuk membuka.',
-            payload: finalFile.path,
-          );
-        } catch (_) {}
-
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text('Laporan berhasil disimpan: $fileName', style: GoogleFonts.manrope()),
-            backgroundColor: AppColors.primary,
-            action: SnackBarAction(
-              label: 'Buka File',
-              textColor: Colors.white,
-              onPressed: () {
-                OpenFilex.open(finalFile!.path);
-              },
-            ),
-          ));
-        }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Laporan berhasil disiapkan: $fileName', style: GoogleFonts.manrope()),
+          backgroundColor: AppColors.primary,
+        ));
       }
+
+      await Share.shareXFiles(
+        [XFile(finalFile.path, mimeType: 'text/html')],
+        text: 'Laporan Harian ${widget.pasien['name']} - $periodStr',
+      );
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -904,7 +887,7 @@ class _LaporanHarianAGScreenState extends State<LaporanHarianAGScreen> {
                     strokeWidth: 2, color: Colors.white))
             : const Icon(Icons.download_outlined, size: 20),
         label: Text(
-          _isExporting ? 'Mengunduh laporan...' : 'Unduh Laporan (Word)',
+                  _isExporting ? 'Menyiapkan laporan...' : 'Unduh Laporan (HTML)',
           style: GoogleFonts.manrope(fontWeight: FontWeight.w700),
         ),
         style: ElevatedButton.styleFrom(

@@ -69,6 +69,11 @@ class _CatatanScreenState extends State<CatatanScreen> {
   String _catatanKlinis = '';       // dari profil pasien (fallback)
   String _catatanProgram = '';      // dari program yang dipilih (dinamis)
 
+  String? _bbuManual;
+  String? _tbuManual;
+  String? _imtuManual;
+  String? _statusGiziManual;
+
   TimeOfDay? _jamPagi;
   TimeOfDay? _jamSelinganPagi;
   TimeOfDay? _jamSiang;
@@ -168,10 +173,18 @@ class _CatatanScreenState extends State<CatatanScreen> {
       if (mounted && freshUser != null) {
         setState(() {
           _catatanKlinis = freshUser['catatan_klinis'] as String? ?? user['catatan_klinis'] as String? ?? '-';
+          _bbuManual = freshUser['bbu_manual'] as String?;
+          _tbuManual = freshUser['tbu_manual'] as String?;
+          _imtuManual = freshUser['imtu_manual'] as String?;
+          _statusGiziManual = freshUser['status_gizi_manual'] as String?;
         });
       } else if (mounted) {
         setState(() {
           _catatanKlinis = user['catatan_klinis'] as String? ?? '-';
+          _bbuManual = user['bbu_manual'] as String?;
+          _tbuManual = user['tbu_manual'] as String?;
+          _imtuManual = user['imtu_manual'] as String?;
+          _statusGiziManual = user['status_gizi_manual'] as String?;
         });
       }
     }
@@ -981,14 +994,6 @@ class _CatatanScreenState extends State<CatatanScreen> {
     }
 
     final ageMap = AgeCalculator.calculateAge(_birthdate);
-    
-    // Jika usia berhasil dihitung dan di bawah 18 tahun (216 bulan), sembunyikan Ringkasan Klinis & Status Gizi (IMT Dewasa)
-    if (ageMap != null) {
-      final int totalMonths = (ageMap['years']! * 12) + ageMap['months']!;
-      if (totalMonths < 216) {
-        return const SizedBox.shrink();
-      }
-    }
 
     return Container(
       margin: const EdgeInsets.only(top: 12),
@@ -1005,7 +1010,7 @@ class _CatatanScreenState extends State<CatatanScreen> {
             children: [
               const Icon(Icons.analytics_outlined, color: Color(0xFF166534), size: 18),
               const SizedBox(width: 8),
-              Text('Ringkasan Klinis & Status Gizi', style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w700, color: const Color(0xFF166534))),
+              Text('Informasi Indeks Masa Tubuh', style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w700, color: const Color(0xFF166534))),
             ],
           ),
           const SizedBox(height: 12),
@@ -1015,21 +1020,28 @@ class _CatatanScreenState extends State<CatatanScreen> {
           else if (_catatanKlinis.isNotEmpty && _catatanKlinis != '-')
             _clinicalRow('Catatan Ahli Gizi', _catatanKlinis),
           const Divider(height: 16, color: Color(0xFF86EFAC)),
-          Row(
-            children: [
-              Expanded(child: _statusItem('IMT', imt.toStringAsFixed(1))),
-              Expanded(child: _statusItem('Status', imtKategori)),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(child: _statusItem('BB/U', 'Normal')), 
-              Expanded(child: _statusItem('IMT/U', 'Normal')), 
-            ],
-          ),
-          // Keterangan khusus anak-anak disembunyikan karena jika pasien < 18 tahun,
-          // seluruh block Ringkasan Klinis ini sudah tidak di-render (SizedBox.shrink).
+          if (ageMap != null && ((ageMap['years']! * 12) + ageMap['months']!) < 216) ...[
+            Row(
+              children: [
+                Expanded(child: _statusItem('BB/U', _bbuManual ?? '-')), 
+                Expanded(child: _statusItem('TB/U', _tbuManual ?? '-')), 
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(child: _statusItem('IMT/U', _imtuManual ?? '-')), 
+                const Expanded(child: SizedBox()), 
+              ],
+            ),
+          ] else ...[
+            Row(
+              children: [
+                Expanded(child: _statusItem('IMT', imt.toStringAsFixed(1))),
+                Expanded(child: _statusItem('Status', _statusGiziManual ?? imtKategori)),
+              ],
+            ),
+          ],
         ],
       ),
     );

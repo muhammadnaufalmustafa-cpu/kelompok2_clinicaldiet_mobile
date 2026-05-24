@@ -78,8 +78,8 @@ class ExportService {
           return p['diet_type'] as String? ?? '-';
         }();
 
-        // Status gizi dihitung dari IMT (BB/TB)
-        final statusGizi = _hitungStatusGizi(p['weight'], p['height']);
+        // Status gizi: prioritaskan input manual AG, fallback ke hitung otomatis IMT (BB/TB)
+        final statusGizi = p['status_gizi_manual'] as String? ?? _hitungStatusGizi(p['weight'], p['height']);
 
         // Status program
         final statusPasien = p['status']?.toString() ?? 'aktif';
@@ -112,7 +112,7 @@ class ExportService {
 
         // Point 7: Catatan evaluasi terakhir (yang paling update)
         final catEval = p['catatan_evaluasi_terakhir'] as Map<String, dynamic>?;
-        final catatanEvaluasiStr = catEval != null ? (catEval['catatan']?.toString() ?? '-') : '-';
+        final catatanEvaluasiStr = catEval != null ? (catEval['catatan']?.toString() ?? '-') : (p['catatan_klinis']?.toString() ?? '-');
 
         final rowData = [
           (i + 1).toString(),                        // No
@@ -155,35 +155,25 @@ class ExportService {
         return true;
       }
 
-      // Android / iOS: Simpan ke storage lokal
-      File? finalFile;
-      if (Platform.isAndroid) {
-        try {
-          final downloadDir = Directory('/storage/emulated/0/Download');
-          if (await downloadDir.exists()) {
-            finalFile = File('${downloadDir.path}/$fileName');
-            await finalFile.writeAsBytes(fileBytes);
-          }
-        } catch (_) {}
-      }
-
-      if (finalFile == null) {
-        final directory = await getTemporaryDirectory();
-        finalFile = File('${directory.path}/$fileName');
-        await finalFile.writeAsBytes(fileBytes);
-      }
+      // Simpan file Excel ke folder sementara, lalu gunakan Share.shareXFiles agar user bisa
+      // bebas memilih "Simpan ke File", "Simpan ke Drive", atau Share via WhatsApp.
+      final directory = await getTemporaryDirectory();
+      final finalFile = File('${directory.path}/$fileName');
+      await finalFile.writeAsBytes(fileBytes);
 
       try {
         await NotificationService().showInstantNotification(
           id: DateTime.now().millisecondsSinceEpoch ~/ 1000,
           title: 'Unduhan Berhasil 📊',
-          body: 'Laporan $fileName berhasil disimpan. Ketuk untuk membuka.',
+          body: 'Laporan $fileName berhasil dibuat. Ketuk untuk membagikan atau menyimpan.',
           payload: finalFile.path,
         );
       } catch (_) {}
-      
-      // Buka file langsung
-      OpenFilex.open(finalFile.path);
+
+      await Share.shareXFiles(
+        [XFile(finalFile.path, mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')],
+        text: 'Laporan Pasien Bulanan',
+      );
 
       return true;
     } catch (e) {

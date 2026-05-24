@@ -11,7 +11,7 @@ import 'login_screen.dart';
 import 'pilih_ahli_gizi_screen.dart';
 import 'review_program_screen.dart';
 import '../widgets/notification_bell.dart';
-
+import '../utils/age_calculator.dart';
 class ProfilScreen extends StatefulWidget {
   const ProfilScreen({super.key});
 
@@ -1245,7 +1245,16 @@ class _ProfilScreenState extends State<ProfilScreen> {
     final height = bbHistory.isNotEmpty
         ? (bbHistory.first['height'] as num?)?.toDouble() ?? (_user?['height'] as num?)?.toDouble() ?? 0
         : (_user?['height'] as num?)?.toDouble() ?? 0;
-    
+    final String? birthdateStr = _user?['birthdate'] as String?;
+    final ageMap = AgeCalculator.calculateAge(birthdateStr);
+    bool isUnderage = false;
+    if (ageMap != null) {
+      final int totalMonths = (ageMap['years']! * 12) + ageMap['months']!;
+      if (totalMonths < 216) {
+        isUnderage = true;
+      }
+    }
+
     double bmi = 0;
     String bmiStatus = 'N/A';
     Color bmiColor = AppColors.textMuted;
@@ -1387,6 +1396,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
                   ),
                   const SizedBox(height: 12),
 
+                  if (!isUnderage)
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(16),
@@ -1443,20 +1453,6 @@ class _ProfilScreenState extends State<ProfilScreen> {
                     ),
                   ),
 
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton.icon(
-                      onPressed: _showUpdateBBDialog,
-                      icon: const Icon(Icons.monitor_weight_outlined, size: 18, color: AppColors.secondary),
-                      label: Text('Catat BB Hari Ini', style: GoogleFonts.manrope(fontWeight: FontWeight.w600, color: AppColors.secondary)),
-                      style: OutlinedButton.styleFrom(
-                        side: const BorderSide(color: AppColors.secondary),
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                      ),
-                    ),
-                  ),
                   const SizedBox(height: 16),
 
                   SizedBox(

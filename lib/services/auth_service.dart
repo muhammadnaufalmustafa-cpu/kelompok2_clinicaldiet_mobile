@@ -864,6 +864,15 @@ static Future<Map<String, dynamic>> registerAhliGizi({
   }
 
   static Future<void> updatePasienStatus(String rm, String status) async {
+    try {
+      final snap = await FirebaseFirestore.instance.collection('users').where('rm', isEqualTo: rm).get();
+      if (snap.docs.isNotEmpty) {
+        await snap.docs.first.reference.update({'status': status});
+      }
+    } catch (e) {
+      debugPrint('Gagal update status di firestore: $e');
+    }
+
     final prefs = await SharedPreferences.getInstance();
     final usersJson = prefs.getString(_usersKey);
     if (usersJson == null) return;
