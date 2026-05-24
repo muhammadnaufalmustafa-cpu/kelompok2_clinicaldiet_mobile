@@ -333,7 +333,7 @@ class _LaporanHarianAGScreenState extends State<LaporanHarianAGScreen> {
           : '${_selectedMonth}_$_selectedYear';
       final timestamp = '${DateTime.now().hour}${DateTime.now().minute}${DateTime.now().second}';
       final fileName =
-          'Laporan_Harian_${widget.pasien['rm']}_${periodStr}_$timestamp.html';
+          'Laporan_Harian_${widget.pasien['rm']}_${periodStr}_$timestamp.doc';
       
       final dir = await getTemporaryDirectory();
       final finalFile = File('${dir.path}/$fileName');
@@ -356,7 +356,7 @@ class _LaporanHarianAGScreenState extends State<LaporanHarianAGScreen> {
       }
 
       await Share.shareXFiles(
-        [XFile(finalFile.path, mimeType: 'text/html')],
+        [XFile(finalFile.path, mimeType: 'application/msword')],
         text: 'Laporan Harian ${widget.pasien['name']} - $periodStr',
       );
     } catch (e) {
@@ -887,7 +887,7 @@ class _LaporanHarianAGScreenState extends State<LaporanHarianAGScreen> {
                     strokeWidth: 2, color: Colors.white))
             : const Icon(Icons.download_outlined, size: 20),
         label: Text(
-                  _isExporting ? 'Menyiapkan laporan...' : 'Unduh Laporan (HTML)',
+                  _isExporting ? 'Menyiapkan laporan...' : 'Unduh Laporan (Word)',
           style: GoogleFonts.manrope(fontWeight: FontWeight.w700),
         ),
         style: ElevatedButton.styleFrom(

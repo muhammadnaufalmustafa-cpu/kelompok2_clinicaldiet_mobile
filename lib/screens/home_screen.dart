@@ -940,8 +940,8 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildBBTBCard() {
     final ageInfo = _computeAge(_user?['birthdate']?.toString() ?? '');
     final bmi = _tbTerakhir > 0 ? _bbTerakhir / ((_tbTerakhir / 100) * (_tbTerakhir / 100)) : 0.0;
-    final bmiLabel = bmi == 0 ? '-' : bmi < 18.5 ? 'Kurus' : bmi < 25 ? 'Normal' : bmi < 30 ? 'Gemuk' : 'Obesitas';
-    final bmiColor = bmi == 0 ? AppColors.textMuted : bmi < 18.5 ? const Color(0xFF0284C7) : bmi < 25 ? AppColors.primary : bmi < 30 ? const Color(0xFFD97706) : const Color(0xFFDC2626);
+    final bmiLabel = _user?['status_gizi_manual'] != null && _user?['status_gizi_manual'] != '' ? _user!['status_gizi_manual'] : (bmi == 0 ? '-' : bmi < 18.5 ? 'Kurus' : bmi < 25 ? 'Normal' : bmi < 30 ? 'Gemuk' : 'Obesitas');
+    final bmiColor = _user?['status_gizi_manual'] != null && _user?['status_gizi_manual'] != '' ? AppColors.primary : (bmi == 0 ? AppColors.textMuted : bmi < 18.5 ? const Color(0xFF0284C7) : bmi < 25 ? AppColors.primary : bmi < 30 ? const Color(0xFFD97706) : const Color(0xFFDC2626));
     
     String catLabel;
     switch (ageInfo.kategori) {
@@ -999,25 +999,53 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     if (ageInfo.kategori == AgeCategory.balita) {
-      return Row(children: [
-        Expanded(child: _buildPhysCard('BB', '${_fmt(_bbTerakhir)} kg', Icons.fitness_center)),
-        const SizedBox(width: 10),
-        Expanded(child: _buildPhysCard('TB', '${_fmt(_tbTerakhir)} cm', Icons.height)),
-        const SizedBox(width: 10),
-        Expanded(child: _buildPhysCard('Gender', gender == 'Laki-laki' ? 'L' : (gender == 'Perempuan' ? 'P' : '-'), Icons.wc)),
-        const SizedBox(width: 10),
-        Expanded(child: _buildPhysCard('Umur', ageStr, Icons.cake_outlined)),
-      ]);
+      return Column(
+        children: [
+          Row(children: [
+            Expanded(child: _buildPhysCard('BB', '${_fmt(_bbTerakhir)} kg', Icons.fitness_center)),
+            const SizedBox(width: 10),
+            Expanded(child: _buildPhysCard('TB', '${_fmt(_tbTerakhir)} cm', Icons.height)),
+            const SizedBox(width: 10),
+            Expanded(child: _buildPhysCard('Gender', gender == 'Laki-laki' ? 'L' : (gender == 'Perempuan' ? 'P' : '-'), Icons.wc)),
+            const SizedBox(width: 10),
+            Expanded(child: _buildPhysCard('Umur', ageStr, Icons.cake_outlined)),
+          ]),
+          if (_user?['bbu_manual'] != null || _user?['tbu_manual'] != null || _user?['imtu_manual'] != null) ...[
+            const SizedBox(height: 10),
+            Row(children: [
+              Expanded(child: _buildPhysCard('BB/U', _user?['bbu_manual']?.toString() ?? '-', Icons.child_care)),
+              const SizedBox(width: 10),
+              Expanded(child: _buildPhysCard('TB/U', _user?['tbu_manual']?.toString() ?? '-', Icons.child_care)),
+              const SizedBox(width: 10),
+              Expanded(child: _buildPhysCard('IMT/U', _user?['imtu_manual']?.toString() ?? '-', Icons.child_care)),
+            ]),
+          ],
+        ],
+      );
     } else if (ageInfo.kategori == AgeCategory.anakRemaja) {
-      return Row(children: [
-        Expanded(flex: 3, child: _buildPhysCard('BB', '${_fmt(_bbTerakhir)} kg', Icons.fitness_center)),
-        const SizedBox(width: 8),
-        Expanded(flex: 3, child: _buildPhysCard('TB', '${_fmt(_tbTerakhir)} cm', Icons.height)),
-        const SizedBox(width: 8),
-        Expanded(flex: 4, child: _buildPhysCard('Umur', ageStr, Icons.cake_outlined)),
-        const SizedBox(width: 8),
-        Expanded(flex: 3, child: _buildPhysCard('Gender', gender == 'Laki-laki' ? 'L' : (gender == 'Perempuan' ? 'P' : '-'), Icons.wc)),
-      ]);
+      return Column(
+        children: [
+          Row(children: [
+            Expanded(flex: 3, child: _buildPhysCard('BB', '${_fmt(_bbTerakhir)} kg', Icons.fitness_center)),
+            const SizedBox(width: 8),
+            Expanded(flex: 3, child: _buildPhysCard('TB', '${_fmt(_tbTerakhir)} cm', Icons.height)),
+            const SizedBox(width: 8),
+            Expanded(flex: 4, child: _buildPhysCard('Umur', ageStr, Icons.cake_outlined)),
+            const SizedBox(width: 8),
+            Expanded(flex: 3, child: _buildPhysCard('Gender', gender == 'Laki-laki' ? 'L' : (gender == 'Perempuan' ? 'P' : '-'), Icons.wc)),
+          ]),
+          if (_user?['bbu_manual'] != null || _user?['tbu_manual'] != null || _user?['imtu_manual'] != null) ...[
+            const SizedBox(height: 10),
+            Row(children: [
+              Expanded(child: _buildPhysCard('BB/U', _user?['bbu_manual']?.toString() ?? '-', Icons.child_care)),
+              const SizedBox(width: 10),
+              Expanded(child: _buildPhysCard('TB/U', _user?['tbu_manual']?.toString() ?? '-', Icons.child_care)),
+              const SizedBox(width: 10),
+              Expanded(child: _buildPhysCard('IMT/U', _user?['imtu_manual']?.toString() ?? '-', Icons.child_care)),
+            ]),
+          ],
+        ],
+      );
     } else {
       return Row(children: [
         Expanded(child: _buildPhysCard('BB', '${_fmt(_bbTerakhir)} kg', Icons.fitness_center)),

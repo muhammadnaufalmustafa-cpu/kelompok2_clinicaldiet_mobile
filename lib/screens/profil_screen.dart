@@ -1277,6 +1277,11 @@ class _ProfilScreenState extends State<ProfilScreen> {
       }
     }
 
+    if (_user?['status_gizi_manual'] != null && _user?['status_gizi_manual'] != '') {
+      bmiStatus = _user!['status_gizi_manual'].toString().toUpperCase();
+      bmiColor = AppColors.primary;
+    }
+
     final profilePhoto = _user?['profile_photo_path'] as String?;
     final profilePhotoBase64 = _user?['profile_photo_base64'] as String?;
 
@@ -1451,7 +1456,41 @@ class _ProfilScreenState extends State<ProfilScreen> {
                         ),
                       ],
                     ),
-                  ),
+                  )
+                  else if (_user?['bbu_manual'] != null || _user?['tbu_manual'] != null || _user?['imtu_manual'] != null)
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: AppColors.background,
+                        borderRadius: BorderRadius.circular(14),
+                        border: const Border(
+                          left: BorderSide(color: AppColors.primary, width: 4),
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'STATUS GIZI ANAK',
+                            style: GoogleFonts.manrope(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: 1.1,
+                              color: AppColors.textMuted,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              Expanded(child: _buildChildStat('BB/U', _user?['bbu_manual']?.toString() ?? '-')),
+                              Expanded(child: _buildChildStat('TB/U', _user?['tbu_manual']?.toString() ?? '-')),
+                              Expanded(child: _buildChildStat('IMT/U', _user?['imtu_manual']?.toString() ?? '-')),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
 
                   const SizedBox(height: 16),
 
@@ -1670,6 +1709,17 @@ class _ProfilScreenState extends State<ProfilScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildChildStat(String label, String value) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: GoogleFonts.manrope(fontSize: 11, color: AppColors.textSecondary)),
+        const SizedBox(height: 4),
+        Text(value, style: GoogleFonts.manrope(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
+      ],
     );
   }
 

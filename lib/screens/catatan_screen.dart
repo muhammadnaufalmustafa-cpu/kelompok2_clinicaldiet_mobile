@@ -1019,22 +1019,8 @@ class _CatatanScreenState extends State<CatatanScreen> {
             _clinicalRow('Catatan Ahli Gizi', _catatanProgram)
           else if (_catatanKlinis.isNotEmpty && _catatanKlinis != '-')
             _clinicalRow('Catatan Ahli Gizi', _catatanKlinis),
-          const Divider(height: 16, color: Color(0xFF86EFAC)),
-          if (ageMap != null && ((ageMap['years']! * 12) + ageMap['months']!) < 216) ...[
-            Row(
-              children: [
-                Expanded(child: _statusItem('BB/U', _bbuManual ?? '-')), 
-                Expanded(child: _statusItem('TB/U', _tbuManual ?? '-')), 
-              ],
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(child: _statusItem('IMT/U', _imtuManual ?? '-')), 
-                const Expanded(child: SizedBox()), 
-              ],
-            ),
-          ] else ...[
+          if (ageMap == null || ((ageMap['years']! * 12) + ageMap['months']!) >= 216) ...[
+            const Divider(height: 16, color: Color(0xFF86EFAC)),
             Row(
               children: [
                 Expanded(child: _statusItem('IMT', imt.toStringAsFixed(1))),

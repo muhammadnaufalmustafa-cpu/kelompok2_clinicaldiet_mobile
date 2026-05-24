@@ -1,6 +1,6 @@
 import 'dart:io';
 import 'dart:typed_data';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart';
 import 'package:excel/excel.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:open_filex/open_filex.dart';
@@ -21,7 +21,7 @@ class ExportService {
   }
 
   /// Ekspor daftar pasien yang difilter ke format Excel (.xlsx)
-  static Future<bool> exportPasienToExcel({
+  static Future<String?> exportPasienToExcel({
     required List<Map<String, dynamic>> pasienList,
     required Map<String, dynamic> ahliGizi,
     required String monthYearStr,
@@ -37,7 +37,7 @@ class ExportService {
         fontFamily: getFontFamily(FontFamily.Calibri),
       );
 
-      // Header Kolom (15 Kolom)
+      // Header Kolom (16 Kolom)
       final headers = [
         'No',
         'No RM',
@@ -64,7 +64,14 @@ class ExportService {
       }
 
       // Ambil reviews array dari ahliGizi untuk mencari rating per pasien
-      final reviews = (ahliGizi['reviews'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+      List<Map<String, dynamic>> reviews = [];
+      if (ahliGizi['reviews'] is List) {
+        for (var r in ahliGizi['reviews']) {
+          if (r is Map) {
+            reviews.add(Map<String, dynamic>.from(r));
+          }
+        }
+      }
 
       // Isi Data
       for (int i = 0; i < pasienList.length; i++) {
@@ -74,12 +81,12 @@ class ExportService {
         // Terapi diet
         final dietStr = () {
           final raw = p['diet_types'];
-          if (raw is List && raw.isNotEmpty) return raw.cast<String>().join(', ');
-          return p['diet_type'] as String? ?? '-';
+          if (raw is List && raw.isNotEmpty) return raw.map((e) => e.toString()).join(', ');
+          return p['diet_type']?.toString() ?? '-';
         }();
 
         // Status gizi: prioritaskan input manual AG, fallback ke hitung otomatis IMT (BB/TB)
-        final statusGizi = p['status_gizi_manual'] as String? ?? _hitungStatusGizi(p['weight'], p['height']);
+        final statusGizi = p['status_gizi_manual']?.toString() ?? _hitungStatusGizi(p['weight'], p['height']);
 
         // Status program
         final statusPasien = p['status']?.toString() ?? 'aktif';
@@ -111,8 +118,17 @@ class ExportService {
             : (outcomeProgram.isNotEmpty ? '[$outcomeProgram] $evaluasiAkhir' : evaluasiAkhir);
 
         // Point 7: Catatan evaluasi terakhir (yang paling update)
-        final catEval = p['catatan_evaluasi_terakhir'] as Map<String, dynamic>?;
-        final catatanEvaluasiStr = catEval != null ? (catEval['catatan']?.toString() ?? '-') : (p['catatan_klinis']?.toString() ?? '-');
+        final rawCatEval = p['catatan_evaluasi_terakhir'];
+        String catatanEvaluasiStr = '-';
+        if (rawCatEval is Map) {
+          catatanEvaluasiStr = rawCatEval['catatan']?.toString() ?? '-';
+        } else if (rawCatEval != null) {
+          catatanEvaluasiStr = rawCatEval.toString();
+        }
+        
+        if (catatanEvaluasiStr == '-' || catatanEvaluasiStr.trim().isEmpty) {
+          catatanEvaluasiStr = p['catatan_klinis']?.toString() ?? '-';
+        }
 
         final rowData = [
           (i + 1).toString(),                        // No
@@ -141,10 +157,11 @@ class ExportService {
 
       // Simpan File
       final fileBytes = excel.encode();
-      if (fileBytes == null) return false;
+      if (fileBytes == null) return "Gagal encode Excel file";
 
       final timestamp = '${DateTime.now().hour}${DateTime.now().minute}${DateTime.now().second}';
-      final fileName = 'Laporan_Pasien_${ahliGizi['name']?.toString().replaceAll(" ", "_")}_${monthYearStr}_$timestamp.xlsx';
+      final safeName = ahliGizi['name']?.toString().replaceAll(RegExp(r'[\\/:*?"<>| ]'), '_') ?? 'AG';
+      final fileName = 'Laporan_Pasien_${safeName}_${monthYearStr}_$timestamp.xlsx';
 
       if (kIsWeb) {
         // Web: Share via browser download
@@ -152,7 +169,7 @@ class ExportService {
           [XFile.fromData(Uint8List.fromList(fileBytes), name: fileName, mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')],
           text: 'Laporan Pasien Bulanan',
         );
-        return true;
+        return null;
       }
 
       // Simpan file Excel ke folder sementara, lalu gunakan Share.shareXFiles agar user bisa
@@ -175,9 +192,10 @@ class ExportService {
         text: 'Laporan Pasien Bulanan',
       );
 
-      return true;
-    } catch (e) {
-      return false;
+      return null;
+    } catch (e, s) {
+      debugPrint('Export Excel Error: $e\n$s');
+      return e.toString();
     }
   }
 }

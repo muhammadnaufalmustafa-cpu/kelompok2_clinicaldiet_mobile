@@ -94,7 +94,7 @@ class _AhliGiziPasienScreenState extends State<AhliGiziPasienScreen> {
 
     setState(() => _isExporting = true);
 
-    final success = await ExportService.exportPasienToExcel(
+    final errorMessage = await ExportService.exportPasienToExcel(
       pasienList: pasienUntukLaporan,
       ahliGizi: _ahliGizi!,
       monthYearStr: monthYearStr,
@@ -103,7 +103,7 @@ class _AhliGiziPasienScreenState extends State<AhliGiziPasienScreen> {
     setState(() => _isExporting = false);
 
     if (mounted) {
-      if (success) {
+      if (errorMessage == null) {
         showDialog(
           context: context,
           builder: (ctx) => AlertDialog(
@@ -116,7 +116,7 @@ class _AhliGiziPasienScreenState extends State<AhliGiziPasienScreen> {
               ],
             ),
             content: Text(
-              'File laporan bulanan (Excel) berhasil disimpan ke folder Download di HP Anda dan siap dibagikan.',
+              'File laporan bulanan (Excel) berhasil disiapkan dan siap dibagikan/disimpan.',
               style: GoogleFonts.manrope(fontSize: 14),
             ),
             actions: [
@@ -129,7 +129,7 @@ class _AhliGiziPasienScreenState extends State<AhliGiziPasienScreen> {
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('Gagal membuat file Excel.', style: GoogleFonts.manrope()),
+          content: Text('Gagal membuat file Excel: $errorMessage', style: GoogleFonts.manrope()),
           backgroundColor: Colors.red,
         ));
       }

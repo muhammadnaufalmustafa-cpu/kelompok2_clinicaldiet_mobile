@@ -47,6 +47,7 @@ class _AhliGiziDetailPasienScreenState
   final _diagnosisCtrl = TextEditingController();
   final _catatanNutrisiCtrl = TextEditingController();
   final _customDietCtrl = TextEditingController();
+  final _evaluasiHarianCtrl = TextEditingController();
 
   // Poin 3 & 6: Status Gizi Manual dan kunci dinamis
   String? _statusGiziManual; // Dipilih oleh Ahli Gizi
@@ -244,6 +245,7 @@ class _AhliGiziDetailPasienScreenState
     _targetCtrl.dispose();
     _diagnosisCtrl.dispose();
     _catatanNutrisiCtrl.dispose();
+    _evaluasiHarianCtrl.dispose();
     for (var c in _targetCtrls.values) { c.dispose(); }
     for (var c in _aktualCtrls.values) { c.dispose(); }
     super.dispose();
@@ -1162,7 +1164,7 @@ class _AhliGiziDetailPasienScreenState
             children: [
               const Icon(Icons.monitor_heart_outlined, size: 16, color: AppColors.primary),
               const SizedBox(width: 8),
-              Text('Status Gizi Pasien', style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
+              Text('Penilaian Status Gizi', style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
               const SizedBox(width: 8),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
