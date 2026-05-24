@@ -920,7 +920,24 @@ static Future<Map<String, dynamic>> registerAhliGizi({
           .where('role', isEqualTo: 'pasien')
           .where('selected_ahli_gizi_nip', isEqualTo: nip)
           .get();
-      return snapshot.docs.map((doc) => doc.data()).toList();
+          
+      final List<Map<String, dynamic>> patients = [];
+      for (var doc in snapshot.docs) {
+        final data = doc.data();
+        // Ambil program aktif untuk tampilan dinamis (N+1 query tapi ringan untuk list kecil)
+        try {
+          final progSnap = await FirebaseFirestore.instance
+              .collection('patientTherapyPrograms')
+              .where('patientRm', isEqualTo: data['rm'])
+              .where('status', isEqualTo: 'active')
+              .get();
+          if (progSnap.docs.isNotEmpty) {
+            data['dynamic_active_diets'] = progSnap.docs.map((d) => d.data()['therapyProgramName'] as String).join(', ');
+          }
+        } catch (_) {}
+        patients.add(data);
+      }
+      return patients;
     } catch (e) {
       return [];
     }

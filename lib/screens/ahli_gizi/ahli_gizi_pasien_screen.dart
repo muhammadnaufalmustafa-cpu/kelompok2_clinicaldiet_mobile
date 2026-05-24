@@ -460,7 +460,7 @@ class _AhliGiziPasienScreenState extends State<AhliGiziPasienScreen> {
                                                     color:
                                                         AppColors.textPrimary)),
                                             Text(
-                                                'RM: ${pasien['rm'] ?? '-'} • Diet: ${pasien['diet_type'] != null && pasien['diet_type'] != '' ? pasien['diet_type'] : 'Belum Dipilih'}',
+                                                'RM: ${pasien['rm'] ?? '-'} • Diet: ${pasien['dynamic_active_diets'] ?? (pasien['diet_type'] != null && pasien['diet_type'] != '' ? pasien['diet_type'] : 'Belum Dipilih')}',
                                                 style: GoogleFonts.manrope(
                                                     fontSize: 12,
                                                     color: AppColors

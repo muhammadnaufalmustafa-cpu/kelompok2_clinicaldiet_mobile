@@ -304,9 +304,7 @@ class _LaporanHarianAGScreenState extends State<LaporanHarianAGScreen> {
     <tr><td>Tanggal Lahir</td><td>: ${p['birthdate'] ?? '-'}</td></tr>
     <tr><td>Jenis Kelamin</td><td>: ${p['gender'] ?? '-'}</td></tr>
     <tr><td>Status Gizi</td><td>: ${p['status_gizi_manual'] ?? p['status_gizi'] ?? 'Belum diinput'}</td></tr>
-    ${p['bbu_manual'] != null ? '<tr><td>BB/U (Anak)</td><td>: ${p['bbu_manual']}</td></tr>' : ''}
-    ${p['tbu_manual'] != null ? '<tr><td>TB/U (Anak)</td><td>: ${p['tbu_manual']}</td></tr>' : ''}
-    ${p['imtu_manual'] != null ? '<tr><td>IMT/U (Anak)</td><td>: ${p['imtu_manual']}</td></tr>' : ''}
+    ${p['imt_manual'] != null ? '<tr><td>IMT (Anak)</td><td>: ${p['imt_manual']}</td></tr>' : ''}
   </table>
 
   ${programBlocks.toString()}

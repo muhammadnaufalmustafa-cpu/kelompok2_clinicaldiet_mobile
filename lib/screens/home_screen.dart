@@ -939,7 +939,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildBBTBCard() {
     final ageInfo = _computeAge(_user?['birthdate']?.toString() ?? '');
-    final bmi = _tbTerakhir > 0 ? _bbTerakhir / ((_tbTerakhir / 100) * (_tbTerakhir / 100)) : 0.0;
+    final manualBmi = double.tryParse(_user?['imt_manual']?.toString() ?? '') ?? 0.0;
+    final bmi = (ageInfo.kategori == AgeCategory.dewasa)
+        ? (manualBmi > 0 ? manualBmi : (_tbTerakhir > 0 ? _bbTerakhir / ((_tbTerakhir / 100) * (_tbTerakhir / 100)) : 0.0))
+        : manualBmi;
     final bmiLabel = _user?['status_gizi_manual'] != null && _user?['status_gizi_manual'] != '' ? _user!['status_gizi_manual'] : (bmi == 0 ? '-' : bmi < 18.5 ? 'Kurus' : bmi < 25 ? 'Normal' : bmi < 30 ? 'Gemuk' : 'Obesitas');
     final bmiColor = _user?['status_gizi_manual'] != null && _user?['status_gizi_manual'] != '' ? AppColors.primary : (bmi == 0 ? AppColors.textMuted : bmi < 18.5 ? const Color(0xFF0284C7) : bmi < 25 ? AppColors.primary : bmi < 30 ? const Color(0xFFD97706) : const Color(0xFFDC2626));
     
@@ -971,7 +974,7 @@ class _HomeScreenState extends State<HomeScreen> {
             decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
             child: Text(catLabel, style: GoogleFonts.manrope(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.primary)),
           ),
-          if (ageInfo.kategori == AgeCategory.dewasa) ...[
+          if (ageInfo.kategori == AgeCategory.dewasa || (_user?['status_gizi_manual'] != null && _user?['status_gizi_manual'] != '')) ...[
             const SizedBox(width: 6),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -1010,14 +1013,10 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(width: 10),
             Expanded(child: _buildPhysCard('Umur', ageStr, Icons.cake_outlined)),
           ]),
-          if (_user?['bbu_manual'] != null || _user?['tbu_manual'] != null || _user?['imtu_manual'] != null) ...[
+          if (bmi > 0) ...[
             const SizedBox(height: 10),
             Row(children: [
-              Expanded(child: _buildPhysCard('BB/U', _user?['bbu_manual']?.toString() ?? '-', Icons.child_care)),
-              const SizedBox(width: 10),
-              Expanded(child: _buildPhysCard('TB/U', _user?['tbu_manual']?.toString() ?? '-', Icons.child_care)),
-              const SizedBox(width: 10),
-              Expanded(child: _buildPhysCard('IMT/U', _user?['imtu_manual']?.toString() ?? '-', Icons.child_care)),
+              Expanded(child: _buildPhysCard('IMT', _fmt(bmi), Icons.calculate_outlined)),
             ]),
           ],
         ],
@@ -1034,14 +1033,10 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(width: 8),
             Expanded(flex: 3, child: _buildPhysCard('Gender', gender == 'Laki-laki' ? 'L' : (gender == 'Perempuan' ? 'P' : '-'), Icons.wc)),
           ]),
-          if (_user?['bbu_manual'] != null || _user?['tbu_manual'] != null || _user?['imtu_manual'] != null) ...[
+          if (bmi > 0) ...[
             const SizedBox(height: 10),
             Row(children: [
-              Expanded(child: _buildPhysCard('BB/U', _user?['bbu_manual']?.toString() ?? '-', Icons.child_care)),
-              const SizedBox(width: 10),
-              Expanded(child: _buildPhysCard('TB/U', _user?['tbu_manual']?.toString() ?? '-', Icons.child_care)),
-              const SizedBox(width: 10),
-              Expanded(child: _buildPhysCard('IMT/U', _user?['imtu_manual']?.toString() ?? '-', Icons.child_care)),
+              Expanded(child: _buildPhysCard('IMT', _fmt(bmi), Icons.calculate_outlined)),
             ]),
           ],
         ],

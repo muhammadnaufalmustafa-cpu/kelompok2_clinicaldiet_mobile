@@ -10,22 +10,65 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 // ------- Daftar lengkap URT sesuai referensi ahli gizi -------------------------------------------------------------------------------
 const List<String> kDaftarURT = [
-  '1 centong rice cooker', '1 centong plastik', '1 sdm', '1 sds',
-  '1 sd sayur', '1 piring', '1 mangkok', '1 cup',
-  '1 bh besar', '1 bh sdg', '1 bh kcl', '1 bh',
-  ' bh', ' bh', '1 iris', '1 ptg',
-  '1 ptg bsr', '1 ptg sdg', '1 ptg kcl', '1 ptg segitiga',
-  '1 ptg kotak', '1 ptg bundar', '1 ptg dadu',
-  '1 ptg bag. kepala', '1 ptg bag. badan', '1 ptg bag. ekor',
-  ' ptg presto', '1 lembar ada pinggiran', '1 lembar tanpa pinggiran',
-  '1 lembar kuning', '1 bonggol', '1 bks', '1 kotak',
-  '1 botol', '1 botol besar', '1 botol kcl', '1 gelas',
-  '1 pcs', '1 pcs sdg', '1 pcs kcl',
-  '1 ekor kecil', '1 ekor sdg', '1 ekor kcl', '1 btr',
-  '1 tusuk', '1 porsi', '1 ptg dada', '1 ptg paha', '1 ptg sayap',
-  '1 ptg dada atas', '1 ptg dada bawah', '1 ptg paha atas', '1 ptg paha bawah',
-  '1 bh kepala+leher', '1 bh pentol bsr', '1 bh pentol sdg',
-  '1 genggam', '1 biji', '1 biji montong',
+  '1 centong rice cooker',
+  '1 centong plastik',
+  '1 sdm',
+  '1 sds',
+  '1 sd sayur',
+  '1 piring',
+  '1 mangkok',
+  '1 cup',
+  '1 bh besar',
+  '1 bh sdg',
+  '1 bh kcl',
+  '1 bh',
+  ' bh',
+  ' bh',
+  '1 iris',
+  '1 ptg',
+  '1 ptg bsr',
+  '1 ptg sdg',
+  '1 ptg kcl',
+  '1 ptg segitiga',
+  '1 ptg kotak',
+  '1 ptg bundar',
+  '1 ptg dadu',
+  '1 ptg bag. kepala',
+  '1 ptg bag. badan',
+  '1 ptg bag. ekor',
+  ' ptg presto',
+  '1 lembar ada pinggiran',
+  '1 lembar tanpa pinggiran',
+  '1 lembar kuning',
+  '1 bonggol',
+  '1 bks',
+  '1 kotak',
+  '1 botol',
+  '1 botol besar',
+  '1 botol kcl',
+  '1 gelas',
+  '1 pcs',
+  '1 pcs sdg',
+  '1 pcs kcl',
+  '1 ekor kecil',
+  '1 ekor sdg',
+  '1 ekor kcl',
+  '1 btr',
+  '1 tusuk',
+  '1 porsi',
+  '1 ptg dada',
+  '1 ptg paha',
+  '1 ptg sayap',
+  '1 ptg dada atas',
+  '1 ptg dada bawah',
+  '1 ptg paha atas',
+  '1 ptg paha bawah',
+  '1 bh kepala+leher',
+  '1 bh pentol bsr',
+  '1 bh pentol sdg',
+  '1 genggam',
+  '1 biji',
+  '1 biji montong',
 ];
 
 class CatatanScreen extends StatefulWidget {
@@ -66,12 +109,11 @@ class _CatatanScreenState extends State<CatatanScreen> {
   final _malamCtrl = TextEditingController();
 
   Map<String, dynamic> _targetNutrients = {};
-  String _catatanKlinis = '';       // dari profil pasien (fallback)
-  String _catatanProgram = '';      // dari program yang dipilih (dinamis)
+  String _catatanKlinis = ''; // dari profil pasien (fallback)
+  String _catatanProgram = ''; // dari program yang dipilih (dinamis)
 
-  String? _bbuManual;
-  String? _tbuManual;
-  String? _imtuManual;
+  String? _imtManual;
+
   String? _statusGiziManual;
 
   TimeOfDay? _jamPagi;
@@ -127,7 +169,9 @@ class _CatatanScreenState extends State<CatatanScreen> {
           return progUid.isEmpty || progUid == uid;
         }).toList();
       }
-      final activePrograms = programs.where((p) => p['status'] == 'active').toList();
+      final activePrograms = programs
+          .where((p) => p['status'] == 'active')
+          .toList();
 
       if (activePrograms.isNotEmpty && mounted) {
         // Cari program yang sesuai dengan patientProgramId dari Beranda (jika ada)
@@ -138,7 +182,8 @@ class _CatatanScreenState extends State<CatatanScreen> {
               )
             : activePrograms.first;
         final programId = initialProgram['patientProgramId'] as String?;
-        final programName = initialProgram['therapyProgramName'] as String? ?? '';
+        final programName =
+            initialProgram['therapyProgramName'] as String? ?? '';
         final programNotes = initialProgram['notes'] as String? ?? '';
         setState(() {
           _patientPrograms = activePrograms;
@@ -172,19 +217,18 @@ class _CatatanScreenState extends State<CatatanScreen> {
       final freshUser = await AuthService.getPasienByRm(rm);
       if (mounted && freshUser != null) {
         setState(() {
-          _catatanKlinis = freshUser['catatan_klinis'] as String? ?? user['catatan_klinis'] as String? ?? '-';
-          _bbuManual = freshUser['bbu_manual'] as String?;
-          _tbuManual = freshUser['tbu_manual'] as String?;
-          _imtuManual = freshUser['imtu_manual'] as String?;
+          _catatanKlinis =
+              freshUser['catatan_klinis'] as String? ??
+              user['catatan_klinis'] as String? ??
+              '-';
           _statusGiziManual = freshUser['status_gizi_manual'] as String?;
+          _imtManual = freshUser['imt_manual']?.toString();
         });
       } else if (mounted) {
         setState(() {
           _catatanKlinis = user['catatan_klinis'] as String? ?? '-';
-          _bbuManual = user['bbu_manual'] as String?;
-          _tbuManual = user['tbu_manual'] as String?;
-          _imtuManual = user['imtu_manual'] as String?;
           _statusGiziManual = user['status_gizi_manual'] as String?;
+          _imtManual = user['imt_manual']?.toString();
         });
       }
     }
@@ -197,8 +241,11 @@ class _CatatanScreenState extends State<CatatanScreen> {
     final target = await AuthService.getNutritionTarget(programId);
     if (target != null && mounted) {
       setState(() {
-        _targetNutrients = (target['nutrientItems'] as Map?)?.cast<String, dynamic>() ?? {};
-        _isLocked = _targetNutrients.values.every((v) => (v['target'] as num? ?? 0) == 0);
+        _targetNutrients =
+            (target['nutrientItems'] as Map?)?.cast<String, dynamic>() ?? {};
+        _isLocked = _targetNutrients.values.every(
+          (v) => (v['target'] as num? ?? 0) == 0,
+        );
       });
     } else if (mounted) {
       setState(() {
@@ -230,7 +277,10 @@ class _CatatanScreenState extends State<CatatanScreen> {
     }
   }
 
-  Future<void> _selectProgram(String programId, {bool notifyParent = true}) async {
+  Future<void> _selectProgram(
+    String programId, {
+    bool notifyParent = true,
+  }) async {
     final matched = _patientPrograms.firstWhere(
       (p) => p['patientProgramId'] == programId,
       orElse: () => <String, dynamic>{},
@@ -246,7 +296,6 @@ class _CatatanScreenState extends State<CatatanScreen> {
     if (notifyParent) widget.onProgramChanged?.call(programId);
   }
 
-
   @override
   void dispose() {
     _programsStreamSub?.cancel();
@@ -259,6 +308,7 @@ class _CatatanScreenState extends State<CatatanScreen> {
     _malamCtrl.dispose();
     super.dispose();
   }
+
   /// Realtime listener: update daftar program + dropdown saat ada perubahan
   /// dari sisi ahli gizi, tanpa perlu reload manual.
   Future<void> _startProgramsStream() async {
@@ -296,14 +346,17 @@ class _CatatanScreenState extends State<CatatanScreen> {
           .where((n) => n.isNotEmpty)
           .toList();
       final requestedProgramId = widget.patientProgramId;
-      final requestedExists = requestedProgramId != null &&
+      final requestedExists =
+          requestedProgramId != null &&
           active.any((p) => p['patientProgramId'] == requestedProgramId);
       String? programToLoad;
       setState(() {
         _patientPrograms = active;
         if (requestedExists) {
           _selectedPatientProgramId = requestedProgramId;
-          final requested = active.firstWhere((p) => p['patientProgramId'] == requestedProgramId);
+          final requested = active.firstWhere(
+            (p) => p['patientProgramId'] == requestedProgramId,
+          );
           _selectedDietType = requested['therapyProgramName'] as String?;
           programToLoad = requestedProgramId;
         }
@@ -312,7 +365,8 @@ class _CatatanScreenState extends State<CatatanScreen> {
           (p) => p['patientProgramId'] == _selectedPatientProgramId,
         );
         if (!stillExists && active.isNotEmpty) {
-          _selectedPatientProgramId = active.first['patientProgramId'] as String?;
+          _selectedPatientProgramId =
+              active.first['patientProgramId'] as String?;
           _selectedDietType = active.first['therapyProgramName'] as String?;
           programToLoad = _selectedPatientProgramId;
           widget.onProgramChanged?.call(_selectedPatientProgramId);
@@ -328,12 +382,38 @@ class _CatatanScreenState extends State<CatatanScreen> {
     });
   }
 
-  final List<String> _hariNames = ['', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
-  final List<String> _bulanNames = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+  final List<String> _hariNames = [
+    '',
+    'Senin',
+    'Selasa',
+    'Rabu',
+    'Kamis',
+    'Jumat',
+    'Sabtu',
+    'Minggu',
+  ];
+  final List<String> _bulanNames = [
+    '',
+    'Januari',
+    'Februari',
+    'Maret',
+    'April',
+    'Mei',
+    'Juni',
+    'Juli',
+    'Agustus',
+    'September',
+    'Oktober',
+    'November',
+    'Desember',
+  ];
 
-  String _formatTanggal(DateTime dt) => '${_hariNames[dt.weekday]}, ${dt.day} ${_bulanNames[dt.month]} ${dt.year}';
-  String _formatJam(DateTime dt) => '${dt.hour.toString().padLeft(2, '0')}.${dt.minute.toString().padLeft(2, '0')} WIB';
-  String _timeOfDayToStr(TimeOfDay t) => '${t.hour.toString().padLeft(2, '0')}.${t.minute.toString().padLeft(2, '0')} WIB';
+  String _formatTanggal(DateTime dt) =>
+      '${_hariNames[dt.weekday]}, ${dt.day} ${_bulanNames[dt.month]} ${dt.year}';
+  String _formatJam(DateTime dt) =>
+      '${dt.hour.toString().padLeft(2, '0')}.${dt.minute.toString().padLeft(2, '0')} WIB';
+  String _timeOfDayToStr(TimeOfDay t) =>
+      '${t.hour.toString().padLeft(2, '0')}.${t.minute.toString().padLeft(2, '0')} WIB';
 
   Future<void> _pickTime(String session) async {
     final picked = await showTimePicker(
@@ -348,22 +428,37 @@ class _CatatanScreenState extends State<CatatanScreen> {
     if (picked != null && mounted) {
       setState(() {
         switch (session) {
-          case 'Pagi': _jamPagi = picked; break;
-          case 'Selingan Pagi': _jamSelinganPagi = picked; break;
-          case 'Siang': _jamSiang = picked; break;
-          case 'Selingan Sore': _jamSelinganSore = picked; break;
-          case 'Malam': _jamMalam = picked; break;
+          case 'Pagi':
+            _jamPagi = picked;
+            break;
+          case 'Selingan Pagi':
+            _jamSelinganPagi = picked;
+            break;
+          case 'Siang':
+            _jamSiang = picked;
+            break;
+          case 'Selingan Sore':
+            _jamSelinganSore = picked;
+            break;
+          case 'Malam':
+            _jamMalam = picked;
+            break;
         }
       });
     }
   }
 
   void _showLockedWarning() {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text('Anda belum bisa mencatat makanan karena ahli gizi belum menetapkan target diet Anda.', style: GoogleFonts.manrope()),
-      backgroundColor: Colors.orange,
-      behavior: SnackBarBehavior.floating,
-    ));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'Anda belum bisa mencatat makanan karena ahli gizi belum menetapkan target diet Anda.',
+          style: GoogleFonts.manrope(),
+        ),
+        backgroundColor: Colors.orange,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 
   // ---- URT Picker (Bottom Sheet) ----------------------------------------------------------------------------------------------------------------------------------------
@@ -377,7 +472,9 @@ class _CatatanScreenState extends State<CatatanScreen> {
         builder: (ctx, setModalState) {
           final filtered = query.isEmpty
               ? kDaftarURT
-              : kDaftarURT.where((u) => u.toLowerCase().contains(query.toLowerCase())).toList();
+              : kDaftarURT
+                    .where((u) => u.toLowerCase().contains(query.toLowerCase()))
+                    .toList();
           return Container(
             height: MediaQuery.of(ctx).size.height * 0.75,
             decoration: const BoxDecoration(
@@ -388,17 +485,34 @@ class _CatatanScreenState extends State<CatatanScreen> {
               children: [
                 Container(
                   margin: const EdgeInsets.symmetric(vertical: 10),
-                  width: 40, height: 4,
-                  decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2)),
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Text('Pilih Satuan URT', style: GoogleFonts.manrope(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
+                  child: Text(
+                    'Pilih Satuan URT',
+                    style: GoogleFonts.manrope(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Text('Tap satuan untuk menambahkan ke catatan', style: GoogleFonts.manrope(fontSize: 12, color: AppColors.textSecondary)),
+                  child: Text(
+                    'Tap satuan untuk menambahkan ke catatan',
+                    style: GoogleFonts.manrope(
+                      fontSize: 12,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 10),
                 Padding(
@@ -407,12 +521,25 @@ class _CatatanScreenState extends State<CatatanScreen> {
                     autofocus: false,
                     decoration: InputDecoration(
                       hintText: 'Cari satuan URT...',
-                      hintStyle: GoogleFonts.manrope(color: AppColors.textMuted, fontSize: 13),
-                      prefixIcon: const Icon(Icons.search, color: AppColors.textSecondary, size: 20),
+                      hintStyle: GoogleFonts.manrope(
+                        color: AppColors.textMuted,
+                        fontSize: 13,
+                      ),
+                      prefixIcon: const Icon(
+                        Icons.search,
+                        color: AppColors.textSecondary,
+                        size: 20,
+                      ),
                       filled: true,
                       fillColor: AppColors.background,
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                      contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        vertical: 10,
+                        horizontal: 16,
+                      ),
                     ),
                     style: GoogleFonts.manrope(fontSize: 13),
                     onChanged: (v) => setModalState(() => query = v),
@@ -425,14 +552,30 @@ class _CatatanScreenState extends State<CatatanScreen> {
                     itemCount: filtered.length,
                     itemBuilder: (_, i) => ListTile(
                       dense: true,
-                      title: Text(filtered[i], style: GoogleFonts.manrope(fontSize: 14, color: AppColors.textPrimary)),
+                      title: Text(
+                        filtered[i],
+                        style: GoogleFonts.manrope(
+                          fontSize: 14,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
                       trailing: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           color: AppColors.primaryLight,
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        child: Text('Pilih', style: GoogleFonts.manrope(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.primary)),
+                        child: Text(
+                          'Pilih',
+                          style: GoogleFonts.manrope(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.primary,
+                          ),
+                        ),
                       ),
                       onTap: () {
                         final currentText = targetCtrl.text;
@@ -441,7 +584,8 @@ class _CatatanScreenState extends State<CatatanScreen> {
                             : '$currentText, ${filtered[i]}';
                         targetCtrl.text = newText;
                         targetCtrl.selection = TextSelection.fromPosition(
-                            TextPosition(offset: newText.length));
+                          TextPosition(offset: newText.length),
+                        );
                         Navigator.pop(ctx);
                       },
                     ),
@@ -456,7 +600,8 @@ class _CatatanScreenState extends State<CatatanScreen> {
   }
 
   Future<void> _confirmSave() async {
-    final bool isAnyEmpty = _pagiCtrl.text.isEmpty ||
+    final bool isAnyEmpty =
+        _pagiCtrl.text.isEmpty ||
         _selinganPagiCtrl.text.isEmpty ||
         _siangCtrl.text.isEmpty ||
         _selinganSoreCtrl.text.isEmpty ||
@@ -466,18 +611,46 @@ class _CatatanScreenState extends State<CatatanScreen> {
       showDialog(
         context: context,
         builder: (ctx) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: Text('Data Belum Lengkap', style: GoogleFonts.manrope(fontWeight: FontWeight.w700)),
-          content: Text('Ada beberapa catatan makan yang masih kosong. Anda tetap ingin mengirim laporan ini?', style: GoogleFonts.manrope(color: AppColors.textSecondary)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: Text(
+            'Data Belum Lengkap',
+            style: GoogleFonts.manrope(fontWeight: FontWeight.w700),
+          ),
+          content: Text(
+            'Ada beberapa catatan makan yang masih kosong. Anda tetap ingin mengirim laporan ini?',
+            style: GoogleFonts.manrope(color: AppColors.textSecondary),
+          ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: Text('Batal', style: GoogleFonts.manrope(fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+              child: Text(
+                'Batal',
+                style: GoogleFonts.manrope(
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textSecondary,
+                ),
+              ),
             ),
             ElevatedButton(
-              onPressed: () { Navigator.pop(ctx); _saveMealLog(); },
-              style: ElevatedButton.styleFrom(backgroundColor: AppColors.secondary, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
-              child: Text('Tetap Kirim', style: GoogleFonts.manrope(color: Colors.white, fontWeight: FontWeight.w600)),
+              onPressed: () {
+                Navigator.pop(ctx);
+                _saveMealLog();
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.secondary,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: Text(
+                'Tetap Kirim',
+                style: GoogleFonts.manrope(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ),
           ],
         ),
@@ -493,7 +666,15 @@ class _CatatanScreenState extends State<CatatanScreen> {
       final user = await AuthService.getLoggedInUser();
       if (user == null) {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Silakan login terlebih dahulu', style: GoogleFonts.manrope()), backgroundColor: Colors.red));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Silakan login terlebih dahulu',
+              style: GoogleFonts.manrope(),
+            ),
+            backgroundColor: Colors.red,
+          ),
+        );
         return;
       }
       final rm = user['rm'] as String;
@@ -515,9 +696,13 @@ class _CatatanScreenState extends State<CatatanScreen> {
         beratBadan: bb,
         tinggiBadan: tb,
         jamPagi: _jamPagi != null ? _timeOfDayToStr(_jamPagi!) : '',
-        jamSelinganPagi: _jamSelinganPagi != null ? _timeOfDayToStr(_jamSelinganPagi!) : '',
+        jamSelinganPagi: _jamSelinganPagi != null
+            ? _timeOfDayToStr(_jamSelinganPagi!)
+            : '',
         jamSiang: _jamSiang != null ? _timeOfDayToStr(_jamSiang!) : '',
-        jamSelinganSore: _jamSelinganSore != null ? _timeOfDayToStr(_jamSelinganSore!) : '',
+        jamSelinganSore: _jamSelinganSore != null
+            ? _timeOfDayToStr(_jamSelinganSore!)
+            : '',
         jamMalam: _jamMalam != null ? _timeOfDayToStr(_jamMalam!) : '',
         patientProgramId: _selectedPatientProgramId ?? widget.patientProgramId,
       );
@@ -542,15 +727,23 @@ class _CatatanScreenState extends State<CatatanScreen> {
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Catatan makan berhasil disimpan!', style: GoogleFonts.manrope(fontWeight: FontWeight.w600)),
+            content: Text(
+              'Catatan makan berhasil disimpan!',
+              style: GoogleFonts.manrope(fontWeight: FontWeight.w600),
+            ),
             backgroundColor: AppColors.secondary,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
         );
 
         // Kirim notifikasi ke Ahli Gizi bahwa pasien sudah isi catatan makan
-        final agNip = user['ahli_gizi_nip'] ?? user['selected_ahli_gizi_nip'] as String? ?? '';
+        final agNip =
+            user['ahli_gizi_nip'] ??
+            user['selected_ahli_gizi_nip'] as String? ??
+            '';
         if (agNip.isNotEmpty) {
           final allAG = await AuthService.getAllAhliGizi();
           final agData = allAG.where((a) => a['nip'] == agNip).firstOrNull;
@@ -559,12 +752,14 @@ class _CatatanScreenState extends State<CatatanScreen> {
             final patientName = user['name'] as String? ?? 'Pasien';
             final dietName = _selectedDietType ?? 'Program Diet';
             final now = DateTime.now();
-            final tgl = '${now.day.toString().padLeft(2,'0')}/${now.month.toString().padLeft(2,'0')}/${now.year}';
+            final tgl =
+                '${now.day.toString().padLeft(2, '0')}/${now.month.toString().padLeft(2, '0')}/${now.year}';
             await FirebaseNotificationService.createNotification(
               userId: agUid,
               role: 'ahli_gizi',
               title: 'Catatan Makan Baru',
-              message: '$patientName telah mengisi catatan makan harian ($dietName) pada $tgl. '
+              message:
+                  '$patientName telah mengisi catatan makan harian ($dietName) pada $tgl. '
                   'Silakan buka riwayat pasien untuk melihat detailnya.',
               type: 'log',
               relatedId: rm,
@@ -577,11 +772,24 @@ class _CatatanScreenState extends State<CatatanScreen> {
         if (mounted) widget.onSaved?.call();
       } else {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal menyimpan catatan makan.', style: GoogleFonts.manrope()), backgroundColor: Colors.red));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Gagal menyimpan catatan makan.',
+              style: GoogleFonts.manrope(),
+            ),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e', style: GoogleFonts.manrope()), backgroundColor: Colors.red));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error: $e', style: GoogleFonts.manrope()),
+          backgroundColor: Colors.red,
+        ),
+      );
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -604,12 +812,26 @@ class _CatatanScreenState extends State<CatatanScreen> {
                     Container(
                       margin: const EdgeInsets.only(bottom: 20),
                       padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(12), border: Border.all(color: AppColors.divider)),
+                      decoration: BoxDecoration(
+                        color: AppColors.surface,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppColors.divider),
+                      ),
                       child: Row(
                         children: [
-                          const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)),
+                          const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
                           const SizedBox(width: 16),
-                          Text('Memuat program terapi dan target diet...', style: GoogleFonts.manrope(fontSize: 13, color: AppColors.textSecondary)),
+                          Text(
+                            'Memuat program terapi dan target diet...',
+                            style: GoogleFonts.manrope(
+                              fontSize: 13,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
                         ],
                       ),
                     )
@@ -624,25 +846,51 @@ class _CatatanScreenState extends State<CatatanScreen> {
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.warning_amber_rounded, color: Colors.orange),
+                          const Icon(
+                            Icons.warning_amber_rounded,
+                            color: Colors.orange,
+                          ),
                           const SizedBox(width: 12),
                           Expanded(
                             child: Text(
                               'Anda belum bisa mencatat makanan karena ahli gizi belum menetapkan target diet Anda.',
-                              style: GoogleFonts.manrope(fontSize: 13, color: Colors.orange[800]),
+                              style: GoogleFonts.manrope(
+                                fontSize: 13,
+                                color: Colors.orange[800],
+                              ),
                             ),
                           ),
                         ],
                       ),
                     ),
                   if (_targetDietText.isNotEmpty) ...[
-                    Text('TARGET DIET', style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w700, letterSpacing: 1.2, color: AppColors.textSecondary)),
+                    Text(
+                      'TARGET DIET',
+                      style: GoogleFonts.manrope(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 1.2,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
                     const SizedBox(height: 12),
                     Container(
                       width: double.infinity,
                       padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(color: AppColors.primaryLight, borderRadius: BorderRadius.circular(12), border: Border.all(color: AppColors.primary.withValues(alpha: 0.3))),
-                      child: Text(_targetDietText, style: GoogleFonts.manrope(fontSize: 14, color: AppColors.primaryDark)),
+                      decoration: BoxDecoration(
+                        color: AppColors.primaryLight,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: AppColors.primary.withValues(alpha: 0.3),
+                        ),
+                      ),
+                      child: Text(
+                        _targetDietText,
+                        style: GoogleFonts.manrope(
+                          fontSize: 14,
+                          color: AppColors.primaryDark,
+                        ),
+                      ),
                     ),
                     const SizedBox(height: 24),
                   ],
@@ -650,12 +898,40 @@ class _CatatanScreenState extends State<CatatanScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('TERAPI DIET', style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w700, letterSpacing: 1.2, color: AppColors.textSecondary)),
+                        Text(
+                          'TERAPI DIET',
+                          style: GoogleFonts.manrope(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 1.2,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
                         if (_selectedDietType != null)
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                            decoration: BoxDecoration(color: const Color(0xFF4F46E5).withValues(alpha: 0.1), borderRadius: BorderRadius.circular(20), border: Border.all(color: const Color(0xFF4F46E5).withValues(alpha: 0.3))),
-                            child: Text(_selectedDietType!, style: GoogleFonts.manrope(fontSize: 11, fontWeight: FontWeight.w700, color: const Color(0xFF4F46E5))),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(
+                                0xFF4F46E5,
+                              ).withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: const Color(
+                                  0xFF4F46E5,
+                                ).withValues(alpha: 0.3),
+                              ),
+                            ),
+                            child: Text(
+                              _selectedDietType!,
+                              style: GoogleFonts.manrope(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: const Color(0xFF4F46E5),
+                              ),
+                            ),
                           ),
                       ],
                     ),
@@ -666,14 +942,38 @@ class _CatatanScreenState extends State<CatatanScreen> {
                         decoration: InputDecoration(
                           filled: true,
                           fillColor: const Color(0xFFEEF2FF),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFC7D2FE))),
-                          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFC7D2FE))),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(
+                              color: Color(0xFFC7D2FE),
+                            ),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(
+                              color: Color(0xFFC7D2FE),
+                            ),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 14,
+                          ),
                         ),
-                        icon: const Icon(Icons.keyboard_arrow_down, color: Color(0xFF4F46E5)),
-                        style: GoogleFonts.manrope(fontSize: 14, fontWeight: FontWeight.w600, color: const Color(0xFF4F46E5)),
+                        icon: const Icon(
+                          Icons.keyboard_arrow_down,
+                          color: Color(0xFF4F46E5),
+                        ),
+                        style: GoogleFonts.manrope(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF4F46E5),
+                        ),
                         dropdownColor: const Color(0xFFEEF2FF),
-                        items: _dietList.map((d) => DropdownMenuItem(value: d, child: Text(d))).toList(),
+                        items: _dietList
+                            .map(
+                              (d) => DropdownMenuItem(value: d, child: Text(d)),
+                            )
+                            .toList(),
                         onChanged: (v) async {
                           if (v == null) return;
                           // Cari program yang cocok dengan nama yang dipilih
@@ -701,58 +1001,118 @@ class _CatatanScreenState extends State<CatatanScreen> {
                   if (_targetNutrients.isNotEmpty && !_isLocked) ...[
                     Row(
                       children: [
-                        Text('TARGET GIZI HARIAN', style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w700, letterSpacing: 1.2, color: AppColors.textSecondary)),
+                        Text(
+                          'TARGET GIZI HARIAN',
+                          style: GoogleFonts.manrope(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 1.2,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
                         const Spacer(),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 3,
+                          ),
                           decoration: BoxDecoration(
                             color: const Color(0xFFD1FAE5),
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          child: Text('Acuan', style: GoogleFonts.manrope(fontSize: 10, fontWeight: FontWeight.w700, color: const Color(0xFF065F46))),
+                          child: Text(
+                            'Acuan',
+                            style: GoogleFonts.manrope(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                              color: const Color(0xFF065F46),
+                            ),
+                          ),
                         ),
                       ],
                     ),
                     const SizedBox(height: 12),
                     Container(
                       padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: AppColors.divider)),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: AppColors.divider),
+                      ),
                       child: Column(
-                        children: _targetNutrients.entries.where((e) => (e.value['target'] as num? ?? 0) > 0).map((e) {
-                          final target = (e.value['target'] as num?)?.toDouble() ?? 0;
-                          final fmtTarget = target == target.truncateToDouble()
-                              ? target.toInt().toString()
-                              : target.toStringAsFixed(1);
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 8),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(e.key, style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                  decoration: BoxDecoration(
-                                    color: AppColors.primaryLight,
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Text(fmtTarget, style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.primary)),
+                        children: _targetNutrients.entries
+                            .where((e) => (e.value['target'] as num? ?? 0) > 0)
+                            .map((e) {
+                              final target =
+                                  (e.value['target'] as num?)?.toDouble() ?? 0;
+                              final fmtTarget =
+                                  target == target.truncateToDouble()
+                                  ? target.toInt().toString()
+                                  : target.toStringAsFixed(1);
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 8),
+                                child: Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      e.key,
+                                      style: GoogleFonts.manrope(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w600,
+                                        color: AppColors.textPrimary,
+                                      ),
+                                    ),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 10,
+                                        vertical: 4,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.primaryLight,
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Text(
+                                        fmtTarget,
+                                        style: GoogleFonts.manrope(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w700,
+                                          color: AppColors.primary,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                              ],
-                            ),
-                          );
-                        }).toList(),
+                              );
+                            })
+                            .toList(),
                       ),
                     ),
                     const SizedBox(height: 24),
                   ],
 
-                  Text('KONDISI FISIK HARI INI', style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w700, letterSpacing: 1.2, color: AppColors.textSecondary)),
+                  Text(
+                    'KONDISI FISIK HARI INI',
+                    style: GoogleFonts.manrope(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 1.2,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
                   const SizedBox(height: 12),
                   Row(
                     children: [
-                      Expanded(child: _buildPhysicalField('Berat Badan (kg)', _bbCtrl)),
+                      Expanded(
+                        child: _buildPhysicalField('Berat Badan (kg)', _bbCtrl),
+                      ),
                       const SizedBox(width: 16),
-                      Expanded(child: _buildPhysicalField('Tinggi Badan (cm)', _tbCtrl)),
+                      Expanded(
+                        child: _buildPhysicalField(
+                          'Tinggi Badan (cm)',
+                          _tbCtrl,
+                        ),
+                      ),
                     ],
                   ),
                   _buildStatusGizi(),
@@ -760,48 +1120,116 @@ class _CatatanScreenState extends State<CatatanScreen> {
 
                   Row(
                     children: [
-                      Text('CATATAN MAKANAN', style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w700, letterSpacing: 1.2, color: AppColors.textSecondary)),
+                      Text(
+                        'CATATAN MAKANAN',
+                        style: GoogleFonts.manrope(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 1.2,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
                       const Spacer(),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 3,
+                        ),
                         decoration: BoxDecoration(
                           color: const Color(0xFFE0F2FE),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Row(
                           children: [
-                            const Icon(Icons.straighten, size: 12, color: Color(0xFF0284C7)),
+                            const Icon(
+                              Icons.straighten,
+                              size: 12,
+                              color: Color(0xFF0284C7),
+                            ),
                             const SizedBox(width: 4),
-                            Text('Tap URT per sesi', style: GoogleFonts.manrope(fontSize: 10, fontWeight: FontWeight.w600, color: const Color(0xFF0284C7))),
+                            Text(
+                              'Tap URT per sesi',
+                              style: GoogleFonts.manrope(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                                color: const Color(0xFF0284C7),
+                              ),
+                            ),
                           ],
                         ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 16),
-                  _buildMealSection(icon: Icons.wb_sunny_outlined, iconBg: const Color(0xFFD1FAE5), label: 'MAKAN PAGI', controller: _pagiCtrl, hint: 'Contoh: Nasi 1 centong rice cooker, sayur bayam, telur dadar 1 bh', session: 'Pagi', jam: _jamPagi),
+                  _buildMealSection(
+                    icon: Icons.wb_sunny_outlined,
+                    iconBg: const Color(0xFFD1FAE5),
+                    label: 'MAKAN PAGI',
+                    controller: _pagiCtrl,
+                    hint:
+                        'Contoh: Nasi 1 centong rice cooker, sayur bayam, telur dadar 1 bh',
+                    session: 'Pagi',
+                    jam: _jamPagi,
+                  ),
                   const SizedBox(height: 20),
-                  _buildMealSection(icon: Icons.storefront_outlined, iconBg: const Color(0xFFD1FAE5), label: 'SELINGAN PAGI', controller: _selinganPagiCtrl, hint: 'Contoh: Pisang rebus 1 bh sdg, teh tawar 1 gelas', session: 'Selingan Pagi', jam: _jamSelinganPagi),
+                  _buildMealSection(
+                    icon: Icons.storefront_outlined,
+                    iconBg: const Color(0xFFD1FAE5),
+                    label: 'SELINGAN PAGI',
+                    controller: _selinganPagiCtrl,
+                    hint: 'Contoh: Pisang rebus 1 bh sdg, teh tawar 1 gelas',
+                    session: 'Selingan Pagi',
+                    jam: _jamSelinganPagi,
+                  ),
                   const SizedBox(height: 20),
-                  _buildMealSection(icon: Icons.restaurant_outlined, iconBg: const Color(0xFFFEF3C7), label: 'MAKAN SIANG', controller: _siangCtrl, hint: 'Ketik di sini...', session: 'Siang', jam: _jamSiang),
+                  _buildMealSection(
+                    icon: Icons.restaurant_outlined,
+                    iconBg: const Color(0xFFFEF3C7),
+                    label: 'MAKAN SIANG',
+                    controller: _siangCtrl,
+                    hint: 'Ketik di sini...',
+                    session: 'Siang',
+                    jam: _jamSiang,
+                  ),
                   const SizedBox(height: 20),
-                  _buildMealSection(icon: Icons.storefront_outlined, iconBg: const Color(0xFFD1FAE5), label: 'SELINGAN SORE', controller: _selinganSoreCtrl, hint: 'Ketik di sini...', session: 'Selingan Sore', jam: _jamSelinganSore),
+                  _buildMealSection(
+                    icon: Icons.storefront_outlined,
+                    iconBg: const Color(0xFFD1FAE5),
+                    label: 'SELINGAN SORE',
+                    controller: _selinganSoreCtrl,
+                    hint: 'Ketik di sini...',
+                    session: 'Selingan Sore',
+                    jam: _jamSelinganSore,
+                  ),
                   const SizedBox(height: 20),
-                    _buildMealSection(icon: Icons.nightlight_outlined, iconBg: const Color(0xFFEDE9FE), label: 'MAKAN MALAM', controller: _malamCtrl, hint: 'Ketik di sini...', session: 'Malam', jam: _jamMalam),
-                  ],
-                ),
+                  _buildMealSection(
+                    icon: Icons.nightlight_outlined,
+                    iconBg: const Color(0xFFEDE9FE),
+                    label: 'MAKAN MALAM',
+                    controller: _malamCtrl,
+                    hint: 'Ketik di sini...',
+                    session: 'Malam',
+                    jam: _jamMalam,
+                  ),
+                ],
               ),
             ),
-            if (!_isLocked) _buildBottomButton(context),
-          ],
-        ),
+          ),
+          if (!_isLocked) _buildBottomButton(context),
+        ],
+      ),
     );
   }
 
   Widget _buildTopBar(BuildContext context) {
     return Container(
       color: AppColors.surface,
-      padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top + 12, left: 20, right: 20, bottom: 16),
+      padding: EdgeInsets.only(
+        top: MediaQuery.of(context).padding.top + 12,
+        left: 20,
+        right: 20,
+        bottom: 16,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -818,12 +1246,23 @@ class _CatatanScreenState extends State<CatatanScreen> {
                       borderRadius: BorderRadius.circular(10),
                       border: Border.all(color: AppColors.divider),
                     ),
-                    child: const Icon(Icons.arrow_back_ios_new, size: 16, color: AppColors.textPrimary),
+                    child: const Icon(
+                      Icons.arrow_back_ios_new,
+                      size: 16,
+                      color: AppColors.textPrimary,
+                    ),
                   ),
                 )
               else
                 const SizedBox(width: 34),
-              Text('Naksihat', style: GoogleFonts.manrope(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.primary)),
+              Text(
+                'Naksihat',
+                style: GoogleFonts.manrope(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.primary,
+                ),
+              ),
               NotificationBell(
                 userId: _userId,
                 role: 'pasien',
@@ -832,13 +1271,41 @@ class _CatatanScreenState extends State<CatatanScreen> {
             ],
           ),
           const SizedBox(height: 16),
-          Text('Catatan Makan Hari Ini', style: GoogleFonts.manrope(fontSize: 20, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+          Text(
+            'Catatan Makan Hari Ini',
+            style: GoogleFonts.manrope(
+              fontSize: 20,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textPrimary,
+            ),
+          ),
           const SizedBox(height: 12),
-          Text('HARI INI', style: GoogleFonts.manrope(fontSize: 10, fontWeight: FontWeight.w600, letterSpacing: 1.2, color: AppColors.textMuted)),
+          Text(
+            'HARI INI',
+            style: GoogleFonts.manrope(
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 1.2,
+              color: AppColors.textMuted,
+            ),
+          ),
           const SizedBox(height: 2),
-          Text(_formatTanggal(DateTime.now()), style: GoogleFonts.manrope(fontSize: 18, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+          Text(
+            _formatTanggal(DateTime.now()),
+            style: GoogleFonts.manrope(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textPrimary,
+            ),
+          ),
           const SizedBox(height: 4),
-          Text('Waktu pengisian: ${_formatJam(DateTime.now())}', style: GoogleFonts.manrope(fontSize: 12, color: AppColors.textSecondary)),
+          Text(
+            'Waktu pengisian: ${_formatJam(DateTime.now())}',
+            style: GoogleFonts.manrope(
+              fontSize: 12,
+              color: AppColors.textSecondary,
+            ),
+          ),
         ],
       ),
     );
@@ -846,16 +1313,28 @@ class _CatatanScreenState extends State<CatatanScreen> {
 
   Widget _buildPhysicalField(String label, TextEditingController controller) {
     return Container(
-      decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(12), border: Border.all(color: AppColors.divider)),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.divider),
+      ),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: TextField(
         controller: controller,
         enabled: !_isLocked,
         keyboardType: TextInputType.number,
-        style: GoogleFonts.manrope(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
+        style: GoogleFonts.manrope(
+          fontSize: 16,
+          fontWeight: FontWeight.w600,
+          color: AppColors.textPrimary,
+        ),
         decoration: InputDecoration(
           labelText: label,
-          labelStyle: GoogleFonts.manrope(fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.textSecondary),
+          labelStyle: GoogleFonts.manrope(
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+            color: AppColors.textSecondary,
+          ),
           border: InputBorder.none,
         ),
       ),
@@ -877,28 +1356,64 @@ class _CatatanScreenState extends State<CatatanScreen> {
         Row(
           children: [
             Container(
-              width: 40, height: 40,
-              decoration: BoxDecoration(color: iconBg, borderRadius: BorderRadius.circular(10)),
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: iconBg,
+                borderRadius: BorderRadius.circular(10),
+              ),
               child: Icon(icon, color: AppColors.primary, size: 20),
             ),
             const SizedBox(width: 10),
-            Expanded(child: Text(label, style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w600, letterSpacing: 0.8, color: AppColors.textPrimary))),
+            Expanded(
+              child: Text(
+                label,
+                style: GoogleFonts.manrope(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.8,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+            ),
             // Tombol URT
             GestureDetector(
-              onTap: _isLocked ? _showLockedWarning : () => _showURTPicker(controller),
+              onTap: _isLocked
+                  ? _showLockedWarning
+                  : () => _showURTPicker(controller),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 5,
+                ),
                 decoration: BoxDecoration(
                   color: _isLocked ? Colors.grey[200] : const Color(0xFFE0F2FE),
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: _isLocked ? Colors.grey : const Color(0xFF0284C7).withValues(alpha: 0.5)),
+                  border: Border.all(
+                    color: _isLocked
+                        ? Colors.grey
+                        : const Color(0xFF0284C7).withValues(alpha: 0.5),
+                  ),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.straighten, size: 13, color: _isLocked ? Colors.grey : const Color(0xFF0284C7)),
+                    Icon(
+                      Icons.straighten,
+                      size: 13,
+                      color: _isLocked ? Colors.grey : const Color(0xFF0284C7),
+                    ),
                     const SizedBox(width: 4),
-                    Text('URT', style: GoogleFonts.manrope(fontSize: 11, fontWeight: FontWeight.w700, color: _isLocked ? Colors.grey : const Color(0xFF0284C7))),
+                    Text(
+                      'URT',
+                      style: GoogleFonts.manrope(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: _isLocked
+                            ? Colors.grey
+                            : const Color(0xFF0284C7),
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -908,21 +1423,41 @@ class _CatatanScreenState extends State<CatatanScreen> {
             GestureDetector(
               onTap: _isLocked ? _showLockedWarning : () => _pickTime(session),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 5,
+                ),
                 decoration: BoxDecoration(
-                  color: jam != null ? AppColors.primaryLight : (_isLocked ? Colors.grey[200] : AppColors.background),
+                  color: jam != null
+                      ? AppColors.primaryLight
+                      : (_isLocked ? Colors.grey[200] : AppColors.background),
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: jam != null ? AppColors.primary : (_isLocked ? Colors.grey : AppColors.divider)),
+                  border: Border.all(
+                    color: jam != null
+                        ? AppColors.primary
+                        : (_isLocked ? Colors.grey : AppColors.divider),
+                  ),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.access_time, size: 14, color: jam != null ? AppColors.primary : (_isLocked ? Colors.grey : AppColors.textMuted)),
+                    Icon(
+                      Icons.access_time,
+                      size: 14,
+                      color: jam != null
+                          ? AppColors.primary
+                          : (_isLocked ? Colors.grey : AppColors.textMuted),
+                    ),
                     const SizedBox(width: 4),
                     Text(
                       jam != null ? _timeOfDayToStr(jam) : 'Set Jam',
-                      style: GoogleFonts.manrope(fontSize: 11, fontWeight: FontWeight.w600,
-                          color: jam != null ? AppColors.primaryDark : (_isLocked ? Colors.grey : AppColors.textMuted)),
+                      style: GoogleFonts.manrope(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: jam != null
+                            ? AppColors.primaryDark
+                            : (_isLocked ? Colors.grey : AppColors.textMuted),
+                      ),
                     ),
                   ],
                 ),
@@ -932,15 +1467,26 @@ class _CatatanScreenState extends State<CatatanScreen> {
         ),
         const SizedBox(height: 10),
         Container(
-          decoration: BoxDecoration(color: _isLocked ? Colors.grey[100] : AppColors.surface, borderRadius: BorderRadius.circular(14), border: Border.all(color: AppColors.divider)),
+          decoration: BoxDecoration(
+            color: _isLocked ? Colors.grey[100] : AppColors.surface,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: AppColors.divider),
+          ),
           child: TextField(
             controller: controller,
             enabled: !_isLocked,
             maxLines: 3,
-            style: GoogleFonts.manrope(fontSize: 14, color: AppColors.textPrimary),
+            style: GoogleFonts.manrope(
+              fontSize: 14,
+              color: AppColors.textPrimary,
+            ),
             decoration: InputDecoration(
               hintText: hint,
-              hintStyle: GoogleFonts.manrope(color: AppColors.textMuted, fontSize: 13, height: 1.5),
+              hintStyle: GoogleFonts.manrope(
+                color: AppColors.textMuted,
+                fontSize: 13,
+                height: 1.5,
+              ),
               border: InputBorder.none,
               contentPadding: const EdgeInsets.all(14),
             ),
@@ -953,19 +1499,41 @@ class _CatatanScreenState extends State<CatatanScreen> {
   Widget _buildBottomButton(BuildContext context) {
     return Container(
       color: AppColors.surface,
-      padding: EdgeInsets.only(left: 16, right: 16, bottom: MediaQuery.of(context).padding.bottom + 16, top: 12),
+      padding: EdgeInsets.only(
+        left: 16,
+        right: 16,
+        bottom: MediaQuery.of(context).padding.bottom + 16,
+        top: 12,
+      ),
       child: SizedBox(
         width: double.infinity,
         child: ElevatedButton.icon(
           onPressed: _isLoading ? null : _confirmSave,
           icon: _isLoading
-              ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(Colors.white)))
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  ),
+                )
               : const Icon(Icons.send_outlined, color: Colors.white),
-          label: Text('KIRIM LAPORAN', style: GoogleFonts.manrope(fontSize: 15, fontWeight: FontWeight.w600, letterSpacing: 1.2, color: Colors.white)),
+          label: Text(
+            'KIRIM LAPORAN',
+            style: GoogleFonts.manrope(
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 1.2,
+              color: Colors.white,
+            ),
+          ),
           style: ElevatedButton.styleFrom(
             backgroundColor: AppColors.secondary,
             padding: const EdgeInsets.symmetric(vertical: 16),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+            ),
             elevation: 0,
           ),
         ),
@@ -974,26 +1542,9 @@ class _CatatanScreenState extends State<CatatanScreen> {
   }
 
   Widget _buildStatusGizi() {
-    final double? weight = double.tryParse(_bbCtrl.text);
-    final double? height = double.tryParse(_tbCtrl.text);
-    
-    if (weight == null || height == null || weight == 0 || height == 0) {
+    if (_selectedDietType == null || _selectedDietType!.isEmpty) {
       return const SizedBox.shrink();
     }
-
-    final double imt = weight / ((height / 100) * (height / 100));
-    String imtKategori = 'Normal';
-    if (imt < 18.5) {
-      imtKategori = 'Kurus';
-    } else if (imt < 25.1) {
-      imtKategori = 'Normal';
-    } else if (imt < 27.1) {
-      imtKategori = 'Gemuk';
-    } else {
-      imtKategori = 'Obesitas';
-    }
-
-    final ageMap = AgeCalculator.calculateAge(_birthdate);
 
     return Container(
       margin: const EdgeInsets.only(top: 12),
@@ -1006,42 +1557,31 @@ class _CatatanScreenState extends State<CatatanScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              const Icon(Icons.analytics_outlined, color: Color(0xFF166534), size: 18),
-              const SizedBox(width: 8),
-              Text('Informasi Indeks Masa Tubuh', style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w700, color: const Color(0xFF166534))),
-            ],
-          ),
-          const SizedBox(height: 12),
+
           _clinicalRow('Terapi Diet', _selectedDietType ?? '-'),
           if (_catatanProgram.isNotEmpty)
             _clinicalRow('Catatan Ahli Gizi', _catatanProgram)
           else if (_catatanKlinis.isNotEmpty && _catatanKlinis != '-')
             _clinicalRow('Catatan Ahli Gizi', _catatanKlinis),
-          if (ageMap == null || ((ageMap['years']! * 12) + ageMap['months']!) >= 216) ...[
-            const Divider(height: 16, color: Color(0xFF86EFAC)),
-            Row(
-              children: [
-                Expanded(child: _statusItem('IMT', imt.toStringAsFixed(1))),
-                Expanded(child: _statusItem('Status', _statusGiziManual ?? imtKategori)),
-              ],
-            ),
-          ],
         ],
       ),
     );
   }
-
 
   Widget _clinicalRow(String label, String value) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 4),
       child: RichText(
         text: TextSpan(
-          style: GoogleFonts.manrope(fontSize: 12, color: AppColors.textPrimary),
+          style: GoogleFonts.manrope(
+            fontSize: 12,
+            color: AppColors.textPrimary,
+          ),
           children: [
-            TextSpan(text: '$label: ', style: const TextStyle(fontWeight: FontWeight.w700)),
+            TextSpan(
+              text: '$label: ',
+              style: const TextStyle(fontWeight: FontWeight.w700),
+            ),
             TextSpan(text: value),
           ],
         ),
@@ -1053,10 +1593,23 @@ class _CatatanScreenState extends State<CatatanScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: GoogleFonts.manrope(fontSize: 10, color: Color(0xFF166534), fontWeight: FontWeight.w600)),
-        Text(value, style: GoogleFonts.manrope(fontSize: 14, fontWeight: FontWeight.w800, color: Color(0xFF166534))),
+        Text(
+          label,
+          style: GoogleFonts.manrope(
+            fontSize: 10,
+            color: Color(0xFF166534),
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        Text(
+          value,
+          style: GoogleFonts.manrope(
+            fontSize: 14,
+            fontWeight: FontWeight.w800,
+            color: Color(0xFF166534),
+          ),
+        ),
       ],
     );
   }
 }
-

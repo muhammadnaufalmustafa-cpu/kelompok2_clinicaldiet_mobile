@@ -1259,9 +1259,16 @@ class _ProfilScreenState extends State<ProfilScreen> {
     String bmiStatus = 'N/A';
     Color bmiColor = AppColors.textMuted;
     
-    if (weight > 0 && height > 0) {
+    final manualBmi = double.tryParse(_user?['imt_manual']?.toString() ?? '') ?? 0.0;
+
+    if (!isUnderage && weight > 0 && height > 0) {
       final heightM = height / 100;
       bmi = weight / (heightM * heightM);
+    } else if (isUnderage && manualBmi > 0) {
+      bmi = manualBmi;
+    }
+
+    if (bmi > 0) {
       if (bmi < 18.5) {
         bmiStatus = 'KURANG';
         bmiColor = Colors.orange;
@@ -1401,7 +1408,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
                   ),
                   const SizedBox(height: 12),
 
-                  if (!isUnderage)
+                  if (!isUnderage || (_user?['status_gizi_manual'] != null && _user?['status_gizi_manual'] != ''))
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(16),
@@ -1436,7 +1443,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
                               ),
                             ),
                             const SizedBox(width: 10),
-                            if (bmi > 0)
+                            if (bmi > 0 || (_user?['status_gizi_manual'] != null && _user?['status_gizi_manual'] != ''))
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                 decoration: BoxDecoration(
@@ -1457,7 +1464,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
                       ],
                     ),
                   )
-                  else if (_user?['bbu_manual'] != null || _user?['tbu_manual'] != null || _user?['imtu_manual'] != null)
+                  else if (_user?['imtu_manual'] != null)
                     Container(
                       width: double.infinity,
                       padding: const EdgeInsets.all(16),
@@ -1483,8 +1490,6 @@ class _ProfilScreenState extends State<ProfilScreen> {
                           const SizedBox(height: 12),
                           Row(
                             children: [
-                              Expanded(child: _buildChildStat('BB/U', _user?['bbu_manual']?.toString() ?? '-')),
-                              Expanded(child: _buildChildStat('TB/U', _user?['tbu_manual']?.toString() ?? '-')),
                               Expanded(child: _buildChildStat('IMT/U', _user?['imtu_manual']?.toString() ?? '-')),
                             ],
                           ),
