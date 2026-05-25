@@ -49,19 +49,7 @@ class _AhliGiziDetailPasienScreenState
   final _customDietCtrl = TextEditingController();
   final _evaluasiHarianCtrl = TextEditingController();
 
-  // Poin 3 & 6: Status Gizi Manual dan kunci dinamis
-  String? _statusGiziManual; // Dipilih oleh Ahli Gizi
-
-  static const List<String> _statusGiziOptions = [
-    'Gizi Baik',
-    'Gizi Kurang',
-    'Gizi Buruk',
-    'Gizi Lebih',
-    'Obesitas',
-    'Berisiko Gizi Lebih',
-    'Tidak Terkategorikan',
-  ];
-
+  final _statusGiziManualCtrl = TextEditingController(); // Diinput oleh Ahli Gizi
   final _imtManualCtrl = TextEditingController();
 
   final List<String> _terapiDietList = [
@@ -156,7 +144,7 @@ class _AhliGiziDetailPasienScreenState
     _status = widget.pasien['status'] ?? 'aktif';
     _targetCtrl.text = widget.pasien['target_diet'] ?? '';
     _diagnosisCtrl.text = widget.pasien['diagnosis'] ?? '';
-    _statusGiziManual = widget.pasien['status_gizi_manual'];
+    _statusGiziManualCtrl.text = widget.pasien['status_gizi_manual'] ?? '';
     _imtManualCtrl.text = widget.pasien['imt_manual']?.toString() ?? '';
 
     _loadInitialData();
@@ -273,6 +261,7 @@ class _AhliGiziDetailPasienScreenState
     _diagnosisCtrl.dispose();
     _catatanNutrisiCtrl.dispose();
     _evaluasiHarianCtrl.dispose();
+    _statusGiziManualCtrl.dispose();
     for (var c in _targetCtrls.values) {
       c.dispose();
     }
@@ -1504,7 +1493,7 @@ class _AhliGiziDetailPasienScreenState
           .then((value) {
             if (value.docs.isNotEmpty) {
               value.docs.first.reference.update({
-                'status_gizi_manual': _statusGiziManual,
+                'status_gizi_manual': _statusGiziManualCtrl.text.trim(),
                 'imt_manual': _imtManualCtrl.text.trim(),
               });
             }
@@ -1602,8 +1591,6 @@ class _AhliGiziDetailPasienScreenState
     }
   }
 
-
-
   Widget _buildEvaluasiSection() {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -1639,25 +1626,15 @@ class _AhliGiziDetailPasienScreenState
             ],
           ),
           const SizedBox(height: 8),
-          DropdownButtonFormField<String>(
-            value: _statusGiziManual,
-            hint: Text(
-              'Pilih status gizi pasien...',
-              style: GoogleFonts.manrope(
+          TextFormField(
+            controller: _statusGiziManualCtrl,
+            style: GoogleFonts.manrope(fontSize: 13, color: AppColors.textPrimary),
+            decoration: InputDecoration(
+              hintText: 'Contoh: Gizi Baik, Overweight, dll...',
+              hintStyle: GoogleFonts.manrope(
                 fontSize: 13,
                 color: AppColors.textMuted,
               ),
-            ),
-            items: _statusGiziOptions
-                .map(
-                  (v) => DropdownMenuItem(
-                    value: v,
-                    child: Text(v, style: GoogleFonts.manrope(fontSize: 13)),
-                  ),
-                )
-                .toList(),
-            onChanged: (v) => setState(() => _statusGiziManual = v),
-            decoration: InputDecoration(
               contentPadding: const EdgeInsets.symmetric(
                 horizontal: 12,
                 vertical: 10,
@@ -1676,28 +1653,67 @@ class _AhliGiziDetailPasienScreenState
               ),
             ),
           ),
-          
-          if (AgeCalculator.calculateAge(widget.pasien['birthdate']) != null && ((AgeCalculator.calculateAge(widget.pasien['birthdate'])!['years']! * 12) + AgeCalculator.calculateAge(widget.pasien['birthdate'])!['months']!) < 216) ...[
+
+          if (AgeCalculator.calculateAge(widget.pasien['birthdate']) != null &&
+              ((AgeCalculator.calculateAge(
+                            widget.pasien['birthdate'],
+                          )!['years']! *
+                          12) +
+                      AgeCalculator.calculateAge(
+                        widget.pasien['birthdate'],
+                      )!['months']!) <
+                  216) ...[
             const SizedBox(height: 16),
             Row(
               children: [
-                const Icon(Icons.child_care, size: 16, color: AppColors.primary),
+                const Icon(
+                  Icons.child_care,
+                  size: 16,
+                  color: AppColors.primary,
+                ),
                 const SizedBox(width: 8),
-                Text('Status Gizi Anak (IMT/U)', style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
+                Text(
+                  'Status Gizi Anak (IMT/U)',
+                  style: GoogleFonts.manrope(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 8),
             TextFormField(
               controller: _imtManualCtrl,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              style: GoogleFonts.manrope(fontSize: 13, color: AppColors.textPrimary),
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
+              style: GoogleFonts.manrope(
+                fontSize: 13,
+                color: AppColors.textPrimary,
+              ),
               decoration: InputDecoration(
                 hintText: 'Contoh: 18.5',
-                hintStyle: GoogleFonts.manrope(fontSize: 13, color: AppColors.textMuted),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.divider)),
-                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.divider)),
-                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.primary)),
+                hintStyle: GoogleFonts.manrope(
+                  fontSize: 13,
+                  color: AppColors.textMuted,
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: const BorderSide(color: AppColors.divider),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: const BorderSide(color: AppColors.divider),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: const BorderSide(color: AppColors.primary),
+                ),
               ),
             ),
           ],
@@ -1790,7 +1806,7 @@ class _AhliGiziDetailPasienScreenState
                 _buildDiagnosisAutocompleteField(),
                 const SizedBox(height: 12),
                 _buildNutrisiField(
-                  'Catatan / Evaluasi Klinis',
+                  'Catatan Klinis',
                   _catatanNutrisiCtrl,
                   'Ketik catatan...',
                   '',
@@ -2084,7 +2100,7 @@ class _AhliGiziDetailPasienScreenState
                 const SizedBox(height: 4),
                 Row(
                   children: [
-                    _buildChip(_dietLabel, AppColors.secondary),
+                    Flexible(child: _buildChip(_dietLabel, AppColors.secondary)),
                     const SizedBox(width: 6),
                     _buildChip(_status.toUpperCase(), _statusColor),
                   ],
@@ -3764,6 +3780,7 @@ class _AhliGiziDetailPasienScreenState
       ),
       child: Text(
         label,
+        overflow: TextOverflow.ellipsis,
         style: GoogleFonts.manrope(
           fontSize: 10,
           fontWeight: FontWeight.w700,

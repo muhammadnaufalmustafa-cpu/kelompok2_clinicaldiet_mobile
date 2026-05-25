@@ -1115,7 +1115,7 @@ class _CatatanScreenState extends State<CatatanScreen> {
                       ),
                     ],
                   ),
-                  _buildStatusGizi(),
+
                   const SizedBox(height: 24),
 
                   Row(
@@ -1541,53 +1541,7 @@ class _CatatanScreenState extends State<CatatanScreen> {
     );
   }
 
-  Widget _buildStatusGizi() {
-    if (_selectedDietType == null || _selectedDietType!.isEmpty) {
-      return const SizedBox.shrink();
-    }
 
-    return Container(
-      margin: const EdgeInsets.only(top: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF0FDF4),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFF86EFAC)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-
-          _clinicalRow('Terapi Diet', _selectedDietType ?? '-'),
-          if (_catatanProgram.isNotEmpty)
-            _clinicalRow('Catatan Ahli Gizi', _catatanProgram)
-          else if (_catatanKlinis.isNotEmpty && _catatanKlinis != '-')
-            _clinicalRow('Catatan Ahli Gizi', _catatanKlinis),
-        ],
-      ),
-    );
-  }
-
-  Widget _clinicalRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
-      child: RichText(
-        text: TextSpan(
-          style: GoogleFonts.manrope(
-            fontSize: 12,
-            color: AppColors.textPrimary,
-          ),
-          children: [
-            TextSpan(
-              text: '$label: ',
-              style: const TextStyle(fontWeight: FontWeight.w700),
-            ),
-            TextSpan(text: value),
-          ],
-        ),
-      ),
-    );
-  }
 
   Widget _statusItem(String label, String value) {
     return Column(

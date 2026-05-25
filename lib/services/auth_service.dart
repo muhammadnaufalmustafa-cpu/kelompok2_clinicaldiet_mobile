@@ -378,12 +378,21 @@ static Future<Map<String, dynamic>> registerAhliGizi({
       // 1. Jika bukan format email, cari emailnya di Firestore berdasarkan RM, Username, atau NIP
       if (!identifier.contains('@')) {
         /* debug log removed */
-        var check = await usersRef.where('rm', isEqualTo: identifier).get();
+        var check = await usersRef.where('rm', isEqualTo: identifier).get().timeout(
+              const Duration(seconds: 10),
+              onTimeout: () => throw 'Timeout saat mencari RM',
+            );
         if (check.docs.isEmpty) {
-          check = await usersRef.where('username', isEqualTo: identifier).get();
+          check = await usersRef.where('username', isEqualTo: identifier).get().timeout(
+                const Duration(seconds: 10),
+                onTimeout: () => throw 'Timeout saat mencari Username',
+              );
         }
         if (check.docs.isEmpty) {
-          check = await usersRef.where('nip', isEqualTo: identifier).get();
+          check = await usersRef.where('nip', isEqualTo: identifier).get().timeout(
+                const Duration(seconds: 10),
+                onTimeout: () => throw 'Timeout saat mencari NIP',
+              );
         }
 
         if (check.docs.isNotEmpty) {

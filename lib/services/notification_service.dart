@@ -97,7 +97,9 @@ class NotificationService {
       uiLocalNotificationDateInterpretation:
           UILocalNotificationDateInterpretation.absoluteTime,
       matchDateTimeComponents: DateTimeComponents.time,
-    );
+    ).catchError((e) {
+      // Ignore on Web or unsupported platforms
+    });
   }
 
   tz.TZDateTime _nextInstanceOfTime(int hour, int minute) {
@@ -111,7 +113,11 @@ class NotificationService {
   }
 
   Future<void> cancelAllNotifications() async {
-    await flutterLocalNotificationsPlugin.cancelAll();
+    try {
+      await flutterLocalNotificationsPlugin.cancelAll();
+    } catch (e) {
+      // Ignore on Web or unsupported platforms
+    }
   }
 
   Future<void> showInstantNotification({
@@ -129,6 +135,10 @@ class NotificationService {
       icon: '@mipmap/ic_launcher',
     );
     const NotificationDetails details = NotificationDetails(android: androidDetails);
-    await flutterLocalNotificationsPlugin.show(id, title, body, details, payload: payload);
+    try {
+      await flutterLocalNotificationsPlugin.show(id, title, body, details, payload: payload);
+    } catch (e) {
+      // Ignore on Web or unsupported platforms
+    }
   }
 }
