@@ -419,7 +419,8 @@ class _CatatanScreenState extends State<CatatanScreen> {
     final picked = await showTimePicker(
       context: context,
       initialTime: TimeOfDay.now(),
-      helpText: 'Jam makan ---œ $session',
+      initialEntryMode: TimePickerEntryMode.input, // Poin 7: tampilkan input digital, bukan jam jarum
+      helpText: 'Jam makan — $session',
       builder: (context, child) => MediaQuery(
         data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true),
         child: child!,
@@ -803,9 +804,13 @@ class _CatatanScreenState extends State<CatatanScreen> {
         children: [
           _buildTopBar(context),
           Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
-              child: Column(
+            child: RefreshIndicator(
+              color: AppColors.secondary,
+              onRefresh: _loadInitialData,
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+                child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   if (_isLoadingData)
@@ -1215,6 +1220,7 @@ class _CatatanScreenState extends State<CatatanScreen> {
               ),
             ),
           ),
+        ),
           if (!_isLocked) _buildBottomButton(context),
         ],
       ),

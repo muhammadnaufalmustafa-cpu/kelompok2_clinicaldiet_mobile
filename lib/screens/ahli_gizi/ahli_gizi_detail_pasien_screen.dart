@@ -33,6 +33,7 @@ class _AhliGiziDetailPasienScreenState
   List<Map<String, dynamic>> _riwayatMakan = [];
   String? _selectedDietType; // Jenis diet yang sedang diedit
   int _missedDays = 0; // jumlah hari tidak isi log
+  DateTime _selectedAktualDate = DateTime.now(); // Tanggal untuk aktualisasi gizi
 
   // ---Â---Â--- Patient Therapy Programs ---Â---Â---
   List<Map<String, dynamic>> _patientPrograms = [];
@@ -1331,11 +1332,18 @@ class _AhliGiziDetailPasienScreenState
                     return;
                   }
                   Navigator.pop(ctx);
-                  _doUpdateStatus(
-                    status,
-                    evaluasiAkhir: evaluasiCtrl.text.trim(),
-                    outcomeType: selectedOutcome,
-                  );
+                  // Poin 4b: jika Belum Tercapai, tampilkan dialog pilihan lanjutan
+                  if (status == 'berhasil' && selectedOutcome == 'Belum Tercapai') {
+                    _showBelumTercapaiActionDialog(
+                      evaluasiAkhir: evaluasiCtrl.text.trim(),
+                    );
+                  } else {
+                    _doUpdateStatus(
+                      status,
+                      evaluasiAkhir: evaluasiCtrl.text.trim(),
+                      outcomeType: selectedOutcome,
+                    );
+                  }
                 },
                 icon: const Icon(
                   Icons.check_circle_outline,
@@ -1361,6 +1369,147 @@ class _AhliGiziDetailPasienScreenState
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  /// Poin 4b: Dialog lanjutan ketika AG memilih "Belum Tercapai"
+  /// Pilihan: Cutoff/Hentikan Program  ATAU  Tambah Periode Diet
+  Future<void> _showBelumTercapaiActionDialog({required String evaluasiAkhir}) async {
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            const Icon(Icons.help_outline_rounded, color: AppColors.accent, size: 22),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Target Belum Tercapai',
+                style: GoogleFonts.manrope(fontWeight: FontWeight.w700, fontSize: 16),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Target diet pasien belum tercapai. Apa yang ingin Anda lakukan selanjutnya?',
+              style: GoogleFonts.manrope(fontSize: 13, color: AppColors.textSecondary, height: 1.5),
+            ),
+            const SizedBox(height: 20),
+            // Opsi A: Cutoff
+            InkWell(
+              borderRadius: BorderRadius.circular(12),
+              onTap: () {
+                Navigator.pop(ctx);
+                _doUpdateStatus(
+                  'berhasil',
+                  evaluasiAkhir: evaluasiAkhir,
+                  outcomeType: 'Belum Tercapai - Cutoff',
+                );
+              },
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: Colors.red.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.red.shade200),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.stop_circle_outlined, color: Colors.red.shade700, size: 22),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Cutoff / Hentikan Program',
+                            style: GoogleFonts.manrope(
+                              fontSize: 13, fontWeight: FontWeight.w700, color: Colors.red.shade700,
+                            ),
+                          ),
+                          Text(
+                            'Program dinyatakan selesai meskipun target belum tercapai.',
+                            style: GoogleFonts.manrope(fontSize: 11, color: Colors.red.shade500, height: 1.4),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            // Opsi B: Tambah Periode Diet
+            InkWell(
+              borderRadius: BorderRadius.circular(12),
+              onTap: () async {
+                Navigator.pop(ctx);
+                // Buka dialog perpanjangan periode untuk program yang dipilih
+                if (_selectedPatientProgram != null) {
+                  await _showEditPeriodDialog(_selectedPatientProgram!);
+                  // Setelah perpanjang, status pasien kembali aktif jika bukan sudah aktif
+                  if (mounted && _status != 'aktif') {
+                    await _doUpdateStatus('aktif', evaluasiAkhir: '', outcomeType: '');
+                  }
+                } else {
+                  if (!mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Pilih program terlebih dahulu.', style: GoogleFonts.manrope()),
+                      backgroundColor: Colors.orange,
+                    ),
+                  );
+                }
+              },
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.07),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.calendar_month_outlined, color: AppColors.primary, size: 22),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Tambah Periode Diet',
+                            style: GoogleFonts.manrope(
+                              fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.primary,
+                            ),
+                          ),
+                          Text(
+                            'Perpanjang durasi program agar pasien bisa melanjutkan diet.',
+                            style: GoogleFonts.manrope(fontSize: 11, color: AppColors.textSecondary, height: 1.4),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text('Batal', style: GoogleFonts.manrope(color: AppColors.textSecondary)),
+          ),
+        ],
       ),
     );
   }
@@ -1529,11 +1678,24 @@ class _AhliGiziDetailPasienScreenState
       if (_evaluasiHarianCtrl.text.isNotEmpty) {
         final currentAg =
             (await AuthService.getLoggedInUser())?['name'] ?? 'Ahli Gizi';
-        await AuthService.saveCatatanEvaluasi(
+        final evalSaved = await AuthService.saveCatatanEvaluasi(
           rmPasien: rm,
           catatan: _evaluasiHarianCtrl.text,
           agName: currentAg,
         );
+        // Kirim notifikasi ke pasien bahwa ada catatan evaluasi baru
+        if (evalSaved && patientId.isNotEmpty) {
+          await FirebaseNotificationService.createNotification(
+            userId: patientId,
+            role: 'pasien',
+            title: 'Catatan Evaluasi dari Ahli Gizi',
+            message:
+                'Ahli Gizi $currentAg telah menambahkan catatan evaluasi harian untuk Anda. '
+                'Silakan cek di dashboard Anda.',
+            type: 'evaluasi',
+            relatedId: rm,
+          );
+        }
       }
 
       // 3. Simpan target diet (text summary legacy)
@@ -1685,15 +1847,13 @@ class _AhliGiziDetailPasienScreenState
             const SizedBox(height: 8),
             TextFormField(
               controller: _imtManualCtrl,
-              keyboardType: const TextInputType.numberWithOptions(
-                decimal: true,
-              ),
+              keyboardType: TextInputType.text,
               style: GoogleFonts.manrope(
                 fontSize: 13,
                 color: AppColors.textPrimary,
               ),
               decoration: InputDecoration(
-                hintText: 'Contoh: 18.5',
+                hintText: 'Contoh: Normal/U, -2 SD, 18.5',
                 hintStyle: GoogleFonts.manrope(
                   fontSize: 13,
                   color: AppColors.textMuted,
@@ -1779,9 +1939,16 @@ class _AhliGiziDetailPasienScreenState
           ),
         ),
       ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
-        children: [
+      body: RefreshIndicator(
+        color: AppColors.secondary,
+        onRefresh: () async {
+          await _loadInitialData();
+          await _checkMissedLogs();
+        },
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
+          children: [
           // ---Â ---Â --- Info Pasien ---Â ---Â ---
           _buildPasienCard(),
           const SizedBox(height: 12),
@@ -2040,9 +2207,10 @@ class _AhliGiziDetailPasienScreenState
           _buildStatusButtons(),
         ],
       ),
-      bottomNavigationBar: _buildBottomBar(),
-    );
-  }
+    ),
+    bottomNavigationBar: _buildBottomBar(),
+  );
+}
 
   // ---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---Â---
   // WIDGET BUILDERS
@@ -3181,6 +3349,15 @@ class _AhliGiziDetailPasienScreenState
   }
 
   Widget _buildCapaianGiziSection() {
+    // Poin 3: Cek apakah pasien sudah pernah isi catatan makan sama sekali
+    final bool isAktualisiLocked = _riwayatMakan.isEmpty;
+
+    // Helper format tanggal untuk date picker label
+    String fmtAktualDate(DateTime dt) {
+      const bulan = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+      return '${dt.day} ${bulan[dt.month]} ${dt.year}';
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -3195,102 +3372,186 @@ class _AhliGiziDetailPasienScreenState
           ),
         ),
         const SizedBox(height: 12),
-        if (_checkedNutrients.values.every((v) => !v))
+
+        // Poin 3: Banner terkunci jika pasien belum pernah isi catatan makan
+        if (isAktualisiLocked)
           Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: AppColors.accent.withValues(alpha: 0.1),
+              color: Colors.orange.shade50,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: AppColors.accent.withValues(alpha: 0.3),
-              ),
+              border: Border.all(color: Colors.orange.shade200),
             ),
-            child: Text(
-              'Pilih dan simpan target gizi terlebih dahulu, lalu isi aktualisasi di sini.',
-              style: GoogleFonts.manrope(fontSize: 12, color: AppColors.accent),
-            ),
-          )
-        else
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppColors.divider),
-            ),
-            child: Column(
-              children: _checkedNutrients.entries.where((e) => e.value).map((
-                e,
-              ) {
-                final nutrient = e.key;
-                if (!_aktualCtrls.containsKey(nutrient)) {
-                  _aktualCtrls[nutrient] = TextEditingController();
-                }
-                final target =
-                    double.tryParse(_targetCtrls[nutrient]?.text ?? '0') ?? 0.0;
-
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            nutrient,
-                            style: GoogleFonts.manrope(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.textPrimary,
-                            ),
-                          ),
-                          if (target > 0)
-                            Text(
-                              'Target: ${_fmtNum(target)}',
-                              style: GoogleFonts.manrope(
-                                fontSize: 11,
-                                color: AppColors.textSecondary,
-                              ),
-                            ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      TextField(
-                        controller: _aktualCtrls[nutrient],
-                        keyboardType: const TextInputType.numberWithOptions(
-                          decimal: true,
-                        ),
-                        style: GoogleFonts.manrope(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.textPrimary,
-                        ),
-                        decoration: InputDecoration(
-                          hintText: 'Input aktualisasi $nutrient...',
-                          hintStyle: GoogleFonts.manrope(
-                            color: AppColors.textMuted,
-                            fontSize: 13,
-                          ),
-                          filled: true,
-                          fillColor: AppColors.background,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                            borderSide: BorderSide.none,
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 10,
-                          ),
-                        ),
-                        onChanged: (_) => setState(() {}),
-                      ),
-                    ],
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(Icons.lock_outline_rounded, color: Colors.orange.shade700, size: 20),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Aktualisasi terkunci. Pasien belum mengisi catatan makan. Tunggu hingga pasien mencatat makanannya terlebih dahulu.',
+                    style: GoogleFonts.manrope(
+                      fontSize: 12,
+                      color: Colors.orange.shade800,
+                      height: 1.5,
+                    ),
                   ),
-                );
-              }).toList(),
+                ),
+              ],
             ),
           ),
+
+        if (!isAktualisiLocked) ...[
+          // Poin 5: Date picker untuk pilih tanggal aktualisasi
+          GestureDetector(
+            onTap: () async {
+              final now = DateTime.now();
+              final picked = await showDatePicker(
+                context: context,
+                initialDate: _selectedAktualDate,
+                firstDate: now.subtract(const Duration(days: 90)),
+                lastDate: now,
+                helpText: 'Pilih tanggal aktualisasi',
+                locale: const Locale('id', 'ID'),
+                builder: (context, child) => Theme(
+                  data: Theme.of(context).copyWith(
+                    colorScheme: const ColorScheme.light(
+                      primary: AppColors.primary,
+                      onPrimary: Colors.white,
+                    ),
+                  ),
+                  child: child!,
+                ),
+              );
+              if (picked != null && mounted) {
+                setState(() => _selectedAktualDate = picked);
+              }
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: AppColors.primaryLight,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.calendar_today_outlined, size: 16, color: AppColors.primary),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Tanggal: ${fmtAktualDate(_selectedAktualDate)}',
+                    style: GoogleFonts.manrope(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  const Icon(Icons.arrow_drop_down, size: 18, color: AppColors.primary),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          if (_checkedNutrients.values.every((v) => !v))
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: AppColors.accent.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: AppColors.accent.withValues(alpha: 0.3),
+                ),
+              ),
+              child: Text(
+                'Pilih dan simpan target gizi terlebih dahulu, lalu isi aktualisasi di sini.',
+                style: GoogleFonts.manrope(fontSize: 12, color: AppColors.accent),
+              ),
+            )
+          else
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: AppColors.divider),
+              ),
+              child: Column(
+                children: _checkedNutrients.entries.where((e) => e.value).map((
+                  e,
+                ) {
+                  final nutrient = e.key;
+                  if (!_aktualCtrls.containsKey(nutrient)) {
+                    _aktualCtrls[nutrient] = TextEditingController();
+                  }
+                  final target =
+                      double.tryParse(_targetCtrls[nutrient]?.text ?? '0') ?? 0.0;
+
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              nutrient,
+                              style: GoogleFonts.manrope(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.textPrimary,
+                              ),
+                            ),
+                            if (target > 0)
+                              Text(
+                                'Target: ${_fmtNum(target)}',
+                                style: GoogleFonts.manrope(
+                                  fontSize: 11,
+                                  color: AppColors.textSecondary,
+                                ),
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        TextField(
+                          controller: _aktualCtrls[nutrient],
+                          keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true,
+                          ),
+                          style: GoogleFonts.manrope(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textPrimary,
+                          ),
+                          decoration: InputDecoration(
+                            hintText: 'Input aktualisasi $nutrient...',
+                            hintStyle: GoogleFonts.manrope(
+                              color: AppColors.textMuted,
+                              fontSize: 13,
+                            ),
+                            filled: true,
+                            fillColor: AppColors.background,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              borderSide: BorderSide.none,
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 10,
+                            ),
+                          ),
+                          onChanged: (_) => setState(() {}),
+                        ),
+                      ],
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+        ],
       ],
     );
   }
@@ -3424,11 +3685,11 @@ class _AhliGiziDetailPasienScreenState
                     ],
                   ),
                   const Divider(height: 16),
-                  _buildMealLogItem('Pagi', log['meal_pagi']),
-                  _buildMealLogItem('Selingan Pagi', log['selingan_pagi']),
-                  _buildMealLogItem('Siang', log['meal_siang']),
-                  _buildMealLogItem('Selingan Sore', log['selingan_sore']),
-                  _buildMealLogItem('Malam', log['meal_malam']),
+                  _buildMealLogItem('Pagi', log['meal_pagi'], jam: log['jam_pagi'] as String?),
+                  _buildMealLogItem('Selingan Pagi', log['selingan_pagi'], jam: log['jam_selingan_pagi'] as String?),
+                  _buildMealLogItem('Siang', log['meal_siang'], jam: log['jam_siang'] as String?),
+                  _buildMealLogItem('Selingan Sore', log['selingan_sore'], jam: log['jam_selingan_sore'] as String?),
+                  _buildMealLogItem('Malam', log['meal_malam'], jam: log['jam_malam'] as String?),
                 ],
               ),
             );
@@ -3437,7 +3698,7 @@ class _AhliGiziDetailPasienScreenState
     );
   }
 
-  Widget _buildMealLogItem(String label, dynamic value) {
+  Widget _buildMealLogItem(String label, dynamic value, {String? jam}) {
     final text = (value as String?) ?? '';
     if (text.trim().isEmpty) return const SizedBox.shrink();
     return Padding(
@@ -3447,13 +3708,26 @@ class _AhliGiziDetailPasienScreenState
         children: [
           SizedBox(
             width: 90,
-            child: Text(
-              '$label:',
-              style: GoogleFonts.manrope(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textSecondary,
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '$label:',
+                  style: GoogleFonts.manrope(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                if (jam != null && jam.isNotEmpty)
+                  Text(
+                    jam,
+                    style: GoogleFonts.manrope(
+                      fontSize: 10,
+                      color: AppColors.textMuted,
+                    ),
+                  ),
+              ],
             ),
           ),
           Expanded(
@@ -3661,7 +3935,7 @@ class _AhliGiziDetailPasienScreenState
             const SizedBox(width: 8),
             Expanded(
               child: _buildStatusButton(
-                'Berhasil',
+                'Selesai',
                 'berhasil',
                 AppColors.secondary,
               ),

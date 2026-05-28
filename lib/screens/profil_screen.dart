@@ -1294,8 +1294,12 @@ class _ProfilScreenState extends State<ProfilScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: CustomScrollView(
-        slivers: [
+      body: RefreshIndicator(
+        color: AppColors.secondary,
+        onRefresh: _loadUser,
+        child: CustomScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          slivers: [
           SliverAppBar(
             pinned: true,
             backgroundColor: AppColors.surface,
@@ -1714,8 +1718,9 @@ class _ProfilScreenState extends State<ProfilScreen> {
           ),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildChildStat(String label, String value) {
     return Column(

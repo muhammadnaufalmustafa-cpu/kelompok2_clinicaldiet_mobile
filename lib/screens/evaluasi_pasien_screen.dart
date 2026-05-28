@@ -136,85 +136,97 @@ class _EvaluasiPasienScreenState extends State<EvaluasiPasienScreen> {
           ),
         ),
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _pasienData == null
-              ? _buildErrorState()
-              : SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Patient card
-                      _buildPatientCard(),
-                      const SizedBox(height: 12),
+      body: RefreshIndicator(
+        color: AppColors.secondary,
+        onRefresh: _loadPasienData,
+        child: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : _pasienData == null
+                ? SingleChildScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    child: Container(
+                      height: MediaQuery.of(context).size.height - 150,
+                      alignment: Alignment.center,
+                      child: _buildErrorState(),
+                    ),
+                  )
+                : SingleChildScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Patient card
+                        _buildPatientCard(),
+                        const SizedBox(height: 12),
 
-                      // WhatsApp button
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton.icon(
-                          onPressed: _launchWhatsAppPasien,
-                          icon: const Icon(Icons.chat_rounded,
-                              color: Colors.white, size: 20),
-                          label: Text(
-                            _pasienData?['phone'] != null
-                                ? 'Chat WA: ${_pasienData!['phone']}'
-                                : 'Chat WhatsApp Pasien',
-                            style: GoogleFonts.manrope(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.white,
+                        // WhatsApp button
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            onPressed: _launchWhatsAppPasien,
+                            icon: const Icon(Icons.chat_rounded,
+                                color: Colors.white, size: 20),
+                            label: Text(
+                              _pasienData?['phone'] != null
+                                  ? 'Chat WA: ${_pasienData!['phone']}'
+                                  : 'Chat WhatsApp Pasien',
+                              style: GoogleFonts.manrope(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white,
+                              ),
                             ),
-                          ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF25D366), // WhatsApp green
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(14)),
-                            elevation: 0,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF25D366), // WhatsApp green
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(14)),
+                              elevation: 0,
+                            ),
                           ),
                         ),
-                      ),
-                      const SizedBox(height: 20),
+                        const SizedBox(height: 20),
 
-                      // Log Laporan
-                      Row(
-                        children: [
-                          Text(
-                            'Log Laporan Terbaru',
-                            style: GoogleFonts.manrope(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.textPrimary,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          if (_mealLogs.isNotEmpty)
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 10, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: AppColors.primaryLight,
-                                borderRadius: BorderRadius.circular(20),
+                        // Log Laporan
+                        Row(
+                          children: [
+                            Text(
+                              'Log Laporan Terbaru',
+                              style: GoogleFonts.manrope(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.textPrimary,
                               ),
-                              child: Text(
-                                'TERVERIFIKASI',
-                                style: GoogleFonts.manrope(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppColors.primaryDark,
+                            ),
+                            const SizedBox(width: 8),
+                            if (_mealLogs.isNotEmpty)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: AppColors.primaryLight,
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Text(
+                                  'TERVERIFIKASI',
+                                  style: GoogleFonts.manrope(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.primaryDark,
+                                  ),
                                 ),
                               ),
-                            ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
 
-                      // Meal logs or empty state
-                      _buildMealLogs(),
-                    ],
+                        // Meal logs or empty state
+                        _buildMealLogs(),
+                      ],
+                    ),
                   ),
-                ),
+      ),
     );
   }
 

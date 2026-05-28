@@ -10,6 +10,7 @@ import 'inform_consent_screen.dart';
 import 'pilih_jenis_diet_screen.dart';
 import 'pilih_ahli_gizi_screen.dart';
 import 'ahli_gizi/ahli_gizi_main_screen.dart';
+import 'admin/admin_main_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -56,7 +57,12 @@ class _SplashScreenState extends State<SplashScreen> {
               .doc(firebaseUser.uid)
               .get()
               .timeout(const Duration(seconds: 10));
-          if (doc.exists) user = doc.data();
+          if (doc.exists) {
+            user = doc.data();
+          } else {
+            user = null;
+            await AuthService.logout();
+          }
         } catch (_) {}
       }
     }
@@ -98,6 +104,8 @@ class _SplashScreenState extends State<SplashScreen> {
     } else if (role == 'ahli_gizi') {
       await NotificationService().cancelAllNotifications();
       return const AhliGiziMainScreen();
+    } else if (role == 'admin') {
+      return const AdminMainScreen();
     }
 
     return const LoginScreen();

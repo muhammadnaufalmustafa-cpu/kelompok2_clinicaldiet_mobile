@@ -206,7 +206,7 @@ class _AdminMainScreenState extends State<AdminMainScreen>
           style: GoogleFonts.manrope(fontWeight: FontWeight.w700),
         ),
         content: Text(
-          'Apakah Anda yakin ingin mempromosikan ${ag['name']} (NIP: ${ag['nip']}) menjadi Admin? Setelah menjadi Admin, akun ini tidak dapat diubah kembali menjadi Ahli Gizi.',
+          'Apakah Anda yakin ingin mempromosikan ${ag['name']} (NIP: ${ag['nip']}) menjadi Admin?',
           style: GoogleFonts.manrope(fontSize: 14),
         ),
         actions: [
@@ -248,6 +248,122 @@ class _AdminMainScreenState extends State<AdminMainScreen>
             style: GoogleFonts.manrope(),
           ),
           backgroundColor: success ? AppColors.secondary : Colors.red,
+        ),
+      );
+      if (success) _loadData();
+    }
+  }
+
+  Future<void> _demoteFromAdmin(Map<String, dynamic> ag) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          'Kembalikan ke Ahli Gizi',
+          style: GoogleFonts.manrope(fontWeight: FontWeight.w700),
+        ),
+        content: Text(
+          'Apakah Anda yakin ingin mengembalikan peran ${ag['name']} (NIP: ${ag['nip']}) menjadi Ahli Gizi?',
+          style: GoogleFonts.manrope(fontSize: 14),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(
+              'Batal',
+              style: GoogleFonts.manrope(color: AppColors.textSecondary),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            child: Text(
+              'Ya, Ubah Peran',
+              style: GoogleFonts.manrope(
+                color: Colors.white,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true) return;
+    final success = await AuthService.demoteFromAdmin(ag['uid'] as String);
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            success
+                ? '✅ Peran ${ag['name']} berhasil dikembalikan menjadi Ahli Gizi.'
+                : 'Gagal mengubah peran.',
+            style: GoogleFonts.manrope(),
+          ),
+          backgroundColor: success ? Colors.orange : Colors.red,
+        ),
+      );
+      if (success) _loadData();
+    }
+  }
+
+  Future<void> _deleteAhliGizi(Map<String, dynamic> ag) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          'Hapus Ahli Gizi',
+          style: GoogleFonts.manrope(fontWeight: FontWeight.w700),
+        ),
+        content: Text(
+          'Apakah Anda yakin ingin menghapus akun ${ag['name']} (NIP: ${ag['nip']}) secara permanen? Tindakan ini tidak dapat dibatalkan.',
+          style: GoogleFonts.manrope(fontSize: 14),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(
+              'Batal',
+              style: GoogleFonts.manrope(color: AppColors.textSecondary),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            child: Text(
+              'Ya, Hapus Akun',
+              style: GoogleFonts.manrope(
+                color: Colors.white,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true) return;
+    final success = await AuthService.deleteUser(ag['uid'] as String);
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            success
+                ? '✅ Akun ${ag['name']} berhasil dihapus secara permanen.'
+                : 'Gagal menghapus akun.',
+            style: GoogleFonts.manrope(),
+          ),
+          backgroundColor: success ? Colors.red : Colors.redAccent,
         ),
       );
       if (success) _loadData();
@@ -422,7 +538,17 @@ class _AdminMainScreenState extends State<AdminMainScreen>
                         ],
                       ),
                     ),
-                    _statusBadge(status),
+                    _statusBadge(ag),
+                    if (ag['uid'] != _admin?['uid']) ...[
+                      const SizedBox(width: 8),
+                      IconButton(
+                        icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                        tooltip: 'Hapus Ahli Gizi',
+                        onPressed: () => _deleteAhliGizi(ag),
+                      ),
+                    ],
                   ],
                 ),
                 const SizedBox(height: 10),
@@ -525,33 +651,53 @@ class _AdminMainScreenState extends State<AdminMainScreen>
                 ],
                 if (!showActions && status == 'approved') ...[
                   const SizedBox(height: 12),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: () => _promoteToAdmin(ag),
-                      icon: const Icon(
-                        Icons.admin_panel_settings,
-                        size: 16,
-                        color: Colors.white,
-                      ),
-                      label: Text(
-                        'Jadikan Admin',
+                  if (ag['uid'] == _admin?['uid'])
+                    Center(
+                      child: Text(
+                        'Akun Anda sedang digunakan',
                         style: GoogleFonts.manrope(
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white,
-                          fontSize: 13,
+                          fontSize: 12,
+                          color: AppColors.textMuted,
+                          fontStyle: FontStyle.italic,
                         ),
                       ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.secondary,
-                        padding: const EdgeInsets.symmetric(vertical: 10),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
+                    )
+                  else
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: () => ag['role'] == 'admin'
+                            ? _demoteFromAdmin(ag)
+                            : _promoteToAdmin(ag),
+                        icon: Icon(
+                          ag['role'] == 'admin'
+                              ? Icons.person_outline
+                              : Icons.admin_panel_settings,
+                          size: 16,
+                          color: Colors.white,
                         ),
-                        elevation: 0,
+                        label: Text(
+                          ag['role'] == 'admin'
+                              ? 'Kembalikan ke Ahli Gizi'
+                              : 'Jadikan Admin',
+                          style: GoogleFonts.manrope(
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                            fontSize: 13,
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: ag['role'] == 'admin'
+                              ? Colors.orange
+                              : AppColors.secondary,
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          elevation: 0,
+                        ),
                       ),
                     ),
-                  ),
                 ],
               ],
             ),
@@ -582,21 +728,28 @@ class _AdminMainScreenState extends State<AdminMainScreen>
     );
   }
 
-  Widget _statusBadge(String status) {
+  Widget _statusBadge(Map<String, dynamic> ag) {
+    final status = ag['status_akun'] as String? ?? 'approved';
+    final role = ag['role'] as String? ?? 'ahli_gizi';
     Color color;
     String label;
-    switch (status) {
-      case 'pending':
-        color = const Color(0xFFF59E0B);
-        label = 'MENUNGGU';
-        break;
-      case 'rejected':
-        color = Colors.red;
-        label = 'DITOLAK';
-        break;
-      default:
-        color = AppColors.primary;
-        label = 'AKTIF';
+    if (role == 'admin') {
+      color = AppColors.secondary;
+      label = 'ADMIN';
+    } else {
+      switch (status) {
+        case 'pending':
+          color = const Color(0xFFF59E0B);
+          label = 'MENUNGGU';
+          break;
+        case 'rejected':
+          color = Colors.red;
+          label = 'DITOLAK';
+          break;
+        default:
+          color = AppColors.primary;
+          label = 'AKTIF';
+      }
     }
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),

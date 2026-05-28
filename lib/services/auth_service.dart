@@ -486,19 +486,45 @@ static Future<Map<String, dynamic>> registerAhliGizi({
   // ------------------------------------------------------------------------------------------------------------------------------------------------------------
   // --------- ADMIN: Ambil semua Ahli Gizi untuk verifikasi ---------
   // ------------------------------------------------------------------------------------------------------------------------------------------------------------
+  static Future<void> _sendEmailNotification({
+    required String toEmail,
+    required String subject,
+    required String htmlContent,
+  }) async {
+    try {
+      await FirebaseFirestore.instance.collection('mail').add({
+        'to': [toEmail],
+        'message': {
+          'subject': subject,
+          'html': htmlContent,
+        },
+      });
+    } catch (e) {
+      debugPrint('Gagal mengirim email: $e');
+    }
+  }
+
   static Future<List<Map<String, dynamic>>> getAllAhliGiziForAdmin({
     String filter = 'all',
   }) async {
     try {
-      Query query = FirebaseFirestore.instance
-          .collection('users')
-          .where('role', isEqualTo: 'ahli_gizi');
+      final usersRef = FirebaseFirestore.instance.collection('users');
+      Query query;
       if (filter == 'pending') {
-        query = query.where('status_akun', isEqualTo: 'pending');
+        query = usersRef
+            .where('role', isEqualTo: 'ahli_gizi')
+            .where('status_akun', isEqualTo: 'pending');
       } else if (filter == 'approved') {
-        query = query.where('status_akun', isEqualTo: 'approved');
+        query = usersRef
+            .where('role', isEqualTo: 'ahli_gizi')
+            .where('status_akun', isEqualTo: 'approved');
       } else if (filter == 'rejected') {
-        query = query.where('status_akun', isEqualTo: 'rejected');
+        query = usersRef
+            .where('role', isEqualTo: 'ahli_gizi')
+            .where('status_akun', isEqualTo: 'rejected');
+      } else {
+        // filter == 'all', fetch both 'ahli_gizi' and 'admin' roles
+        query = usersRef.where('role', whereIn: ['ahli_gizi', 'admin']);
       }
       final snap = await query.get();
       return snap.docs.map((d) => d.data() as Map<String, dynamic>).toList();
@@ -509,6 +535,12 @@ static Future<Map<String, dynamic>> registerAhliGizi({
 
   static Future<bool> approveAhliGizi(String uid) async {
     try {
+      final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+      if (!doc.exists) return false;
+      final data = doc.data()!;
+      final email = data['email'] as String? ?? '';
+      final name = data['name'] as String? ?? 'Ahli Gizi';
+
       await FirebaseFirestore.instance.collection('users').doc(uid).update({
         'status_akun': 'approved',
         'rejection_reason': '',
@@ -525,6 +557,22 @@ static Future<Map<String, dynamic>> registerAhliGizi({
         'relatedId': '',
         'createdAt': FieldValue.serverTimestamp(),
       });
+
+      if (email.isNotEmpty) {
+        await _sendEmailNotification(
+          toEmail: email,
+          subject: 'Selamat, Akun Ahli Gizi Anda Telah Disetujui! 🎉',
+          htmlContent: '''
+            <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; padding: 20px; color: #333333; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; borderRadius: 8px;">
+              <h2 style="color: #4F46E5;">Pendaftaran Disetujui!</h2>
+              <p>Halo <strong>$name</strong>,</p>
+              <p>Selamat! Akun Ahli Gizi Anda telah diverifikasi dan disetujui oleh Administrator.</p>
+              <p>Anda sekarang dapat login ke aplikasi menggunakan email dan kata sandi yang telah Anda daftarkan sebelumnya.</p>
+              <p style="margin-top: 24px; font-size: 12px; color: #777777;">Email ini dikirim secara otomatis oleh sistem.</p>
+            </div>
+          ''',
+        );
+      }
       return true;
     } catch (e) {
       return false;
@@ -536,6 +584,12 @@ static Future<Map<String, dynamic>> registerAhliGizi({
     required String reason,
   }) async {
     try {
+      final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+      if (!doc.exists) return false;
+      final data = doc.data()!;
+      final email = data['email'] as String? ?? '';
+      final name = data['name'] as String? ?? 'Ahli Gizi';
+
       await FirebaseFirestore.instance.collection('users').doc(uid).update({
         'status_akun': 'rejected',
         'rejection_reason': reason,
@@ -543,22 +597,39 @@ static Future<Map<String, dynamic>> registerAhliGizi({
       await FirebaseFirestore.instance.collection('notifications').add({
         'userId': uid,
         'role': 'ahli_gizi',
-        'title': '----™ Pendaftaran Ditolak',
+        'title': '❌ Pendaftaran Ditolak',
         'message': 'Maaf, pendaftaran Anda ditolak. Alasan: $reason',
         'type': 'account_rejected',
         'isRead': false,
         'relatedId': '',
         'createdAt': FieldValue.serverTimestamp(),
       });
+
+      if (email.isNotEmpty) {
+        await _sendEmailNotification(
+          toEmail: email,
+          subject: 'Pemberitahuan Pendaftaran Ahli Gizi ❌',
+          htmlContent: '''
+            <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; padding: 20px; color: #333333; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; borderRadius: 8px;">
+              <h2 style="color: #DC2626;">Pendaftaran Ditolak</h2>
+              <p>Halo <strong>$name</strong>,</p>
+              <p>Mohon maaf, pendaftaran akun Ahli Gizi Anda ditolak oleh Administrator karena alasan berikut:</p>
+              <blockquote style="background: #F9FAFB; padding: 12px; border-left: 4px solid #DC2626; margin: 16px 0;">
+                <strong>$reason</strong>
+              </blockquote>
+              <p>Jika Anda memiliki pertanyaan lebih lanjut, silakan hubungi pihak Administrator.</p>
+              <p style="margin-top: 24px; font-size: 12px; color: #777777;">Email ini dikirim secara otomatis oleh sistem.</p>
+            </div>
+          ''',
+        );
+      }
       return true;
     } catch (e) {
       return false;
     }
   }
 
-  // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-    static Future<bool> promoteToAdmin(String uid) async {
+  static Future<bool> promoteToAdmin(String uid) async {
     try {
       await FirebaseFirestore.instance.collection('users').doc(uid).update({
         'role': 'admin',
@@ -574,6 +645,37 @@ static Future<Map<String, dynamic>> registerAhliGizi({
         'relatedId': '',
         'createdAt': FieldValue.serverTimestamp(),
       });
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  static Future<bool> demoteFromAdmin(String uid) async {
+    try {
+      await FirebaseFirestore.instance.collection('users').doc(uid).update({
+        'role': 'ahli_gizi',
+        'demoted_from_admin_at': FieldValue.serverTimestamp(),
+      });
+      await FirebaseFirestore.instance.collection('notifications').add({
+        'userId': uid,
+        'role': 'ahli_gizi',
+        'title': '⚠️ Peran Akun Diubah',
+        'message': 'Peran akun Anda telah dikembalikan menjadi Ahli Gizi oleh Admin.',
+        'type': 'role_demoted',
+        'isRead': false,
+        'relatedId': '',
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  static Future<bool> deleteUser(String uid) async {
+    try {
+      await FirebaseFirestore.instance.collection('users').doc(uid).delete();
       return true;
     } catch (e) {
       return false;

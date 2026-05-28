@@ -967,24 +967,52 @@ class _HomeScreenState extends State<HomeScreen> {
         Row(children: [
           const Icon(Icons.monitor_weight_outlined, color: AppColors.primary, size: 18),
           const SizedBox(width: 8),
-          Text('Data Fisik Terakhir', style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
-          const Spacer(),
+          Expanded(
+            child: Text(
+              'Data Fisik Terakhir',
+              style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
+            ),
+          ),
+          const SizedBox(width: 8),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
             decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
             child: Text(catLabel, style: GoogleFonts.manrope(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.primary)),
           ),
-          if (ageInfo.kategori == AgeCategory.dewasa || (_user?['status_gizi_manual'] != null && _user?['status_gizi_manual'] != '')) ...[
-            const SizedBox(width: 6),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-              decoration: BoxDecoration(color: bmiColor.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
-              child: Text(bmiLabel, style: GoogleFonts.manrope(fontSize: 11, fontWeight: FontWeight.w700, color: bmiColor)),
-            ),
-          ],
         ]),
         const SizedBox(height: 12),
         _buildDynamicPhysRow(ageInfo, bmi),
+        if (ageInfo.kategori == AgeCategory.dewasa || (_user?['status_gizi_manual'] != null && _user?['status_gizi_manual'] != '')) ...[
+          const SizedBox(height: 12),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              color: bmiColor.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: bmiColor.withValues(alpha: 0.15)),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.info_outline, color: bmiColor, size: 16),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: RichText(
+                    text: TextSpan(
+                      style: GoogleFonts.manrope(fontSize: 12, color: AppColors.textPrimary),
+                      children: [
+                        const TextSpan(text: 'Evaluasi Harian: ', style: TextStyle(fontWeight: FontWeight.w600)),
+                        TextSpan(text: bmiLabel, style: TextStyle(fontWeight: FontWeight.w700, color: bmiColor)),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ]),
     );
   }
@@ -1925,60 +1953,106 @@ class _HomeScreenState extends State<HomeScreen> {
       } catch (_) { fmtDate = dateStr; }
     }
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [AppColors.secondary.withValues(alpha: 0.08), AppColors.secondary.withValues(alpha: 0.04)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
+          child: Row(
+            children: [
+              const Icon(Icons.rate_review_outlined, color: AppColors.secondary, size: 18),
+              const SizedBox(width: 8),
+              Text(
+                'Evaluasi Harian',
+                style: GoogleFonts.manrope(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+            ],
           ),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.secondary.withValues(alpha: 0.25)),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  AppColors.secondary.withValues(alpha: 0.08),
+                  AppColors.secondary.withValues(alpha: 0.04)
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppColors.secondary.withValues(alpha: 0.25)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: AppColors.secondary.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Icon(Icons.rate_review_outlined, color: AppColors.secondary, size: 18),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            agName,
+                            style: GoogleFonts.manrope(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Ahli Gizi Pendamping',
+                            style: GoogleFonts.manrope(
+                              fontSize: 11,
+                              color: AppColors.textMuted,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (fmtDate.isNotEmpty)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: AppColors.secondary.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          fmtDate,
+                          style: GoogleFonts.manrope(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.secondary,
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Catatan dari Ahli Gizi',
-                          style: GoogleFonts.manrope(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.secondary)),
-                      Text(agName,
-                          style: GoogleFonts.manrope(fontSize: 11, color: AppColors.textMuted)),
-                    ],
+                const SizedBox(height: 12),
+                const Divider(height: 1),
+                const SizedBox(height: 12),
+                Text(
+                  catatan,
+                  style: GoogleFonts.manrope(
+                    fontSize: 13,
+                    color: AppColors.textPrimary,
+                    height: 1.5,
                   ),
+                  maxLines: 6,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                if (fmtDate.isNotEmpty)
-                  Text(fmtDate, style: GoogleFonts.manrope(fontSize: 10, color: AppColors.textMuted)),
               ],
             ),
-            const SizedBox(height: 10),
-            const Divider(height: 1),
-            const SizedBox(height: 10),
-            Text(
-              catatan,
-              style: GoogleFonts.manrope(fontSize: 13, color: AppColors.textPrimary, height: 1.5),
-              maxLines: 4,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
+          ),
         ),
-      ),
+      ],
     );
   }
 }
