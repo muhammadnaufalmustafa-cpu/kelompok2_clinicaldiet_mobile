@@ -456,7 +456,7 @@ class _AhliGiziDashboardScreenState extends State<AhliGiziDashboardScreen> {
                         Text('Jenis Kelamin: ${pasien['gender'] ?? '-'}', style: GoogleFonts.manrope(fontSize: 11, color: AppColors.textSecondary)),
                         if (pasien['status_gizi_manual'] != null && pasien['status_gizi_manual'] != '') ...[
                           const SizedBox(height: 2),
-                          Text('Status Gizi: ${pasien['status_gizi_manual']}', style: GoogleFonts.manrope(fontSize: 11, color: AppColors.primary, fontWeight: FontWeight.w600)),
+                          Text('Evaluasi Harian: ${pasien['status_gizi_manual']}', style: GoogleFonts.manrope(fontSize: 11, color: AppColors.primary, fontWeight: FontWeight.w600)),
                         ],
                         if (imt != null) ...[
                           const SizedBox(height: 2),

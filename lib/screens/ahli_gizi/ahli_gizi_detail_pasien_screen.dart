@@ -1777,7 +1777,7 @@ class _AhliGiziDetailPasienScreenState
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  'Penilaian Status Gizi Akhir',
+                  'Evaluasi Harian',
                   style: GoogleFonts.manrope(
                     fontSize: 13,
                     fontWeight: FontWeight.w700,

@@ -303,7 +303,7 @@ class _LaporanHarianAGScreenState extends State<LaporanHarianAGScreen> {
     <tr><td>No. Rekam Medis</td><td>: ${p['rm'] ?? '-'}</td></tr>
     <tr><td>Tanggal Lahir</td><td>: ${p['birthdate'] ?? '-'}</td></tr>
     <tr><td>Jenis Kelamin</td><td>: ${p['gender'] ?? '-'}</td></tr>
-    <tr><td>Status Gizi</td><td>: ${p['status_gizi_manual'] ?? p['status_gizi'] ?? 'Belum diinput'}</td></tr>
+    <tr><td>Evaluasi Harian</td><td>: ${p['status_gizi_manual'] ?? p['status_gizi'] ?? 'Belum diinput'}</td></tr>
     ${p['imt_manual'] != null ? '<tr><td>IMT (Anak)</td><td>: ${p['imt_manual']}</td></tr>' : ''}
   </table>
 
@@ -598,7 +598,7 @@ class _LaporanHarianAGScreenState extends State<LaporanHarianAGScreen> {
           const SizedBox(height: 12),
           const Divider(color: Colors.white24),
           const SizedBox(height: 8),
-          _infoRow('Status Gizi', p['status_gizi'] ?? '-'),
+          _infoRow('Evaluasi Harian', p['status_gizi_manual'] ?? p['status_gizi'] ?? '-'),
         ],
       ),
     );
